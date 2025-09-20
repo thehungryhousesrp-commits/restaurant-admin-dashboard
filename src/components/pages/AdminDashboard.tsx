@@ -41,7 +41,7 @@ import CategoryManager from "@/components/admin/CategoryManager";
 import { InvoicePreview } from "@/components/order/InvoicePreview";
 
 export default function AdminDashboard() {
-  const { menuItems, categories, orders, deleteMenuItem, updateMenuItem } = useAppContext();
+  const { menuItems, categories, orders, deleteMenuItem, updateMenuItem, deleteOrder } = useAppContext();
   const [isFormOpen, setFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<MenuItem | undefined>(undefined);
   const { toast } = useToast();
@@ -59,6 +59,22 @@ export default function AdminDashboard() {
   const handleAvailabilityToggle = (item: MenuItem, isAvailable: boolean) => {
     updateMenuItem(item.id, { isAvailable });
     toast({ title: `${item.name} is now ${isAvailable ? 'available' : 'unavailable'}`});
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      await deleteOrder(orderId);
+      toast({
+        title: "Order Deleted",
+        description: "The order record has been permanently deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete the order.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getCategoryName = (categoryId: string) => {
@@ -181,7 +197,6 @@ export default function AdminDashboard() {
                             <TableHead>Invoice #</TableHead>
                             <TableHead>Customer</TableHead>
                             <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
                             <TableHead className="text-center">Actions</TableHead>
                         </TableRow>
@@ -192,11 +207,8 @@ export default function AdminDashboard() {
                                 <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
                                 <TableCell>{order.customerInfo.name}</TableCell>
                                 <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                                <TableCell>
-                                    <Badge>{order.status}</Badge>
-                                </TableCell>
                                 <TableCell className="text-right">₹{order.total.toFixed(2)}</TableCell>
-                                <TableCell className="text-center">
+                                <TableCell className="text-center space-x-2">
                                     <Dialog>
                                         <DialogTrigger asChild>
                                             <Button variant="outline" size="sm">
@@ -206,6 +218,28 @@ export default function AdminDashboard() {
                                         </DialogTrigger>
                                         <InvoicePreview order={order} />
                                     </Dialog>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="text-destructive">
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              This action cannot be undone. This will permanently delete the order record for invoice
+                                              <span className="font-semibold"> #{order.id.slice(-6).toUpperCase()}</span>.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteOrder(order.id)}>
+                                              Continue
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
                                 </TableCell>
                             </TableRow>
                         ))}

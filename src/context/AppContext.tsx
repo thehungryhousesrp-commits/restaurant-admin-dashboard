@@ -37,6 +37,7 @@ interface AppContextType {
   deleteCategory: (id: string) => Promise<void>;
   placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
+  deleteOrder: (id: string) => Promise<void>;
   login: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<any>;
 }
@@ -248,6 +249,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setError("Failed to update order status.");
     }
   };
+
+  const deleteOrder = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'orders', id));
+    } catch(e) {
+        console.error("Error deleting order: ", e);
+        setError("Failed to delete order.");
+        throw e;
+    }
+  };
   
   const login = (email: string, pass: string) => {
     return signInWithEmailAndPassword(auth, email, pass);
@@ -272,6 +283,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     deleteCategory,
     placeOrder,
     updateOrderStatus,
+    deleteOrder,
     login,
     logout
   };
@@ -286,5 +298,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    
