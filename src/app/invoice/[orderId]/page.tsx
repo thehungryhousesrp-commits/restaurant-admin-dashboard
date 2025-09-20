@@ -6,6 +6,7 @@ import InvoiceDisplay from '@/components/order/InvoiceDisplay';
 import { notFound } from 'next/navigation';
 import { type Order } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from "@/components/ui/separator";
 
 interface InvoicePageProps {
   params: {
@@ -30,8 +31,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
         }
       } catch (err) {
         console.error(err);
-        if (err instanceof Error && err.message.includes('permission')) {
-             setError('You do not have permission to view this invoice.');
+        if (err instanceof Error && err.message.toLowerCase().includes('permission')) {
+             setError('You do not have permission to view this invoice. Please check your Firestore security rules.');
         } else {
              setError('Failed to load invoice data.');
         }
@@ -63,7 +64,6 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   }
   
   if (error) {
-     // You can use a more styled error component here
      return (
         <div className="container mx-auto px-4 py-8 text-center text-red-500">
             <h1 className="text-2xl font-bold">Error</h1>
