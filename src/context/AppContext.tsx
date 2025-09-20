@@ -106,39 +106,54 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribeAuth();
   }, []);
 
-
   useEffect(() => {
-    const initializeData = async () => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
+    
+    // This function will initialize data and set up Firestore subscriptions.
+    const initializeAndSubscribe = async () => {
       try {
-        await seedInitialData();
+        // We only seed data once, ideally on first load, but this is safe.
+        if (menuItems.length === 0) {
+            await seedInitialData();
+        }
 
-        const unsubscribeCategories = onSnapshot(query(collection(db, "categories")), (snapshot) => {
+        const qCategories = query(collection(db, "categories"));
+        const unsubscribeCategories = onSnapshot(qCategories, (snapshot) => {
           const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
           setCategories(cats);
         }, (err) => {
           console.error("Error fetching categories: ", err);
-          setError("Failed to load categories.");
+          setError("Failed to load categories. Check Firestore security rules.");
         });
 
-        const unsubscribeMenuItems = onSnapshot(query(collection(db, "menu-items")), (snapshot) => {
+        const qMenuItems = query(collection(db, "menu-items"));
+        const unsubscribeMenuItems = onSnapshot(qMenuItems, (snapshot) => {
           const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
           setMenuItems(items);
-          setLoading(false);
+          setLoading(false); // Set loading to false after menu items are fetched
         }, (err) => {
           console.error("Error fetching menu items: ", err);
-          setError("Failed to load menu items.");
+          setError("Failed to load menu items. Check Firestore security rules.");
           setLoading(false);
         });
 
-        const unsubscribeOrders = onSnapshot(query(collection(db, "orders")), (snapshot) => {
-            const fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-            setOrders(fetchedOrders);
-        }, (err) => {
-            console.error("Error fetching orders: ", err);
-        });
+        // Only subscribe to orders if the user is logged in (is an admin)
+        let unsubscribeOrders = () => {};
+        if (user) {
+            const qOrders = query(collection(db, "orders"));
+            unsubscribeOrders = onSnapshot(qOrders, (snapshot) => {
+                const fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+                setOrders(fetchedOrders);
+            }, (err) => {
+                console.error("Error fetching orders: ", err);
+                // Non-admins might not have permission, so don't set a global error
+            });
+        } else {
+            setOrders([]); // Clear orders if user logs out
+        }
         
+        // Return a cleanup function to unsubscribe from all listeners
         return () => {
           unsubscribeMenuItems();
           unsubscribeCategories();
@@ -146,14 +161,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
 
       } catch (err) {
-        console.error("Initialization error: ", err);
+        console.error("Data initialization error: ", err);
         setError("Failed to initialize app data.");
         setLoading(false);
       }
-    }
+    };
 
-    initializeData();
-  }, []);
+    // Run the subscription setup. It returns the cleanup function.
+    const cleanupPromise = initializeAndSubscribe();
+
+    // The actual cleanup function for useEffect
+    return () => {
+        cleanupPromise.then(cleanup => cleanup && cleanup());
+    };
+  }, [user]); // Re-run this effect whenever the user's auth state changes!
 
   const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'>) => {
     try {
