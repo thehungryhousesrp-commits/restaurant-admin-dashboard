@@ -115,15 +115,10 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
         </div>
       </ScrollArea>
       
-      <DialogFooter className="p-6 pt-2 border-t bg-background flex-col gap-2">
-        <div className="text-center">
+      <DialogFooter className="p-6 pt-4 border-t bg-background">
+        <div className="w-full text-center">
             <h4 className="font-semibold font-headline text-base">Thank you for choosing us!</h4>
             <p className="text-xs text-muted-foreground">Please Visit Again</p>
-        </div>
-        <div className="flex justify-center gap-2 pt-2">
-            <Button size="sm" variant="outline" disabled><Printer className="mr-2 h-4 w-4" />Print</Button>
-            <Button size="sm" variant="outline" disabled><Mail className="mr-2 h-4 w-4" />Email</Button>
-            <Button size="sm" variant="outline" disabled><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button>
         </div>
       </DialogFooter>
     </DialogContent>
