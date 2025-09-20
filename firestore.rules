@@ -1,0 +1,20 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow public read access to menu items and categories
+    match /menu-items/{itemId} {
+      allow read: if true;
+      allow write: if request.auth != null; // Only authenticated users can create, update, delete
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if request.auth != null; // Only authenticated users can create, update, delete
+    }
+
+    // You can add more specific rules for other collections here
+  }
+}
