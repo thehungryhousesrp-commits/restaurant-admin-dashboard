@@ -33,9 +33,9 @@ const generateImageFlow = ai.defineFlow(
   },
   async (input) => {
     const { media } = await ai.generate({
-        // Switch to a free model to avoid billing errors.
-        model: googleAI.model('gemini-2.5-flash-image-preview'),
-        prompt: `A professional, appetizing, high-resolution photo of ${input.itemName} on a clean, simple restaurant table background.`,
+        // Switch to a model with a more generous free tier to avoid rate-limiting.
+        model: googleAI.model('gemini-2.5-flash'),
+        prompt: `Generate a professional, appetizing, high-resolution photo of ${input.itemName}. The image should be suitable for a restaurant menu. It should be on a clean, simple, light-colored background. The food should look delicious and be the main focus of the image.`,
         config: {
           responseModalities: ['IMAGE', 'TEXT'],
         },
@@ -48,5 +48,3 @@ const generateImageFlow = ai.defineFlow(
     return { imageUrl: media.url };
   }
 );
-
-    
