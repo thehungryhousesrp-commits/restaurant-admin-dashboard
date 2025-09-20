@@ -9,7 +9,8 @@ const firebaseConfig = {
   "projectId": "studio-5171737170-2a797",
   "appId": "1:10603963276:web:10bc23127c23e6f5ddeca9",
   "apiKey": "AIzaSyDkrj0LduXqUzBRL55naM0ujx7bM9DjQF8",
-  "authDomain": "studio-5171737170-2a797.firebaseapp.com"
+  "authDomain": "studio-5171737170-2a797.firebaseapp.com",
+  "storageBucket": "studio-5171737170-2a797.appspot.com"
 };
 
 // Initialize Firebase
