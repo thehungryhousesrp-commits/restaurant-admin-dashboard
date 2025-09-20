@@ -29,9 +29,9 @@ const prompt = ai.definePrompt({
   name: 'suggestPricePrompt',
   input: {schema: SuggestPriceInputSchema},
   output: {schema: SuggestPriceOutputSchema},
-  prompt: `You are an expert restaurant consultant specializing in menu pricing for the Indian market. Your task is to suggest a competitive and reasonable price in Indian Rupees (INR) for a new menu item.
+  prompt: `You are an expert restaurant consultant specializing in menu pricing for the Indian market, specifically for Sreerampur, West Bengal. Your task is to suggest a competitive and reasonable price in Indian Rupees (INR) for a new menu item.
 
-  Consider the item's name, description, and typical ingredients. Base your suggestion on average prices in a mid-range, modern Indian restaurant.
+  Consider the item's name, description, and typical ingredients. Base your suggestion on average prices in a mid-range, modern restaurant in Sreerampur, West Bengal.
   
   Do not explain your reasoning. Only return the suggested price as a number.
 

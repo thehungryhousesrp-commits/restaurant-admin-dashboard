@@ -12,7 +12,8 @@ import {
   doc,
   query,
   getDocs,
-  writeBatch
+  writeBatch,
+  setDoc
 } from 'firebase/firestore';
 import { 
   ref, 
@@ -36,8 +37,8 @@ interface AppContextType {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { imageUrl: string }) => Promise<void>;
-  updateMenuItem: (id: string, updates: Partial<MenuItem> & { imageUrl?: string }) => Promise<void>;
+  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageHint'>) => Promise<void>;
+  updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
@@ -49,7 +50,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Helper to upload an image, returning the download URL
+// Helper to upload a dataURI image, returning the download URL
 async function uploadImage(dataUri: string, itemId: string): Promise<string> {
     const storageRef = ref(storage, `menu-images/${itemId}-${Date.now()}`);
     // 'data_url' is the format for Base64 data URI
@@ -160,18 +161,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     initializeData();
   }, []);
 
-  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint' | 'imageUrl'> & { imageUrl: string }) => {
+  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'>) => {
     try {
         const docRef = doc(collection(db, 'menu-items'));
-        const imageUrl = await uploadImage(item.imageUrl, docRef.id);
+        // The form gives us a data URI, so we upload it to get a public URL.
+        const newImageUrl = await uploadImage(item.imageUrl, docRef.id);
 
         const newItemData = {
             ...item,
-            imageUrl,
+            imageUrl: newImageUrl, // Store the public URL
             imageHint: 'custom item'
         };
-        await addDoc(collection(db, 'menu-items'), newItemData);
-
+        await setDoc(docRef, newItemData);
     } catch (e) {
       console.error("Error adding document: ", e);
       setError("Failed to add menu item.");
@@ -179,16 +180,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateMenuItem = async (id: string, updates: Partial<MenuItem> & { imageUrl?: string }) => {
+  const updateMenuItem = async (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => {
      try {
       const itemDoc = doc(db, 'menu-items', id);
-      let finalUpdates: Partial<MenuItem> = { ...updates };
+      const finalUpdates: Partial<MenuItem> = { ...updates };
       
       // If a new image data URI is provided, upload it and update the URL
       if (updates.imageUrl && updates.imageUrl.startsWith('data:image')) {
         const newImageUrl = await uploadImage(updates.imageUrl, id);
         finalUpdates.imageUrl = newImageUrl;
-        finalUpdates.imageHint = 'custom item';
+        finalUpdates.imageHint = 'custom item'; // Mark as custom
       }
 
       await updateDoc(itemDoc, finalUpdates);
