@@ -16,12 +16,17 @@ import { Input } from '@/components/ui/input';
 import { loginSchema } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { useAppContext } from '@/context/AppContext';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAppContext();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -31,20 +36,24 @@ export default function LoginForm() {
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    // Placeholder for Firebase Authentication
-    console.log(data);
-    toast({
-      title: "Login Successful",
-      description: "Redirecting to dashboard...",
-      variant: "default",
-    });
-
-    // Simulate role-based redirect
-    if (data.email.includes('admin')) {
+  const onSubmit = async (data: LoginFormValues) => {
+    setLoading(true);
+    try {
+      await login(data.email, data.password);
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to dashboard...",
+      });
       router.push('/admin/menu');
-    } else {
-      router.push('/');
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: "Invalid email or password. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Login error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,7 +67,7 @@ export default function LoginForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@example.com" {...field} />
+                <Input placeholder="admin@example.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -77,7 +86,8 @@ export default function LoginForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Sign In
         </Button>
       </form>

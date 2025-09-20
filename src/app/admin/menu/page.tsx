@@ -1,6 +1,32 @@
-import AdminDashboard from "@/components/pages/AdminDashboard";
+"use client";
 
-// This would ideally be a protected route that checks for admin role.
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAppContext } from '@/context/AppContext';
+import AdminDashboard from "@/components/pages/AdminDashboard";
+import { Skeleton } from '@/components/ui/skeleton';
+
 export default function AdminMenuPage() {
+    const { user, loadingAuth } = useAppContext();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loadingAuth && !user) {
+            router.push('/login');
+        }
+    }, [user, loadingAuth, router]);
+
+    if (loadingAuth || !user) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <div className="space-y-4">
+                    <Skeleton className="h-12 w-1/4" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            </div>
+        );
+    }
+
     return <AdminDashboard />;
 }

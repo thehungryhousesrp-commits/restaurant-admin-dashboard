@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo } from '@/lib/types';
-import { db, storage } from '@/lib/firebase';
+import { db, storage, auth } from '@/lib/firebase';
 import { 
   collection, 
   onSnapshot, 
@@ -14,10 +14,18 @@ import {
   getDocs,
   writeBatch
 } from 'firebase/firestore';
+import { 
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  type User
+} from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface AppContextType {
+  user: User | null;
+  loadingAuth: boolean;
   menuItems: MenuItem[];
   categories: Category[];
   orders: Order[];
@@ -30,6 +38,8 @@ interface AppContextType {
   deleteCategory: (id: string) => Promise<void>;
   placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Order;
   updateOrderStatus: (id: string, status: Order['status']) => void;
+  login: (email: string, pass: string) => Promise<any>;
+  logout: () => Promise<any>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -38,7 +48,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 async function seedInitialData() {
     const categoriesRef = collection(db, 'categories');
     const categoriesSnap = await getDocs(query(categoriesRef));
-    const seededCategoryDocs = [];
+    const seededCategoryDocs: Category[] = [];
 
     if (categoriesSnap.empty) {
         console.log('Seeding categories...');
@@ -47,8 +57,7 @@ async function seedInitialData() {
             { name: 'Burgers' }, { name: 'Desserts' },
         ];
         for (const cat of initialCategories) {
-            const docRef = doc(collection(db, 'categories'));
-            await addDoc(categoriesRef, cat);
+            const docRef = await addDoc(categoriesRef, cat);
             seededCategoryDocs.push({ id: docRef.id, ...cat });
         }
     } else {
@@ -77,11 +86,23 @@ async function seedInitialData() {
 
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoadingAuth(false);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
 
   useEffect(() => {
     const initializeData = async () => {
@@ -99,12 +120,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
 
         const unsubscribeMenuItems = onSnapshot(collection(db, "menu-items"), (snapshot) => {
-          const items = snapshot.docs.map(doc => {
-            const data = doc.data();
-            // Find category name from category ID
-            const categoryName = categories.find(c => c.id === data.category)?.name || 'Uncategorized';
-            return { id: doc.id, ...data, category: categoryName } as MenuItem;
-          });
+          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
           setMenuItems(items);
           setLoading(false);
         }, (err) => {
@@ -112,8 +128,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setError("Failed to load menu items.");
           setLoading(false);
         });
-        
-        // Note: Orders are still in-memory. They can be moved to Firestore next.
         
         return () => {
           unsubscribeMenuItems();
@@ -128,7 +142,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     initializeData();
-  }, [categories]);
+  }, []);
 
   const uploadImage = async (imageFile: File): Promise<string> => {
     const storageRef = ref(storage, `menu-images/${Date.now()}-${imageFile.name}`);
@@ -191,7 +205,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteCategory = async (id: string) => {
-    // Optional: Check if any menu items are using this category before deleting.
     try {
       await deleteDoc(doc(db, 'categories', id));
     } catch(e) {
@@ -211,16 +224,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       createdAt: Date.now(),
     };
     setOrders(prev => [newOrder, ...prev]);
-    // TODO: Save order to Firestore
     return newOrder;
   };
   
   const updateOrderStatus = (id: string, status: Order['status']) => {
     setOrders(prev => prev.map(order => order.id === id ? { ...order, status } : order));
-    // TODO: Update order status in Firestore
+  };
+  
+  const login = (email: string, pass: string) => {
+    return signInWithEmailAndPassword(auth, email, pass);
+  };
+  
+  const logout = () => {
+    return signOut(auth);
   };
 
   const value = {
+    user,
+    loadingAuth,
     menuItems,
     categories,
     orders,
@@ -230,9 +251,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     updateMenuItem,
     deleteMenuItem,
     addCategory,
-deleteCategory,
+    deleteCategory,
     placeOrder,
-    updateOrderStatus
+    updateOrderStatus,
+    login,
+    logout
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
