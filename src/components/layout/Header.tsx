@@ -28,14 +28,14 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-card/80 backdrop-blur-sm">
-      <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+      <div className="container flex h-20 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
             <Image 
                 src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png" 
                 alt="The Hungry House Hub Logo"
-                width={40}
-                height={40}
+                width={60}
+                height={60}
             />
             <span className="inline-block font-bold font-headline text-lg">The Hungry House Hub</span>
           </Link>

@@ -23,7 +23,7 @@ export interface OrderItem extends MenuItem {
 
 export interface CustomerInfo {
   name: string;
-  table: string;
+  phone: string;
 }
 
 export interface Order {

@@ -37,7 +37,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
             <div>
                 <h3 className="font-semibold mb-2">Billed To:</h3>
                 <p className="text-sm text-muted-foreground">{order.customerInfo.name}</p>
-                <p className="text-sm text-muted-foreground">Table: {order.customerInfo.table}</p>
+                <p className="text-sm text-muted-foreground">Phone: {order.customerInfo.phone}</p>
             </div>
             <div className="text-right">
                 <h3 className="font-semibold mb-2">Invoice Date:</h3>

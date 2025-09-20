@@ -28,7 +28,7 @@ export default function OrderSummary({
 }: OrderSummaryProps) {
   const { placeOrder } = useAppContext();
   const { toast } = useToast();
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', table: '' });
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '' });
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
   const total = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -38,8 +38,8 @@ export default function OrderSummary({
       toast({ title: "Cannot place an empty order.", variant: "destructive" });
       return;
     }
-    if (!customerInfo.name || !customerInfo.table) {
-      toast({ title: "Please enter customer and table name.", variant: "destructive" });
+    if (!customerInfo.name || !customerInfo.phone) {
+      toast({ title: "Please enter customer name and phone number.", variant: "destructive" });
       return;
     }
     const newOrder = placeOrder(currentOrder, customerInfo);
@@ -50,7 +50,7 @@ export default function OrderSummary({
   const handleDialogClose = (open: boolean) => {
     if(!open) {
       onClearOrder();
-      setCustomerInfo({ name: '', table: '' });
+      setCustomerInfo({ name: '', phone: '' });
       setPlacedOrder(null);
     }
   }
@@ -82,12 +82,13 @@ export default function OrderSummary({
               />
             </div>
              <div className="space-y-2">
-              <Label htmlFor="tableNumber">Table Number</Label>
+              <Label htmlFor="phoneNumber">Phone Number</Label>
               <Input
-                id="tableNumber"
-                placeholder="e.g. Table 5"
-                value={customerInfo.table}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, table: e.target.value })}
+                id="phoneNumber"
+                type="tel"
+                placeholder="e.g. 9876543210"
+                value={customerInfo.phone}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
               />
             </div>
             <Separator />
@@ -124,7 +125,7 @@ export default function OrderSummary({
             </div>
             <Dialog onOpenChange={handleDialogClose}>
                 <DialogTrigger asChild>
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={!customerInfo.name || !customerInfo.table}>
+                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={!customerInfo.name || !customerInfo.phone}>
                         Place Order & Generate Invoice
                     </Button>
                 </DialogTrigger>
