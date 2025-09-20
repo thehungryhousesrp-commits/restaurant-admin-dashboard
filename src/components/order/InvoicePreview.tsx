@@ -61,8 +61,8 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
               <TableRow key={item.id}>
                 <TableCell>{item.name}</TableCell>
                 <TableCell className="text-center">{item.quantity}</TableCell>
-                <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -74,11 +74,11 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
             <div className="w-full max-w-xs space-y-2">
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>${order.total.toFixed(2)}</span>
+                    <span>₹{order.total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>${order.total.toFixed(2)}</span>
+                    <span>₹{order.total.toFixed(2)}</span>
                 </div>
             </div>
         </div>

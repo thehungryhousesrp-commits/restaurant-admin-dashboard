@@ -124,7 +124,7 @@ export default function AdminDashboard() {
                     </TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.category}</TableCell>
-                    <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                         <Switch
                             checked={item.isAvailable}

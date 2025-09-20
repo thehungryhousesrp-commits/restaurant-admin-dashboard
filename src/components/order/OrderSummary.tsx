@@ -96,7 +96,7 @@ export default function OrderSummary({
                 <div key={item.id} className="flex items-center gap-2">
                   <div className="flex-grow">
                     <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}>
@@ -120,7 +120,7 @@ export default function OrderSummary({
         <CardFooter className="flex-col !p-4 border-t">
             <div className="w-full flex justify-between font-bold text-lg mb-4">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>₹{total.toFixed(2)}</span>
             </div>
             <Dialog onOpenChange={handleDialogClose}>
                 <DialogTrigger asChild>

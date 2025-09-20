@@ -47,7 +47,7 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
         <CardDescription className="text-sm">{item.description}</CardDescription>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
-        <p className="text-lg font-semibold">${item.price.toFixed(2)}</p>
+        <p className="text-lg font-semibold">₹{item.price.toFixed(2)}</p>
         <Button
           size="sm"
           onClick={() => onAddToOrder(item)}
