@@ -24,14 +24,20 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, Loader2, Sparkles } from "lucide-react";
+import { Wand2, Loader2, Sparkles, UploadCloud } from "lucide-react";
 import { generateDescription } from "@/ai/flows/generateDescription";
 import { suggestPrice } from "@/ai/flows/suggestPrice";
 import { findImageUrl } from "@/ai/flows/findImageUrl";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// We are removing imageUrl from the form schema as it will be auto-generated.
-// We keep the rest of the schema for validation.
+
+// We are removing imageUrl from the form schema as it will be auto-generated for new items.
 const formSchema = menuItemSchema.omit({ imageUrl: true, imageHint: true });
 type MenuFormValues = z.infer<typeof formSchema>;
 
@@ -47,6 +53,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
   const [isAiBusy, setIsAiBusy] = useState(false);
+  const [aiImageClickCount, setAiImageClickCount] = useState(0);
   
   const isEditing = !!itemToEdit;
 
@@ -98,6 +105,21 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   useEffect(() => {
     setIsAiBusy(isGeneratingDesc || isSuggestingPrice);
   }, [isGeneratingDesc, isSuggestingPrice]);
+
+  const handlePremiumFeatureClick = () => {
+    setAiImageClickCount(prev => prev + 1);
+  }
+
+  useEffect(() => {
+    if (aiImageClickCount >= 3) {
+      toast({
+        title: "Upgrade Required",
+        description: "This is a premium feature. Please upgrade your plan to use it.",
+        variant: "destructive",
+      });
+      setAiImageClickCount(0); // Reset counter
+    }
+  }, [aiImageClickCount, toast]);
 
   const handleGenerateDescription = async () => {
     if (!itemName) {
@@ -151,19 +173,17 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     setIsAiBusy(true);
     try {
       if (isEditing && itemToEdit) {
-        // For editing, we only update the data. We don't change the image unless the user uploads a new one.
-        // Since we removed manual upload, we will just pass the existing data.
-        await updateMenuItem(itemToEdit.id, data);
+        // Since we don't have manual upload, we just pass the existing data for update
+        await updateMenuItem(itemToEdit.id, { ...itemToEdit, ...data });
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        // For a new item, we generate the image URL.
         if (!data.name) {
              toast({ title: "Item name is required", description: "Please provide a name to find an image.", variant: "destructive"});
              setIsAiBusy(false);
              return;
         }
 
-        toast({ title: "Finding an image...", description: "The AI is searching for a suitable image for your item." });
+        toast({ title: "Finding an image...", description: "The AI is searching for a suitable placeholder for your item." });
         const imageResult = await findImageUrl({ itemName: data.name });
         
         const newItemPayload = {
@@ -185,143 +205,194 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   };
   
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl><Input placeholder="Margherita Pizza" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                   <div className="flex items-center justify-between">
-                    <FormLabel>Description</FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGenerateDescription}
-                      disabled={isAiBusy || !itemName}
-                    >
-                      {isGeneratingDesc ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Wand2 className="mr-2 h-4 w-4" />
-                      )}
-                      Generate
-                    </Button>
-                  </div>
-                  <FormControl><Textarea placeholder="Classic Italian pizza..." {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex gap-4">
+    <TooltipProvider>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column for Form Fields */}
+            <div className="space-y-6">
               <FormField
                 control={form.control}
-                name="price"
+                name="name"
                 render={({ field }) => (
-                  <FormItem className="flex-grow">
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Price (INR)</FormLabel>
-                       <Button
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl><Input placeholder="Margherita Pizza" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                     <div className="flex items-center justify-between">
+                      <FormLabel>Description</FormLabel>
+                      <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleSuggestPrice}
-                        disabled={isAiBusy || !itemName || !itemDescription}
+                        onClick={handleGenerateDescription}
+                        disabled={isAiBusy || !itemName}
                       >
-                        {isSuggestingPrice ? (
+                        {isGeneratingDesc ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                          <Sparkles className="mr-2 h-4 w-4" />
+                          <Wand2 className="mr-2 h-4 w-4" />
                         )}
-                        Suggest
+                        Generate
                       </Button>
                     </div>
-                    <FormControl>
-                        <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                    </FormControl>
+                    <FormControl><Textarea placeholder="Classic Italian pizza..." {...field} /></FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem className="flex-grow">
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="isAvailable"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5"><FormLabel>Available</FormLabel></div>
-                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   </FormItem>
                 )}
               />
               <div className="flex gap-4">
-                <FormField control={form.control} name="isVeg" render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isVeg" /></FormControl>
-                      <Label htmlFor="isVeg" className="font-normal">Veg</Label>
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem className="flex-grow">
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Price (INR)</FormLabel>
+                         <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSuggestPrice}
+                          disabled={isAiBusy || !itemName || !itemDescription}
+                        >
+                          {isSuggestingPrice ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Sparkles className="mr-2 h-4 w-4" />
+                          )}
+                          Suggest
+                        </Button>
+                      </div>
+                      <FormControl>
+                          <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
-                )} />
-                 <FormField control={form.control} name="isSpicy" render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
-                      <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem className="flex-grow">
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
-                )} />
-                 <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
-                      <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
+                  )}
+                />
+              </div>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="isAvailable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5"><FormLabel>Available</FormLabel></div>
+                      <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     </FormItem>
-                )} />
+                  )}
+                />
+                <div className="flex gap-4">
+                  <FormField control={form.control} name="isVeg" render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isVeg" /></FormControl>
+                        <Label htmlFor="isVeg" className="font-normal">Veg</Label>
+                      </FormItem>
+                  )} />
+                   <FormField control={form.control} name="isSpicy" render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
+                        <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
+                      </FormItem>
+                  )} />
+                   <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
+                        <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
+                      </FormItem>
+                  )} />
+                </div>
               </div>
             </div>
-          
-            { imagePreview && (
-              <div>
-                <Label>Current Image</Label>
-                <div className="relative aspect-video w-full rounded-md overflow-hidden border mt-2">
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">A relevant image will be found automatically for new items. Existing images are not changed.</p>
+
+            {/* Right Column for Image */}
+            <div className="space-y-4">
+               <div>
+                  <Label>Menu Image</Label>
+                  <div className="relative aspect-video w-full rounded-md overflow-hidden border mt-2 bg-muted">
+                      {imagePreview ? (
+                          <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                      ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                              <UploadCloud className="h-12 w-12" />
+                              <p className="mt-2 text-sm">Image will be auto-assigned</p>
+                          </div>
+                      )}
+                  </div>
+               </div>
+              <div className="grid grid-cols-2 gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        disabled
+                        onClick={handlePremiumFeatureClick}
+                      >
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Generate with AI
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Premium Feature: Upgrade to generate images with AI.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                       <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          disabled
+                          onClick={handlePremiumFeatureClick}
+                        >
+                          <UploadCloud className="mr-2 h-4 w-4" />
+                          Upload Image
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Premium Feature: Upgrade to upload custom images.</p>
+                    </TooltipContent>
+                  </Tooltip>
               </div>
-            )}
-        </div>
-        <Button type="submit" disabled={isAiBusy}>{isEditing ? 'Save Changes' : 'Add Item'}</Button>
-      </form>
-    </Form>
+               <FormDescription>
+                 For new items, a placeholder image will be automatically found. AI Generation and Manual Upload are premium features.
+              </FormDescription>
+            </div>
+          </div>
+          <Button type="submit" disabled={isAiBusy}>{isEditing ? 'Save Changes' : 'Add Item'}</Button>
+        </form>
+      </Form>
+    </TooltipProvider>
   );
 }

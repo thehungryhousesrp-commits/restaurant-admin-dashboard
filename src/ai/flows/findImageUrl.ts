@@ -48,6 +48,16 @@ const findImageUrlFlow = ai.defineFlow(
     outputSchema: FindImageUrlOutputSchema,
   },
   async (input) => {
+    // For this app, we will use a placeholder service to avoid external dependencies and costs.
+    // In a real app, you might use the prompt logic below.
+    console.log("Using placeholder image service for menu item:", input.itemName);
+    const seed = input.itemName.replace(/\s+/g, '-').toLowerCase();
+    return { 
+        imageUrl: `https://picsum.photos/seed/${seed}/600/400`,
+        imageHint: input.itemName.toLowerCase().split(' ').slice(0, 2).join(' ')
+    };
+    
+    /*
     // A simple retry mechanism in case the model doesn't return a valid URL
     for (let i = 0; i < 3; i++) {
         try {
@@ -66,5 +76,6 @@ const findImageUrlFlow = ai.defineFlow(
         imageUrl: `https://picsum.photos/seed/${input.itemName.replace(/\s/g, '-')}/600/400`,
         imageHint: input.itemName.toLowerCase().split(' ').slice(0, 2).join(' ')
     };
+    */
   }
 );
