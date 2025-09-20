@@ -114,22 +114,9 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
 
         <Separator />
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-center sm:text-left">
-            <h4 className="font-semibold">Scan to Pay</h4>
-            <Image 
-              data-ai-hint="qr code"
-              src="https://picsum.photos/seed/qrcode/120/120" 
-              alt="QR Code for payment"
-              width={120}
-              height={120}
-              className="mt-2 rounded-lg border p-1"
-            />
-          </div>
-          <div className="flex flex-col gap-2 text-center sm:text-right">
-             <h4 className="font-semibold font-headline text-lg">Thank you for choosing us!</h4>
-             <p className="text-xs text-muted-foreground">Please Visit Again</p>
-          </div>
+        <div className="text-center">
+            <h4 className="font-semibold font-headline text-lg">Thank you for choosing us!</h4>
+            <p className="text-xs text-muted-foreground">Please Visit Again</p>
         </div>
       </div>
       
