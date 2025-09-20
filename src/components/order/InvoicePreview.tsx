@@ -8,11 +8,14 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
-import { Download, Mail, MessageCircle, Printer } from "lucide-react";
+import { Share2, Copy } from "lucide-react";
 import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 interface InvoicePreviewProps {
   order: Order;
@@ -20,6 +23,20 @@ interface InvoicePreviewProps {
 
 export function InvoicePreview({ order }: InvoicePreviewProps) {
   const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
+  const { toast } = useToast();
+  const [shareableLink, setShareableLink] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        setShareableLink(`${window.location.origin}/invoice/${order.id}`);
+    }
+  }, [order.id]);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareableLink);
+    toast({ title: "Link Copied!", description: "Invoice link copied to clipboard." });
+  };
+
 
   return (
     <DialogContent className="sm:max-w-md p-0 flex flex-col max-h-[90vh]">
@@ -114,8 +131,21 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
             </div>
         </div>
       </ScrollArea>
+
+      <div className="px-6 py-4 border-t">
+          <label htmlFor="share-link" className="text-sm font-medium flex items-center gap-2 mb-2">
+            <Share2 className="h-4 w-4" />
+            Shareable Link
+          </label>
+          <div className="flex space-x-2">
+            <Input id="share-link" type="text" readOnly value={shareableLink} className="text-xs" />
+            <Button type="button" size="icon" onClick={copyLink}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       
-      <DialogFooter className="p-6 pt-4 border-t bg-background">
+      <DialogFooter className="p-6 pt-0 border-t bg-background">
         <div className="w-full text-center">
             <h4 className="font-semibold font-headline text-base">Thank you for choosing us!</h4>
             <p className="text-xs text-muted-foreground">Please Visit Again</p>
@@ -124,3 +154,5 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     </DialogContent>
   );
 }
+
+    

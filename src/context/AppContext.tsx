@@ -35,7 +35,7 @@ interface AppContextType {
   deleteMenuItem: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
-  placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Order;
+  placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   login: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<any>;
@@ -130,10 +130,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setError("Failed to load menu items.");
           setLoading(false);
         });
+
+        const unsubscribeOrders = onSnapshot(query(collection(db, "orders")), (snapshot) => {
+            const fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+            setOrders(fetchedOrders);
+        }, (err) => {
+            console.error("Error fetching orders: ", err);
+        });
         
         return () => {
           unsubscribeMenuItems();
           unsubscribeCategories();
+          unsubscribeOrders();
         };
 
       } catch (err) {
@@ -165,7 +173,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const itemDoc = doc(db, 'menu-items', id);
       const payload = {
         ...updates,
-        imageHint: updates.name ? updates.name.toLowerCase().split(' ').slice(0, 2).join(' ') : 'food item',
+      }
+      if (updates.name) {
+        payload.imageHint = updates.name.toLowerCase().split(' ').slice(0, 2).join(' ');
       }
       await updateDoc(itemDoc, payload);
     } catch (e) {
@@ -202,14 +212,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const placeOrder = (items: OrderItem[], customerInfo: CustomerInfo): Order => {
+  const placeOrder = async (items: OrderItem[], customerInfo: CustomerInfo): Promise<Order> => {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const cgst = subtotal * 0.025;
     const sgst = subtotal * 0.025;
     const total = Math.round(subtotal + cgst + sgst);
     
-    const newOrder: Order = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    const newOrderData: Omit<Order, 'id'> = {
       items,
       customerInfo,
       subtotal,
@@ -219,12 +228,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       status: 'Pending',
       createdAt: Date.now(),
     };
-    setOrders(prev => [newOrder, ...prev]);
-    return newOrder;
+
+    try {
+      const docRef = await addDoc(collection(db, 'orders'), newOrderData);
+      return { id: docRef.id, ...newOrderData };
+    } catch (error) {
+      console.error("Error placing order: ", error);
+      setError("Failed to place order.");
+      throw error;
+    }
   };
   
-  const updateOrderStatus = (id: string, status: Order['status']) => {
-    setOrders(prev => prev.map(order => order.id === id ? { ...order, status } : order));
+  const updateOrderStatus = async (id: string, status: Order['status']) => {
+    try {
+        const orderDoc = doc(db, 'orders', id);
+        await updateDoc(orderDoc, { status });
+    } catch (error) {
+        console.error("Error updating order status: ", error);
+        setError("Failed to update order status.");
+    }
   };
   
   const login = (email: string, pass: string) => {
@@ -264,3 +286,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    

@@ -5,7 +5,7 @@ export interface Category {
 
 export interface MenuItem {
   id: string;
-  name: string;
+  name:string;
   description: string;
   price: number;
   category: string;
@@ -26,9 +26,11 @@ export interface CustomerInfo {
   phone: string;
 }
 
+// This defines the structure of an order AS IT IS STORED IN FIRESTORE
+// Note: `id` is not stored in the document itself, but is the document ID.
 export interface Order {
-  id: string;
-  items: OrderItem[];
+  id: string; // Document ID from Firestore
+  items: Omit<OrderItem, 'id' | 'description' | 'category' | 'imageUrl' | 'imageHint' | 'isAvailable' | 'isVeg' | 'isSpicy' | 'isChefsSpecial'>[];
   customerInfo: CustomerInfo;
   subtotal: number;
   cgst: number;
@@ -37,3 +39,5 @@ export interface Order {
   status: 'Pending' | 'Preparing' | 'Completed';
   createdAt: number;
 }
+
+    

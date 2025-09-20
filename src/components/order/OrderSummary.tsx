@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, MinusCircle, Trash2, ShoppingCart } from "lucide-react";
+import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Loader2 } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { InvoicePreview } from "./InvoicePreview";
@@ -30,13 +30,14 @@ export default function OrderSummary({
   const { toast } = useToast();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '' });
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const subtotal = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cgst = subtotal * 0.025;
   const sgst = subtotal * 0.025;
   const total = subtotal + cgst + sgst;
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (currentOrder.length === 0) {
       toast({ title: "Cannot place an empty order.", variant: "destructive" });
       return;
@@ -45,9 +46,17 @@ export default function OrderSummary({
       toast({ title: "Please enter customer name and phone number.", variant: "destructive" });
       return;
     }
-    const newOrder = placeOrder(currentOrder, customerInfo);
-    setPlacedOrder(newOrder);
-    toast({ title: "Order Placed Successfully!", description: `Order ID: ${newOrder.id}`, variant: "default" });
+
+    setIsPlacingOrder(true);
+    try {
+      const newOrder = await placeOrder(currentOrder, customerInfo);
+      setPlacedOrder(newOrder);
+      toast({ title: "Order Placed Successfully!", description: `Order ID: ${newOrder.id}`, variant: "default" });
+    } catch (error) {
+      toast({ title: "Failed to place order.", variant: "destructive" });
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
   
   const handleDialogClose = (open: boolean) => {
@@ -142,7 +151,8 @@ export default function OrderSummary({
             </div>
             <Dialog onOpenChange={handleDialogClose}>
                 <DialogTrigger asChild>
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={!customerInfo.name || !customerInfo.phone}>
+                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={!customerInfo.name || !customerInfo.phone || isPlacingOrder}>
+                        {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Place Order & Generate Invoice
                     </Button>
                 </DialogTrigger>
@@ -153,3 +163,5 @@ export default function OrderSummary({
     </Card>
   );
 }
+
+    
