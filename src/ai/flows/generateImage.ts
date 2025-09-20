@@ -33,10 +33,11 @@ const generateImageFlow = ai.defineFlow(
   },
   async (input) => {
     const { media } = await ai.generate({
-        // Switch to a model with a more generous free tier to avoid rate-limiting.
+        // This model has a more generous free tier for image generation.
         model: googleAI.model('gemini-2.5-flash'),
         prompt: `Generate a professional, appetizing, high-resolution photo of ${input.itemName}. The image should be suitable for a restaurant menu. It should be on a clean, simple, light-colored background. The food should look delicious and be the main focus of the image.`,
         config: {
+          // Explicitly ask for an IMAGE output along with TEXT
           responseModalities: ['IMAGE', 'TEXT'],
         },
     });
@@ -45,6 +46,7 @@ const generateImageFlow = ai.defineFlow(
         throw new Error("Image generation failed to return a data URI.");
     }
     
+    // The output is a data URI string, which is what we need for uploading to storage.
     return { imageUrl: media.url };
   }
 );
