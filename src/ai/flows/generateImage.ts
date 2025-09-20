@@ -33,8 +33,12 @@ const generateImageFlow = ai.defineFlow(
   },
   async (input) => {
     const { media } = await ai.generate({
-        model: googleAI.model('imagen-4.0-fast-generate-001'),
+        // Switch to a free model to avoid billing errors.
+        model: googleAI.model('gemini-2.5-flash-image-preview'),
         prompt: `A professional, appetizing, high-resolution photo of ${input.itemName} on a clean, simple restaurant table background.`,
+        config: {
+          responseModalities: ['IMAGE', 'TEXT'],
+        },
     });
 
     if (!media.url) {
@@ -44,3 +48,5 @@ const generateImageFlow = ai.defineFlow(
     return { imageUrl: media.url };
   }
 );
+
+    

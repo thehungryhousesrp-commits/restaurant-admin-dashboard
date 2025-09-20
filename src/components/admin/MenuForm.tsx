@@ -276,7 +276,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                       </Button>
                     </div>
                     <FormControl>
-                        <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                        <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber || 0)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -400,3 +400,5 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     </Form>
   );
 }
+
+    
