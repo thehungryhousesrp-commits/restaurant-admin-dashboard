@@ -9,8 +9,7 @@ export const menuItemSchema = z.object({
   isVeg: z.boolean(),
   isSpicy: z.boolean(),
   isChefsSpecial: z.boolean(),
-  imageUrl: z.string().url("Image must be a valid URL."),
-  imageHint: z.string(),
+  imageUrl: z.string().url("A valid Image URL is required.").min(1, "Image URL is required."),
 });
 
 export const categorySchema = z.object({

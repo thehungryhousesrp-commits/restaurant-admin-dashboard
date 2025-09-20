@@ -30,8 +30,8 @@ interface AppContextType {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
-  updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, 'id'>>) => Promise<void>;
+  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageHint'>) => Promise<void>;
+  updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
@@ -146,9 +146,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     initializeData();
   }, []);
 
-  const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
+  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'>) => {
     try {
-        await addDoc(collection(db, 'menu-items'), item);
+        const payload = {
+            ...item,
+            imageHint: item.name.toLowerCase().split(' ').slice(0, 2).join(' '),
+        }
+        await addDoc(collection(db, 'menu-items'), payload);
     } catch (e) {
       console.error("Error adding document: ", e);
       setError("Failed to add menu item.");
@@ -156,10 +160,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateMenuItem = async (id: string, updates: Partial<Omit<MenuItem, 'id'>>) => {
+  const updateMenuItem = async (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => {
      try {
       const itemDoc = doc(db, 'menu-items', id);
-      await updateDoc(itemDoc, updates);
+      const payload = {
+        ...updates,
+        imageHint: updates.name ? updates.name.toLowerCase().split(' ').slice(0, 2).join(' ') : 'food item',
+      }
+      await updateDoc(itemDoc, payload);
     } catch (e) {
       console.error("Error updating document: ", e);
       setError("Failed to update menu item.");
@@ -236,7 +244,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     placeOrder,
     updateOrderStatus,
     login,
-    logout
+logout
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
