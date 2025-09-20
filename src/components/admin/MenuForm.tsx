@@ -27,7 +27,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Wand2, Loader2, Sparkles, UploadCloud } from "lucide-react";
 import { generateDescription } from "@/ai/flows/generateDescription";
 import { suggestPrice } from "@/ai/flows/suggestPrice";
+import { findImageUrl } from "@/ai/flows/findImageUrl";
 import { Checkbox } from "@/components/ui/checkbox";
+import { extractDirectImageUrl } from "@/lib/utils";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
 
@@ -135,8 +137,9 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
     try {
-      const payload: Omit<MenuItem, 'id' | 'imageHint'> & { id?: string } = {
+      const payload: Omit<MenuItem, 'id'> & { id?: string } = {
         ...data,
+        imageHint: data.name.toLowerCase().split(' ').slice(0, 2).join(' '),
       };
 
       if (isEditing && itemToEdit) {
@@ -155,6 +158,12 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
   };
   
+  const handleImageUrlBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const extractedUrl = extractDirectImageUrl(rawValue);
+    form.setValue("imageUrl", extractedUrl, { shouldValidate: true });
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -292,9 +301,15 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Image URL</FormLabel>
-                    <FormControl><Input placeholder="https://example.com/image.png" {...field} /></FormControl>
+                    <FormControl>
+                      <Input 
+                        placeholder="https://i.ibb.co/image.png" 
+                        {...field}
+                        onBlur={handleImageUrlBlur}
+                      />
+                    </FormControl>
                     <FormDescription>
-                      Upload your image to a service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="underline">ImgBB</a> and paste the direct image link here.
+                      Paste any link from an image hosting service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="underline">ImgBB</a>. We'll extract the direct link.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
