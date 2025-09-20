@@ -203,11 +203,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const placeOrder = (items: OrderItem[], customerInfo: CustomerInfo): Order => {
-    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const cgst = subtotal * 0.025;
+    const sgst = subtotal * 0.025;
+    const total = Math.round(subtotal + cgst + sgst);
+    
     const newOrder: Order = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       items,
       customerInfo,
+      subtotal,
+      cgst,
+      sgst,
       total,
       status: 'Pending',
       createdAt: Date.now(),
@@ -244,7 +251,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     placeOrder,
     updateOrderStatus,
     login,
-logout
+    logout
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

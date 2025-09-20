@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
-import Logo from "@/components/icons/Logo";
 import { Download, Mail, MessageCircle } from "lucide-react";
 import Image from "next/image";
 
@@ -20,46 +19,61 @@ interface InvoicePreviewProps {
 }
 
 export function InvoicePreview({ order }: InvoicePreviewProps) {
+  const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
+
   return (
     <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
-        <div className="flex items-center gap-4">
-            <Logo className="h-10 w-10 text-primary" />
-            <div>
-                <DialogTitle className="font-headline text-2xl">Invoice</DialogTitle>
-                <DialogDescription>Order ID: {order.id}</DialogDescription>
+        <div className="flex flex-col items-center gap-4 text-center">
+            <Image 
+                src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png" 
+                alt="The Hungry House Hub Logo"
+                width={80}
+                height={80}
+            />
+            <div className="space-y-1">
+              <DialogTitle className="font-headline text-3xl">The Hungry House</DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                62/A Netaji Subhas Avenue, Serampore, Hooghly, 712201
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Ph: 6289472216 | Email: thehungryhouse.srp@gmail.com
+              </p>
             </div>
         </div>
       </DialogHeader>
       
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-6 py-4">
+        <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-                <h3 className="font-semibold mb-2">Billed To:</h3>
-                <p className="text-sm text-muted-foreground">{order.customerInfo.name}</p>
-                <p className="text-sm text-muted-foreground">Phone: {order.customerInfo.phone}</p>
+                <h3 className="font-semibold mb-2 text-base">Billed To</h3>
+                <p className="font-medium">{order.customerInfo.name}</p>
+                <p className="text-muted-foreground">{order.customerInfo.phone}</p>
             </div>
-            <div className="text-right">
-                <h3 className="font-semibold mb-2">Invoice Date:</h3>
-                <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+            <div className="text-right space-y-1">
+                <p><span className="font-semibold">Invoice #:</span> {order.id.slice(-6).toUpperCase()}</p>
+                <p><span className="font-semibold">Date:</span> {new Date(order.createdAt).toLocaleDateString()}</p>
+                <p><span className="font-semibold">Time:</span> {new Date(order.createdAt).toLocaleTimeString()}</p>
             </div>
         </div>
 
         <Separator />
+        
+        <h2 className="text-xl font-bold text-center font-headline tracking-wider">E-BILL</h2>
 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Item</TableHead>
-              <TableHead className="text-center">Quantity</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="w-1/2">Item</TableHead>
+              <TableHead className="text-center">Qty</TableHead>
+              <TableHead className="text-right">Rate</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {order.items.map((item) => (
               <TableRow key={item.id}>
-                <TableCell>{item.name}</TableCell>
+                <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell className="text-center">{item.quantity}</TableCell>
                 <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
                 <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
@@ -71,13 +85,28 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
         <Separator />
         
         <div className="flex justify-end">
-            <div className="w-full max-w-xs space-y-2">
+            <div className="w-full max-w-sm space-y-2 text-sm">
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>₹{order.total.toFixed(2)}</span>
+                    <span>₹{order.subtotal.toFixed(2)}</span>
                 </div>
+                 <div className="flex justify-between">
+                    <span className="text-muted-foreground">CGST @ 2.5%</span>
+                    <span>₹{order.cgst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">SGST @ 2.5%</span>
+                    <span>₹{order.sgst.toFixed(2)}</span>
+                </div>
+                {roundOff !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Round Off</span>
+                    <span>{roundOff > 0 ? '+' : '-'}₹{Math.abs(roundOff).toFixed(2)}</span>
+                  </div>
+                )}
+                <Separator className="my-2"/>
                 <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
+                    <span>Total Payable</span>
                     <span>₹{order.total.toFixed(2)}</span>
                 </div>
             </div>
@@ -88,19 +117,18 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-center sm:text-left">
             <h4 className="font-semibold">Scan to Pay</h4>
-            <p className="text-xs text-muted-foreground">Use any UPI app</p>
             <Image 
               data-ai-hint="qr code"
-              src="https://picsum.photos/seed/qrcode/100/100" 
+              src="https://picsum.photos/seed/qrcode/120/120" 
               alt="QR Code for payment"
-              width={100}
-              height={100}
-              className="mt-2 rounded-md"
+              width={120}
+              height={120}
+              className="mt-2 rounded-lg border p-1"
             />
           </div>
-          <div className="flex flex-col gap-2">
-             <h4 className="font-semibold text-center sm:text-right">Thank you for your business!</h4>
-             <p className="text-xs text-muted-foreground text-center sm:text-right">Please find your invoice details above.</p>
+          <div className="flex flex-col gap-2 text-center sm:text-right">
+             <h4 className="font-semibold font-headline text-lg">Thank you for choosing us!</h4>
+             <p className="text-xs text-muted-foreground">Please Visit Again</p>
           </div>
         </div>
       </div>

@@ -30,6 +30,9 @@ export interface Order {
   id: string;
   items: OrderItem[];
   customerInfo: CustomerInfo;
+  subtotal: number;
+  cgst: number;
+  sgst: number;
   total: number;
   status: 'Pending' | 'Preparing' | 'Completed';
   createdAt: number;

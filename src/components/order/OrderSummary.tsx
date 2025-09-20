@@ -31,7 +31,10 @@ export default function OrderSummary({
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '' });
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
-  const total = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cgst = subtotal * 0.025;
+  const sgst = subtotal * 0.025;
+  const total = subtotal + cgst + sgst;
 
   const handlePlaceOrder = () => {
     if (currentOrder.length === 0) {
@@ -119,9 +122,23 @@ export default function OrderSummary({
       </CardContent>
       {currentOrder.length > 0 && (
         <CardFooter className="flex-col !p-4 border-t">
+            <div className="w-full space-y-1 text-sm mb-4">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">CGST (2.5%)</span>
+                    <span>₹{cgst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">SGST (2.5%)</span>
+                    <span>₹{sgst.toFixed(2)}</span>
+                </div>
+            </div>
             <div className="w-full flex justify-between font-bold text-lg mb-4">
                 <span>Total</span>
-                <span>₹{total.toFixed(2)}</span>
+                <span>₹{Math.round(total).toFixed(2)}</span>
             </div>
             <Dialog onOpenChange={handleDialogClose}>
                 <DialogTrigger asChild>
