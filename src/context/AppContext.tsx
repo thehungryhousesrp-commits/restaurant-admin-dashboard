@@ -162,7 +162,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               setOrders(fetchedOrders);
           }, (err) => {
               console.error("Error fetching orders (admin): ", err);
-              setError("Failed to load order data. You may not have permissions.");
+              // Don't set a global error for this, as public data might be fine.
+              // Maybe show a small indicator in the admin UI instead.
           });
 
           return () => unsubscribeOrders();
