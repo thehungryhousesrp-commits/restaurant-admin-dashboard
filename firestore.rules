@@ -3,26 +3,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow public read access to menu items and categories
+    // Allow anyone to read menu items and categories
     match /menu-items/{itemId} {
       allow read: if true;
-      allow write, update, delete: if request.auth != null;
+      allow write: if request.auth != null; // Only authenticated users can write
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow write, update, delete: if request.auth != null;
+      allow write: if request.auth != null; // Only authenticated users can write
     }
-    
-    // Rules for the orders collection
-    match /orders/{orderId} {
-      // Anyone can create an order (place an order)
-      allow create: if true;
 
-      // Only authenticated users (admins) can list/read all orders.
-      // Any user can read a specific order if they have the link (for the invoice page).
-      allow get: if true; 
-      allow list, update, delete: if request.auth != null;
+    // Rules for Orders
+    match /orders/{orderId} {
+      // ANYONE can create an order (place a new order)
+      allow create: if true;
+      
+      // ANYONE who has the direct link can view a SPECIFIC invoice
+      allow get: if true;
+
+      // ONLY a logged-in user (admin) can see the LIST of all orders
+      allow list: if request.auth != null;
+
+      // ONLY a logged-in user (admin) can update or delete orders
+      allow update, delete: if request.auth != null;
     }
   }
 }
