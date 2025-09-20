@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { AppProvider } from '@/context/AppContext';
-import Header from '@/components/layout/Header';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
@@ -24,10 +23,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased min-h-screen bg-background">
         <AppProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-          </div>
+          {children}
           <Toaster />
         </AppProvider>
       </body>
