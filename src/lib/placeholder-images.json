@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "pizza-margherita",
+      "description": "Classic Margherita Pizza with fresh mozzarella, tomatoes, and basil.",
+      "imageUrl": "https://picsum.photos/seed/1/600/400",
+      "imageHint": "pizza margherita"
+    },
+    {
+      "id": "pasta-carbonara",
+      "description": "Creamy Carbonara pasta with pancetta and a rich egg sauce.",
+      "imageUrl": "https://picsum.photos/seed/2/600/400",
+      "imageHint": "pasta carbonara"
+    },
+    {
+      "id": "spicy-arrabbiata",
+      "description": "Penne pasta in a spicy tomato sauce with garlic and red chili peppers.",
+      "imageUrl": "https://picsum.photos/seed/3/600/400",
+      "imageHint": "pasta arrabbiata"
+    },
+    {
+      "id": "veggie-delight-pizza",
+      "description": "A delicious pizza loaded with fresh vegetables like bell peppers, olives, and onions.",
+      "imageUrl": "https://picsum.photos/seed/4/600/400",
+      "imageHint": "veggie pizza"
+    },
+    {
+      "id": "chefs-special-risotto",
+      "description": "Chef's special mushroom risotto, cooked to perfection with parmesan cheese.",
+      "imageUrl": "https://picsum.photos/seed/5/600/400",
+      "imageHint": "mushroom risotto"
+    },
+    {
+      "id": "classic-burger",
+      "description": "Juicy beef patty with lettuce, tomato, and our special sauce.",
+      "imageUrl": "https://picsum.photos/seed/6/600/400",
+      "imageHint": "beef burger"
+    },
+    {
+      "id": "caesar-salad",
+      "description": "Crisp romaine lettuce with Caesar dressing, croutons, and parmesan.",
+      "imageUrl": "https://picsum.photos/seed/7/600/400",
+      "imageHint": "caesar salad"
+    },
+    {
+      "id": "chocolate-lava-cake",
+      "description": "Warm chocolate cake with a gooey molten center, served with vanilla ice cream.",
+      "imageUrl": "https://picsum.photos/seed/8/600/400",
+      "imageHint": "chocolate cake"
+    }
+  ]
 }
