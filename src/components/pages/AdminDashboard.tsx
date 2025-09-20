@@ -40,7 +40,7 @@ import MenuForm from "@/components/admin/MenuForm";
 import CategoryManager from "@/components/admin/CategoryManager";
 
 export default function AdminDashboard() {
-  const { menuItems, deleteMenuItem, updateMenuItem } = useAppContext();
+  const { menuItems, categories, deleteMenuItem, updateMenuItem } = useAppContext();
   const [isFormOpen, setFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<MenuItem | undefined>(undefined);
   const { toast } = useToast();
@@ -58,6 +58,11 @@ export default function AdminDashboard() {
   const handleAvailabilityToggle = (item: MenuItem, isAvailable: boolean) => {
     updateMenuItem(item.id, { isAvailable });
     toast({ title: `${item.name} is now ${isAvailable ? 'available' : 'unavailable'}`});
+  };
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : 'Uncategorized';
   };
 
   return (
@@ -123,7 +128,7 @@ export default function AdminDashboard() {
                       />
                     </TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.category}</TableCell>
+                    <TableCell>{getCategoryName(item.category)}</TableCell>
                     <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                         <Switch
