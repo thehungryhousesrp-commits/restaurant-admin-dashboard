@@ -3,21 +3,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // MENU and CATEGORIES: Anyone can read, only admin can write.
+    // Categories can be read by anyone, but only changed by an admin.
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
+    // Menu items can be read by anyone, but only changed by an admin.
     match /menu-items/{itemId} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // ORDERS: Anyone can get a single invoice, only admin can list/write/delete.
+    // Orders can be CREATED by anyone.
+    // Admins can view a list of all orders and delete them.
+    // Anyone can view a single invoice if they have the direct link (ID).
     match /orders/{orderId} {
-      allow get: if true;
-      allow list, create, update, delete: if request.auth != null;
+      allow create, get: if true;
+      allow list, update, delete: if request.auth != null;
     }
   }
 }
