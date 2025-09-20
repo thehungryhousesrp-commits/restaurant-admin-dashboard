@@ -106,9 +106,9 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       </div>
       
       <DialogFooter className="gap-2 sm:justify-end">
-        <Button variant="outline" disabled><Download />Download PDF</Button>
-        <Button variant="outline" disabled><Mail />Email</Button>
-        <Button variant="outline" disabled><MessageCircle />WhatsApp</Button>
+        <Button variant="outline" disabled><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+        <Button variant="outline" disabled><Mail className="mr-2 h-4 w-4" />Email</Button>
+        <Button variant="outline" disabled><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button>
       </DialogFooter>
     </DialogContent>
   );

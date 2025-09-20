@@ -47,40 +47,43 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Helper to seed initial data if collections are empty
 async function seedInitialData() {
     const categoriesRef = collection(db, 'categories');
-    const categoriesSnap = await getDocs(query(categoriesRef));
-    const seededCategoryDocs: Category[] = [];
+    const menuItemsRef = collection(db, 'menu-items');
 
-    if (categoriesSnap.empty) {
-        console.log('Seeding categories...');
+    const categoriesSnap = await getDocs(query(categoriesRef));
+    const menuItemsSnap = await getDocs(query(menuItemsRef));
+
+    // Only seed if both collections are empty
+    if (categoriesSnap.empty && menuItemsSnap.empty) {
+        console.log('Database is empty. Seeding initial data...');
+        const batch = writeBatch(db);
+        const seededCategoryDocs: Category[] = [];
+
         const initialCategories: Omit<Category, 'id'>[] = [
             { name: 'Pizza' }, { name: 'Pasta' }, { name: 'Salads' },
             { name: 'Burgers' }, { name: 'Desserts' },
         ];
+
+        // Create categories and store their new IDs
         for (const cat of initialCategories) {
-            const docRef = await addDoc(categoriesRef, cat);
-            seededCategoryDocs.push({ id: docRef.id, ...cat });
+            const catDocRef = doc(collection(db, "categories"));
+            batch.set(catDocRef, cat);
+            seededCategoryDocs.push({ id: catDocRef.id, ...cat });
         }
-    } else {
-        categoriesSnap.forEach(doc => seededCategoryDocs.push({ id: doc.id, ...doc.data() as Omit<Category, 'id'> }));
-    }
-
-    const menuItemsRef = collection(db, 'menu-items');
-    const menuItemsSnap = await getDocs(query(menuItemsRef));
-
-    if (menuItemsSnap.empty) {
-        console.log('Seeding menu items...');
-        const batch = writeBatch(db);
+        
+        // Create menu items using the new category IDs
         PlaceHolderImages.forEach(item => {
             const { id, ...rest } = item;
-            const docRef = doc(menuItemsRef);
+            const menuItemDocRef = doc(collection(db, "menu-items"));
             
-            // Find the corresponding category ID
             const category = seededCategoryDocs.find(c => c.name.toLowerCase() === rest.category.toLowerCase());
-
-            batch.set(docRef, { ...rest, category: category ? category.id : '' });
+            
+            batch.set(menuItemDocRef, { ...rest, category: category ? category.id : '' });
         });
+
         await batch.commit();
-        console.log('Seeding menu items complete.');
+        console.log('Seeding complete.');
+    } else {
+        console.log('Database already contains data. Skipping seed.');
     }
 }
 
@@ -111,7 +114,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       try {
         await seedInitialData();
 
-        const unsubscribeCategories = onSnapshot(collection(db, "categories"), (snapshot) => {
+        const unsubscribeCategories = onSnapshot(query(collection(db, "categories")), (snapshot) => {
           const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
           setCategories(cats);
         }, (err) => {
@@ -119,7 +122,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setError("Failed to load categories.");
         });
 
-        const unsubscribeMenuItems = onSnapshot(collection(db, "menu-items"), (snapshot) => {
+        const unsubscribeMenuItems = onSnapshot(query(collection(db, "menu-items")), (snapshot) => {
           const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
           setMenuItems(items);
           setLoading(false);

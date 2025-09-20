@@ -162,7 +162,7 @@ export default function AdminDashboard() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                    </TableCell>
+                    </TableCell>                  
                   </TableRow>
                 ))}
               </TableBody>

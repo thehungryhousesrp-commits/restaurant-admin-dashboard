@@ -85,6 +85,19 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         image: undefined,
       });
       setImagePreview(itemToEdit.imageUrl);
+    } else {
+      form.reset({
+        name: "",
+        description: "",
+        price: 0,
+        category: "",
+        isAvailable: true,
+        isVeg: false,
+        isSpicy: false,
+        isChefsSpecial: false,
+        image: undefined,
+      });
+      setImagePreview(null);
     }
   }, [itemToEdit, form]);
 
@@ -131,7 +144,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         setImagePreview(result.imageUrl);
         const imageFile = await dataUriToFile(result.imageUrl, `${currentName.replace(/\s+/g, '-')}.png`);
         
-        // Create a FileList
+        // Create a FileList and set it to the form
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(imageFile);
         form.setValue("image", dataTransfer.files, { shouldValidate: true });
@@ -151,16 +164,19 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     try {
       const submissionData = { ...data };
       
-      if (isEditing && !submissionData.image) {
-        // @ts-ignore
-        delete submissionData.image;
-      }
-      
+      const isImageMissing = !submissionData.image || submissionData.image.length === 0;
+
       if (isEditing && itemToEdit) {
+        // If editing and no new image is provided, don't try to update the image.
+        if (isImageMissing) {
+           // @ts-ignore
+           delete submissionData.image;
+        }
         updateMenuItem(itemToEdit.id, submissionData);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        if (!submissionData.image || submissionData.image.length === 0) {
+        // If creating a new item, an image is required.
+        if (isImageMissing) {
            toast({ title: "Image required", description: "Please select or generate an image for the new item.", variant: "destructive"});
            return;
         }
@@ -235,7 +251,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 render={({ field }) => (
                   <FormItem className="flex-grow">
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
                       </FormControl>
