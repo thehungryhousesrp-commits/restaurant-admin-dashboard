@@ -24,7 +24,7 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, Loader2, Sparkles, UploadCloud } from "lucide-react";
+import { Wand2, Loader2, Sparkles, UploadCloud, Image as ImageIcon } from "lucide-react";
 import { generateDescription } from "@/ai/flows/generateDescription";
 import { suggestPrice } from "@/ai/flows/suggestPrice";
 import { findImageUrl } from "@/ai/flows/findImageUrl";
@@ -43,6 +43,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const { toast } = useToast();
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
+  const [isFindingImage, setIsFindingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditing = !!itemToEdit;
@@ -132,7 +133,31 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
   };
 
-  const isAiBusy = isGeneratingDesc || isSuggestingPrice;
+  const handleFindImage = async () => {
+    if (!itemName) {
+      toast({
+        title: "Item Name Required",
+        description: "Please enter an item name before finding an image.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsFindingImage(true);
+    try {
+      const result = await findImageUrl({ itemName });
+      if (result.imageUrl) {
+        form.setValue("imageUrl", result.imageUrl, { shouldValidate: true });
+        toast({ title: "Image Found!", description: "An image URL has been found and added." });
+      }
+    } catch (error) {
+      console.error("Error finding image:", error);
+      toast({ title: "AI Error", description: "Could not find an image.", variant: "destructive" });
+    } finally {
+      setIsFindingImage(false);
+    }
+  };
+  
+  const isAiBusy = isGeneratingDesc || isSuggestingPrice || isFindingImage;
 
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
@@ -300,7 +325,23 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 name="imageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image URL</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Image URL</FormLabel>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleFindImage}
+                        disabled={isAiBusy || !itemName}
+                      >
+                        {isFindingImage ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ImageIcon className="mr-2 h-4 w-4" />
+                        )}
+                        Generate Image
+                      </Button>
+                    </div>
                     <FormControl>
                       <Input 
                         placeholder="https://i.ibb.co/image.png" 
@@ -323,7 +364,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                   ) : (
                       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                           <UploadCloud className="h-12 w-12" />
-                          <p className="mt-2 text-sm text-center">Paste an image URL above to see a preview</p>
+                          <p className="mt-2 text-sm text-center">Generate or paste an image URL to see a preview</p>
                       </div>
                   )}
                 </div>

@@ -22,7 +22,7 @@ export default function InvoiceDisplay({ order }: InvoiceDisplayProps) {
                     height={80}
                 />
                 <div className="space-y-0.5">
-                    <h1 className="font-headline text-3xl">The Hungry House</h1>
+                    <h1 className="font-headline text-3xl">The Hungry House Hub</h1>
                     <p className="text-xs text-muted-foreground">
                         62/A Netaji Subhas Avenue, Serampore, Hooghly, 712201
                     </p>
