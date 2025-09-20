@@ -24,8 +24,9 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, Loader2 } from "lucide-react";
+import { Wand2, Loader2, Image as ImageIcon } from "lucide-react";
 import { generateDescription } from "@/ai/flows/generateDescription";
+import { generateImage } from "@/ai/flows/generateImage";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
 
@@ -34,11 +35,20 @@ interface MenuFormProps {
   onFormSubmit: () => void;
 }
 
+// Helper to convert data URI to File
+async function dataUriToFile(dataUrl: string, filename: string): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type });
+}
+
+
 export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const { categories, addMenuItem, updateMenuItem } = useAppContext();
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(itemToEdit?.imageUrl || null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   
   const isEditing = !!itemToEdit;
 
@@ -87,7 +97,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       });
       return;
     }
-    setIsGenerating(true);
+    setIsGeneratingDesc(true);
     try {
       const result = await generateDescription({ itemName: currentName });
       if (result.description) {
@@ -98,7 +108,40 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       console.error("Error generating description:", error);
       toast({ title: "AI Error", description: "Could not generate description.", variant: "destructive" });
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingDesc(false);
+    }
+  };
+
+  const handleGenerateImage = async () => {
+    const currentName = form.getValues("name");
+     if (!currentName) {
+      toast({
+        title: "Item Name Required",
+        description: "Please enter an item name before generating an image.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsGeneratingImg(true);
+    setImagePreview(null);
+    try {
+      const result = await generateImage({ itemName: currentName });
+      if (result.imageUrl) {
+        setImagePreview(result.imageUrl);
+        const imageFile = await dataUriToFile(result.imageUrl, `${currentName.replace(/\s+/g, '-')}.png`);
+        
+        // Create a FileList
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(imageFile);
+        form.setValue("image", dataTransfer.files, { shouldValidate: true });
+
+        toast({ title: "Image Generated!", description: "The AI has created a new image for your item." });
+      }
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({ title: "AI Error", description: "Could not generate image.", variant: "destructive" });
+    } finally {
+      setIsGeneratingImg(false);
     }
   };
 
@@ -107,8 +150,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     try {
       const submissionData = { ...data };
       
-      // If there's no new image file and we are editing, we don't want to send the `image` field.
-      // The schema now allows it to be optional.
       if (isEditing && !submissionData.image) {
         // @ts-ignore
         delete submissionData.image;
@@ -119,7 +160,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
         if (!submissionData.image || submissionData.image.length === 0) {
-           toast({ title: "Image required", description: "Please select an image for the new item.", variant: "destructive"});
+           toast({ title: "Image required", description: "Please select or generate an image for the new item.", variant: "destructive"});
            return;
         }
         addMenuItem(submissionData as Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList });
@@ -160,9 +201,9 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                       variant="outline"
                       size="sm"
                       onClick={handleGenerateDescription}
-                      disabled={isGenerating || !itemName}
+                      disabled={isGeneratingDesc || !itemName}
                     >
-                      {isGenerating ? (
+                      {isGeneratingDesc ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Wand2 className="mr-2 h-4 w-4" />
@@ -247,7 +288,23 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
               name="image"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Menu Image</FormLabel>
+                   <div className="flex items-center justify-between">
+                     <FormLabel>Menu Image</FormLabel>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateImage}
+                        disabled={isGeneratingImg || !itemName}
+                      >
+                        {isGeneratingImg ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ImageIcon className="mr-2 h-4 w-4" />
+                        )}
+                        Generate Image
+                      </Button>
+                   </div>
                   <FormControl>
                     <Input 
                       type="file" 
@@ -266,14 +323,23 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 </FormItem>
               )}
             />
-            {imagePreview && (
+            
+            { (imagePreview || isGeneratingImg) && (
               <div className="relative aspect-video w-full rounded-md overflow-hidden border">
-                <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                { isGeneratingImg ? (
+                  <div className="flex flex-col items-center justify-center h-full bg-muted">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+                    <p className="text-sm text-muted-foreground">Generating your image...</p>
+                    <p className="text-xs text-muted-foreground">This may take a moment.</p>
+                  </div>
+                ) : (
+                   imagePreview && <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                )}
               </div>
             )}
           </div>
         </div>
-        <Button type="submit">{isEditing ? 'Save Changes' : 'Add Item'}</Button>
+        <Button type="submit" disabled={isGeneratingDesc || isGeneratingImg}>{isEditing ? 'Save Changes' : 'Add Item'}</Button>
       </form>
     </Form>
   );
