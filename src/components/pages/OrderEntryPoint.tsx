@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import Image from 'next/image';
 
 export default function OrderEntryPoint() {
   const { menuItems, categories, loading } = useAppContext();
@@ -65,6 +66,15 @@ export default function OrderEntryPoint() {
         {/* Left Column: Menu */}
         <div className="lg:w-2/3">
           <div className="space-y-6">
+             <div className="flex justify-center mb-4">
+                <Image 
+                    src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png"
+                    alt="Hungry House Hub Logo"
+                    width={150}
+                    height={150}
+                    priority
+                />
+            </div>
             <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Menu</h1>
                 <p className="text-muted-foreground">Select items to build an order.</p>
