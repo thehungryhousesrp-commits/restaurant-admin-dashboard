@@ -4,7 +4,7 @@ import { useState } from "react";
 import { type MenuItem, type Order } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, HardDriveUpload, Eye } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Eye } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -44,7 +44,6 @@ export default function AdminDashboard() {
   const { menuItems, categories, orders, deleteMenuItem, updateMenuItem } = useAppContext();
   const [isFormOpen, setFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<MenuItem | undefined>(undefined);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
   const handleEditClick = (item: MenuItem) => {
@@ -77,10 +76,6 @@ export default function AdminDashboard() {
             <p className="text-muted-foreground">Manage your restaurant's menu, categories, and orders.</p>
         </div>
         <div className="flex gap-2">
-            <Button variant="outline" disabled>
-                <HardDriveUpload className="mr-2 h-4 w-4" />
-                Bulk Upload
-            </Button>
             <Dialog open={isFormOpen} onOpenChange={setFormOpen}>
                 <DialogTrigger asChild>
                     <Button onClick={handleAddNewClick}>
