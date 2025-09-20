@@ -37,13 +37,15 @@ interface MenuFormProps {
   onFormSubmit: () => void;
 }
 
-// Helper to convert data URI to File
-async function dataUriToFile(dataUrl: string, filename: string): Promise<File> {
-  const res = await fetch(dataUrl);
-  const blob = await res.blob();
-  return new File([blob], filename, { type: blob.type });
+// Helper to convert file to Base64 data URI
+function fileToDataUri(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
-
 
 export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const { categories, addMenuItem, updateMenuItem } = useAppContext();
@@ -66,13 +68,13 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       isVeg: itemToEdit?.isVeg ?? false,
       isSpicy: itemToEdit?.isSpicy ?? false,
       isChefsSpecial: itemToEdit?.isChefsSpecial ?? false,
-      image: undefined,
+      imageUrl: itemToEdit?.imageUrl || "",
     },
   });
 
   const itemName = form.watch("name");
   const itemDescription = form.watch("description");
-  const imageRef = form.register("image");
+  const imageRef = form.register("imageUrl");
 
   useEffect(() => {
     if (itemToEdit) {
@@ -85,7 +87,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         isVeg: itemToEdit.isVeg,
         isSpicy: itemToEdit.isSpicy,
         isChefsSpecial: itemToEdit.isChefsSpecial,
-        image: undefined,
+        imageUrl: itemToEdit.imageUrl,
       });
       setImagePreview(itemToEdit.imageUrl);
     } else {
@@ -98,7 +100,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         isVeg: false,
         isSpicy: false,
         isChefsSpecial: false,
-        image: undefined,
+        imageUrl: "",
       });
       setImagePreview(null);
     }
@@ -171,12 +173,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       const result = await generateImage({ itemName: currentName });
       if (result.imageUrl) {
         setImagePreview(result.imageUrl);
-        const imageFile = await dataUriToFile(result.imageUrl, `${currentName.replace(/\s+/g, '-')}.png`);
-        
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(imageFile);
-        form.setValue("image", dataTransfer.files, { shouldValidate: true });
-
+        form.setValue("imageUrl", result.imageUrl, { shouldValidate: true });
         toast({ title: "Image Generated!", description: "The AI has created a new image for your item." });
       }
     } catch (error) {
@@ -188,27 +185,19 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   };
 
 
-  const onSubmit = (data: MenuFormValues) => {
+  const onSubmit = async (data: MenuFormValues) => {
     try {
-      const submissionData = { ...data };
-      
-      const isImageMissing = !submissionData.image || submissionData.image.length === 0;
+      if (!data.imageUrl) {
+         toast({ title: "Image required", description: "Please select or generate an image for the item.", variant: "destructive"});
+         return;
+      }
 
       if (isEditing && itemToEdit) {
-        // If editing and no new image is provided, keep the old one.
-        if (isImageMissing) {
-           // @ts-ignore
-           delete submissionData.image;
-        }
-        updateMenuItem(itemToEdit.id, submissionData);
+        updateMenuItem(itemToEdit.id, data);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        // If creating a new item, an image is required.
-        if (isImageMissing) {
-           toast({ title: "Image required", description: "Please select or generate an image for the new item.", variant: "destructive"});
-           return;
-        }
-        addMenuItem(submissionData as Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList });
+        // The type assertion is needed because addMenuItem expects a slightly different type
+        await addMenuItem(data as Omit<MenuItem, 'id' | 'imageHint'>);
         toast({ title: "Success", description: "New menu item added." });
       }
       onFormSubmit();
@@ -350,7 +339,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
           <div className="space-y-4">
             <FormField
               control={form.control}
-              name="image"
+              name="imageUrl"
               render={({ field }) => (
                 <FormItem>
                    <div className="flex items-center justify-between">
@@ -374,16 +363,18 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                     <Input 
                       type="file" 
                       accept="image/*"
-                      {...imageRef}
-                      onChange={(e) => {
-                        field.onChange(e.target.files);
+                      // We don't use the field's onChange directly to handle file-to-data-uri conversion
+                      onChange={async (e) => {
                         if (e.target.files && e.target.files[0]) {
-                          setImagePreview(URL.createObjectURL(e.target.files[0]));
+                          const file = e.target.files[0];
+                          const dataUri = await fileToDataUri(file);
+                          field.onChange(dataUri); // Update form with data URI
+                          setImagePreview(dataUri);
                         }
                       }}
                     />
                   </FormControl>
-                  <FormDescription>PNG, JPG, WEBP. Max 5MB. {isEditing && "Leave blank to keep current image."}</FormDescription>
+                  <FormDescription>PNG, JPG, WEBP. Max 1MB.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

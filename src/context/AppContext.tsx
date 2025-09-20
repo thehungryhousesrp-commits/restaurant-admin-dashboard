@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo } from '@/lib/types';
-import { db, storage, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { 
   collection, 
   onSnapshot, 
@@ -20,7 +20,6 @@ import {
   signOut,
   type User
 } from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface AppContextType {
@@ -31,8 +30,8 @@ interface AppContextType {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList }) => Promise<void>;
-  updateMenuItem: (id: string, updates: Partial<MenuItem> & { image?: FileList }) => Promise<void>;
+  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { imageUrl: string }) => Promise<void>;
+  updateMenuItem: (id: string, updates: Partial<MenuItem> & { imageUrl?: string }) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
@@ -147,23 +146,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     initializeData();
   }, []);
 
-  const uploadImage = async (imageFile: File): Promise<string> => {
-    const storageRef = ref(storage, `menu-images/${Date.now()}-${imageFile.name}`);
-    const snapshot = await uploadBytes(storageRef, imageFile);
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    return downloadURL;
-  }
-
-  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList }) => {
+  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'> & { imageUrl: string }) => {
     try {
-      const imageUrl = await uploadImage(item.image[0]);
       const newItemData = {
         ...item,
-        imageUrl: imageUrl,
         imageHint: 'custom item'
       };
-      // @ts-ignore
-      delete newItemData.image;
       await addDoc(collection(db, 'menu-items'), newItemData);
     } catch (e) {
       console.error("Error adding document: ", e);
@@ -172,16 +160,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateMenuItem = async (id: string, updates: Partial<MenuItem> & { image?: FileList }) => {
+  const updateMenuItem = async (id: string, updates: Partial<MenuItem> & { imageUrl?: string }) => {
      try {
       const itemDoc = doc(db, 'menu-items', id);
-      const { image, ...rest } = updates;
-      let newImageProps = {};
-      if (image && image.length > 0) {
-        const newImageUrl = await uploadImage(image[0]);
-        newImageProps = { imageUrl: newImageUrl, imageHint: 'custom item' };
+      let updateData: Partial<MenuItem> & { imageUrl?: string; imageHint?: string } = { ...updates };
+      
+      if (updates.imageUrl) {
+        updateData.imageHint = 'custom item';
       }
-      await updateDoc(itemDoc, { ...rest, ...newImageProps });
+
+      await updateDoc(itemDoc, updateData);
     } catch (e) {
       console.error("Error updating document: ", e);
       setError("Failed to update menu item.");
