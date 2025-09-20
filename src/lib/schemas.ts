@@ -9,7 +9,7 @@ export const menuItemSchema = z.object({
   isVeg: z.boolean(),
   isSpicy: z.boolean(),
   isChefsSpecial: z.boolean(),
-  image: z.any().refine(file => file?.length == 1, 'Image is required.'),
+  image: z.any().optional(),
 });
 
 export const categorySchema = z.object({

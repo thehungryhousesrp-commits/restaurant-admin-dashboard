@@ -24,6 +24,8 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { Wand2, Loader2 } from "lucide-react";
+import { generateDescription } from "@/ai/flows/generateDescription";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
 
@@ -36,6 +38,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const { categories, addMenuItem, updateMenuItem } = useAppContext();
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(itemToEdit?.imageUrl || null);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const isEditing = !!itemToEdit;
 
@@ -54,6 +57,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     },
   });
 
+  const itemName = form.watch("name");
   const imageRef = form.register("image");
 
   useEffect(() => {
@@ -73,15 +77,52 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
   }, [itemToEdit, form]);
 
+  const handleGenerateDescription = async () => {
+    const currentName = form.getValues("name");
+    if (!currentName) {
+      toast({
+        title: "Item Name Required",
+        description: "Please enter an item name before generating a description.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const result = await generateDescription({ itemName: currentName });
+      if (result.description) {
+        form.setValue("description", result.description, { shouldValidate: true });
+        toast({ title: "Description Generated!", description: "The AI has written a new description." });
+      }
+    } catch (error) {
+      console.error("Error generating description:", error);
+      toast({ title: "AI Error", description: "Could not generate description.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+
   const onSubmit = (data: MenuFormValues) => {
     try {
+      const submissionData = { ...data };
+      
+      // If there's no new image file and we are editing, we don't want to send the `image` field.
+      // The schema now allows it to be optional.
+      if (isEditing && !submissionData.image) {
+        // @ts-ignore
+        delete submissionData.image;
+      }
+      
       if (isEditing && itemToEdit) {
-        // @ts-ignore - a bit of a hack to make the types work
-        updateMenuItem(itemToEdit.id, data);
+        updateMenuItem(itemToEdit.id, submissionData);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        // @ts-ignore
-        addMenuItem(data);
+        if (!submissionData.image || submissionData.image.length === 0) {
+           toast({ title: "Image required", description: "Please select an image for the new item.", variant: "destructive"});
+           return;
+        }
+        addMenuItem(submissionData as Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList });
         toast({ title: "Success", description: "New menu item added." });
       }
       onFormSubmit();
@@ -112,7 +153,23 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                   <div className="flex items-center justify-between">
+                    <FormLabel>Description</FormLabel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateDescription}
+                      disabled={isGenerating || !itemName}
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Wand2 className="mr-2 h-4 w-4" />
+                      )}
+                      Generate with AI
+                    </Button>
+                  </div>
                   <FormControl><Textarea placeholder="Classic Italian pizza..." {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -204,7 +261,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                       }}
                     />
                   </FormControl>
-                  <FormDescription>PNG, JPG, WEBP. Max 5MB.</FormDescription>
+                  <FormDescription>PNG, JPG, WEBP. Max 5MB. {isEditing && "Leave blank to keep current image."}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
