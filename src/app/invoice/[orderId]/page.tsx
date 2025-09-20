@@ -22,6 +22,12 @@ export default function InvoicePage({ params }: InvoicePageProps) {
 
   useEffect(() => {
     const fetchOrder = async () => {
+      if (!params.orderId) {
+          setError("No Order ID provided.");
+          setLoading(false);
+          return;
+      }
+      
       try {
         setLoading(true);
         const docRef = doc(db, 'orders', params.orderId);
@@ -33,8 +39,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
           setOrder({ id: docSnap.id, ...docSnap.data() } as Order);
         }
       } catch (err) {
-        console.error(err);
-        if (err instanceof Error && err.message.toLowerCase().includes('permission')) {
+        console.error("Error fetching invoice:", err);
+        if (err instanceof Error && (err.message.toLowerCase().includes('permission') || err.message.toLowerCase().includes('missing or insufficient permissions'))) {
              setError('You do not have permission to view this invoice. Please check your Firestore security rules.');
         } else {
              setError('Failed to load invoice data.');
