@@ -2,51 +2,107 @@
   "placeholderImages": [
     {
       "id": "pizza-margherita",
+      "name": "Margherita Pizza",
       "description": "Classic Margherita Pizza with fresh mozzarella, tomatoes, and basil.",
+      "price": 450,
+      "category": "Pizza",
       "imageUrl": "https://picsum.photos/seed/1/600/400",
-      "imageHint": "pizza margherita"
+      "imageHint": "pizza margherita",
+      "isAvailable": true,
+      "isVeg": true,
+      "isSpicy": false,
+      "isChefsSpecial": false
     },
     {
       "id": "pasta-carbonara",
+      "name": "Pasta Carbonara",
       "description": "Creamy Carbonara pasta with pancetta and a rich egg sauce.",
+      "price": 550,
+      "category": "Pasta",
       "imageUrl": "https://picsum.photos/seed/2/600/400",
-      "imageHint": "pasta carbonara"
+      "imageHint": "pasta carbonara",
+      "isAvailable": true,
+      "isVeg": false,
+      "isSpicy": false,
+      "isChefsSpecial": true
     },
     {
       "id": "spicy-arrabbiata",
+      "name": "Spicy Arrabbiata",
       "description": "Penne pasta in a spicy tomato sauce with garlic and red chili peppers.",
+      "price": 520,
+      "category": "Pasta",
       "imageUrl": "https://picsum.photos/seed/3/600/400",
-      "imageHint": "pasta arrabbiata"
+      "imageHint": "pasta arrabbiata",
+      "isAvailable": true,
+      "isVeg": true,
+      "isSpicy": true,
+      "isChefsSpecial": false
     },
     {
       "id": "veggie-delight-pizza",
+      "name": "Veggie Delight Pizza",
       "description": "A delicious pizza loaded with fresh vegetables like bell peppers, olives, and onions.",
+      "price": 500,
+      "category": "Pizza",
       "imageUrl": "https://picsum.photos/seed/4/600/400",
-      "imageHint": "veggie pizza"
+      "imageHint": "veggie pizza",
+      "isAvailable": true,
+      "isVeg": true,
+      "isSpicy": false,
+      "isChefsSpecial": false
     },
     {
       "id": "chefs-special-risotto",
+      "name": "Mushroom Risotto",
       "description": "Chef's special mushroom risotto, cooked to perfection with parmesan cheese.",
+      "price": 600,
+      "category": "Pasta",
       "imageUrl": "https://picsum.photos/seed/5/600/400",
-      "imageHint": "mushroom risotto"
+      "imageHint": "mushroom risotto",
+      "isAvailable": false,
+      "isVeg": true,
+      "isSpicy": false,
+      "isChefsSpecial": true
     },
     {
       "id": "classic-burger",
+      "name": "Classic Burger",
       "description": "Juicy beef patty with lettuce, tomato, and our special sauce.",
+      "price": 350,
+      "category": "Burgers",
       "imageUrl": "https://picsum.photos/seed/6/600/400",
-      "imageHint": "beef burger"
+      "imageHint": "beef burger",
+      "isAvailable": true,
+      "isVeg": false,
+      "isSpicy": false,
+      "isChefsSpecial": false
     },
     {
       "id": "caesar-salad",
+      "name": "Caesar Salad",
       "description": "Crisp romaine lettuce with Caesar dressing, croutons, and parmesan.",
+      "price": 300,
+      "category": "Salads",
       "imageUrl": "https://picsum.photos/seed/7/600/400",
-      "imageHint": "caesar salad"
+      "imageHint": "caesar salad",
+      "isAvailable": true,
+      "isVeg": true,
+      "isSpicy": false,
+      "isChefsSpecial": false
     },
     {
       "id": "chocolate-lava-cake",
+      "name": "Chocolate Lava Cake",
       "description": "Warm chocolate cake with a gooey molten center, served with vanilla ice cream.",
+      "price": 250,
+      "category": "Desserts",
       "imageUrl": "https://picsum.photos/seed/8/600/400",
-      "imageHint": "chocolate cake"
+      "imageHint": "chocolate cake",
+      "isAvailable": true,
+      "isVeg": true,
+      "isSpicy": false,
+      "isChefsSpecial": false
     }
   ]
 }

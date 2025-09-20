@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo } from '@/lib/types';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { 
   collection, 
   onSnapshot, 
@@ -14,6 +14,7 @@ import {
   getDocs,
   writeBatch
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface AppContextType {
@@ -35,51 +36,43 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Helper to seed initial data if collections are empty
 async function seedInitialData() {
-  const menuItemsRef = collection(db, 'menu-items');
-  const categoriesRef = collection(db, 'categories');
+    const categoriesRef = collection(db, 'categories');
+    const categoriesSnap = await getDocs(query(categoriesRef));
+    const seededCategoryDocs = [];
 
-  const menuItemsSnap = await getDocs(query(menuItemsRef));
-  const categoriesSnap = await getDocs(query(categoriesRef));
+    if (categoriesSnap.empty) {
+        console.log('Seeding categories...');
+        const initialCategories: Omit<Category, 'id'>[] = [
+            { name: 'Pizza' }, { name: 'Pasta' }, { name: 'Salads' },
+            { name: 'Burgers' }, { name: 'Desserts' },
+        ];
+        for (const cat of initialCategories) {
+            const docRef = doc(collection(db, 'categories'));
+            await addDoc(categoriesRef, cat);
+            seededCategoryDocs.push({ id: docRef.id, ...cat });
+        }
+    } else {
+        categoriesSnap.forEach(doc => seededCategoryDocs.push({ id: doc.id, ...doc.data() as Omit<Category, 'id'> }));
+    }
 
-  const batch = writeBatch(db);
+    const menuItemsRef = collection(db, 'menu-items');
+    const menuItemsSnap = await getDocs(query(menuItemsRef));
 
-  if (categoriesSnap.empty) {
-    console.log('Seeding categories...');
-    const initialCategories: Omit<Category, 'id'>[] = [
-      { name: 'Pizza' }, { name: 'Pasta' }, { name: 'Salads' },
-      { name: 'Burgers' }, { name: 'Desserts' },
-    ];
-    initialCategories.forEach(cat => {
-      const docRef = doc(collection(db, 'categories'));
-      batch.set(docRef, cat);
-    });
-  }
+    if (menuItemsSnap.empty) {
+        console.log('Seeding menu items...');
+        const batch = writeBatch(db);
+        PlaceHolderImages.forEach(item => {
+            const { id, ...rest } = item;
+            const docRef = doc(menuItemsRef);
+            
+            // Find the corresponding category ID
+            const category = seededCategoryDocs.find(c => c.name.toLowerCase() === rest.category.toLowerCase());
 
-  if (menuItemsSnap.empty) {
-    console.log('Seeding menu items...');
-    PlaceHolderImages.forEach(item => {
-      const { id, ...rest } = item; // placeholder ID is not needed
-      const docRef = doc(collection(db, 'menu-items'));
-      const categoryName = rest.category;
-      
-      // We need to find the category ID from the initial data.
-      // This is a bit of a hack for seeding, in a real app you'd have better relations.
-      const categoryMap: { [key: string]: string } = {
-          'pizza': 'Pizza',
-          'pasta': 'Pasta',
-          'salads': 'Salads',
-          'burgers': 'Burgers',
-          'desserts': 'Desserts',
-      };
-      
-      const categoryId = Object.keys(categoryMap).find(key => categoryMap[key].toLowerCase() === categoryName.toLowerCase()) || 'pizza';
-
-      batch.set(docRef, { ...rest, category: categoryId });
-    });
-  }
-  
-  await batch.commit();
-  console.log('Seeding complete.');
+            batch.set(docRef, { ...rest, category: category ? category.id : '' });
+        });
+        await batch.commit();
+        console.log('Seeding menu items complete.');
+    }
 }
 
 
@@ -93,58 +86,72 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
-      await seedInitialData();
+      setError(null);
+      try {
+        await seedInitialData();
 
-      const unsubscribeMenuItems = onSnapshot(collection(db, "menu-items"), (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
-        setMenuItems(items);
-        setLoading(false);
-      }, (err) => {
-        console.error("Error fetching menu items: ", err);
-        setError("Failed to load menu items.");
-        setLoading(false);
-      });
+        const unsubscribeCategories = onSnapshot(collection(db, "categories"), (snapshot) => {
+          const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+          setCategories(cats);
+        }, (err) => {
+          console.error("Error fetching categories: ", err);
+          setError("Failed to load categories.");
+        });
 
-      const unsubscribeCategories = onSnapshot(collection(db, "categories"), (snapshot) => {
-        const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+        const unsubscribeMenuItems = onSnapshot(collection(db, "menu-items"), (snapshot) => {
+          const items = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Find category name from category ID
+            const categoryName = categories.find(c => c.id === data.category)?.name || 'Uncategorized';
+            return { id: doc.id, ...data, category: categoryName } as MenuItem;
+          });
+          setMenuItems(items);
+          setLoading(false);
+        }, (err) => {
+          console.error("Error fetching menu items: ", err);
+          setError("Failed to load menu items.");
+          setLoading(false);
+        });
         
-        // This is a temp fix to map category ID to name for display in menu list
-        setMenuItems(prevItems => prevItems.map(item => {
-            const category = cats.find(c => c.id === item.category);
-            return {...item, category: category ? category.name : 'Uncategorized'}
-        }));
+        // Note: Orders are still in-memory. They can be moved to Firestore next.
+        
+        return () => {
+          unsubscribeMenuItems();
+          unsubscribeCategories();
+        };
 
-        setCategories(cats);
-      }, (err) => {
-        console.error("Error fetching categories: ", err);
-        setError("Failed to load categories.");
-      });
-      
-      // Note: Orders are still in-memory. They can be moved to Firestore next.
-      
-      return () => {
-        unsubscribeMenuItems();
-        unsubscribeCategories();
-      };
+      } catch (err) {
+        console.error("Initialization error: ", err);
+        setError("Failed to initialize app data.");
+        setLoading(false);
+      }
     }
 
     initializeData();
-  }, []);
+  }, [categories]);
+
+  const uploadImage = async (imageFile: File): Promise<string> => {
+    const storageRef = ref(storage, `menu-images/${Date.now()}-${imageFile.name}`);
+    const snapshot = await uploadBytes(storageRef, imageFile);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  }
 
   const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList }) => {
-    // Note: Image upload to Firebase Storage is not implemented yet.
-    // We'll use a local blob URL for now.
     try {
-      const imageUrl = URL.createObjectURL(item.image[0]);
+      const imageUrl = await uploadImage(item.image[0]);
       const newItemData = {
         ...item,
-        imageUrl: imageUrl, // Replace with storage URL later
+        imageUrl: imageUrl,
         imageHint: 'custom item'
       };
+      // @ts-ignore
+      delete newItemData.image;
       await addDoc(collection(db, 'menu-items'), newItemData);
     } catch (e) {
       console.error("Error adding document: ", e);
       setError("Failed to add menu item.");
+      throw e;
     }
   };
 
@@ -154,13 +161,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const { image, ...rest } = updates;
       let newImageProps = {};
       if (image && image.length > 0) {
-        // Image upload logic to be added here. For now, use blob URL.
-        newImageProps = { imageUrl: URL.createObjectURL(image[0]), imageHint: 'custom item' };
+        const newImageUrl = await uploadImage(image[0]);
+        newImageProps = { imageUrl: newImageUrl, imageHint: 'custom item' };
       }
       await updateDoc(itemDoc, { ...rest, ...newImageProps });
     } catch (e) {
       console.error("Error updating document: ", e);
       setError("Failed to update menu item.");
+      throw e;
     }
   };
 
@@ -183,6 +191,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteCategory = async (id: string) => {
+    // Optional: Check if any menu items are using this category before deleting.
     try {
       await deleteDoc(doc(db, 'categories', id));
     } catch(e) {
@@ -221,7 +230,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     updateMenuItem,
     deleteMenuItem,
     addCategory,
-    deleteCategory,
+deleteCategory,
     placeOrder,
     updateOrderStatus
   };
