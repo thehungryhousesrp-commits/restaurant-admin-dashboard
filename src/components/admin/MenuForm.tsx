@@ -24,9 +24,10 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, Loader2, Image as ImageIcon } from "lucide-react";
+import { Wand2, Loader2, Image as ImageIcon, Sparkles } from "lucide-react";
 import { generateDescription } from "@/ai/flows/generateDescription";
 import { generateImage } from "@/ai/flows/generateImage";
+import { suggestPrice } from "@/ai/flows/suggestPrice";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
@@ -50,6 +51,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(itemToEdit?.imageUrl || null);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
+  const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
   
   const isEditing = !!itemToEdit;
 
@@ -69,6 +71,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   });
 
   const itemName = form.watch("name");
+  const itemDescription = form.watch("description");
   const imageRef = form.register("image");
 
   useEffect(() => {
@@ -126,6 +129,32 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
   };
 
+  const handleSuggestPrice = async () => {
+    const currentName = form.getValues("name");
+    const currentDescription = form.getValues("description");
+    if (!currentName || !currentDescription) {
+      toast({
+        title: "Name and Description Required",
+        description: "Please enter item name and description before suggesting a price.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSuggestingPrice(true);
+    try {
+      const result = await suggestPrice({ itemName: currentName, description: currentDescription });
+      if (result.price) {
+        form.setValue("price", result.price, { shouldValidate: true });
+        toast({ title: "Price Suggested!", description: `The AI suggested a price of ₹${result.price}.` });
+      }
+    } catch (error) {
+      console.error("Error suggesting price:", error);
+      toast({ title: "AI Error", description: "Could not suggest a price.", variant: "destructive" });
+    } finally {
+      setIsSuggestingPrice(false);
+    }
+  };
+
   const handleGenerateImage = async () => {
     const currentName = form.getValues("name");
      if (!currentName) {
@@ -144,7 +173,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         setImagePreview(result.imageUrl);
         const imageFile = await dataUriToFile(result.imageUrl, `${currentName.replace(/\s+/g, '-')}.png`);
         
-        // Create a FileList and set it to the form
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(imageFile);
         form.setValue("image", dataTransfer.files, { shouldValidate: true });
@@ -167,7 +195,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       const isImageMissing = !submissionData.image || submissionData.image.length === 0;
 
       if (isEditing && itemToEdit) {
-        // If editing and no new image is provided, don't try to update the image.
+        // If editing and no new image is provided, keep the old one.
         if (isImageMissing) {
            // @ts-ignore
            delete submissionData.image;
@@ -189,6 +217,8 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       console.error(error);
     }
   };
+  
+  const isAiBusy = isGeneratingDesc || isGeneratingImg || isSuggestingPrice;
 
   return (
     <Form {...form}>
@@ -218,14 +248,14 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                       variant="outline"
                       size="sm"
                       onClick={handleGenerateDescription}
-                      disabled={isGeneratingDesc || !itemName}
+                      disabled={isAiBusy || !itemName}
                     >
                       {isGeneratingDesc ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Wand2 className="mr-2 h-4 w-4" />
                       )}
-                      Generate with AI
+                      Generate
                     </Button>
                   </div>
                   <FormControl><Textarea placeholder="Classic Italian pizza..." {...field} /></FormControl>
@@ -239,8 +269,26 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 name="price"
                 render={({ field }) => (
                   <FormItem className="flex-grow">
-                    <FormLabel>Price</FormLabel>
-                    <FormControl><Input type="number" step="0.01" placeholder="499.00" {...field} /></FormControl>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Price (INR)</FormLabel>
+                       <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSuggestPrice}
+                        disabled={isAiBusy || !itemName || !itemDescription}
+                      >
+                        {isSuggestingPrice ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-2 h-4 w-4" />
+                        )}
+                        Suggest
+                      </Button>
+                    </div>
+                    <FormControl>
+                        <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -312,14 +360,14 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                         variant="outline"
                         size="sm"
                         onClick={handleGenerateImage}
-                        disabled={isGeneratingImg || !itemName}
+                        disabled={isAiBusy || !itemName}
                       >
                         {isGeneratingImg ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
                           <ImageIcon className="mr-2 h-4 w-4" />
                         )}
-                        Generate Image
+                        Generate
                       </Button>
                    </div>
                   <FormControl>
@@ -356,7 +404,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
             )}
           </div>
         </div>
-        <Button type="submit" disabled={isGeneratingDesc || isGeneratingImg}>{isEditing ? 'Save Changes' : 'Add Item'}</Button>
+        <Button type="submit" disabled={isAiBusy}>{isEditing ? 'Save Changes' : 'Add Item'}</Button>
       </form>
     </Form>
   );
