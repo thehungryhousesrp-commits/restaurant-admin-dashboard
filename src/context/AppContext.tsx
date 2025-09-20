@@ -2,6 +2,18 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo } from '@/lib/types';
+import { db } from '@/lib/firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc,
+  query,
+  getDocs,
+  writeBatch
+} from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface AppContextType {
@@ -10,35 +22,66 @@ interface AppContextType {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList }) => void;
-  updateMenuItem: (id: string, updates: Partial<MenuItem> & { image?: FileList }) => void;
-  deleteMenuItem: (id: string) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  deleteCategory: (id: string) => void;
+  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList }) => Promise<void>;
+  updateMenuItem: (id: string, updates: Partial<MenuItem> & { image?: FileList }) => Promise<void>;
+  deleteMenuItem: (id: string) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
   placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Order;
   updateOrderStatus: (id: string, status: Order['status']) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const initialCategories: Category[] = [
-  { id: 'pizza', name: 'Pizza' },
-  { id: 'pasta', name: 'Pasta' },
-  { id: 'salads', name: 'Salads' },
-  { id: 'burgers', name: 'Burgers' },
-  { id: 'desserts', name: 'Desserts' },
-];
+// Helper to seed initial data if collections are empty
+async function seedInitialData() {
+  const menuItemsRef = collection(db, 'menu-items');
+  const categoriesRef = collection(db, 'categories');
 
-const initialMenuItems: MenuItem[] = [
-  { id: PlaceHolderImages[0].id, name: 'Margherita Pizza', description: PlaceHolderImages[0].description, price: 12.99, category: 'pizza', imageUrl: PlaceHolderImages[0].imageUrl, imageHint: PlaceHolderImages[0].imageHint, isAvailable: true, isVeg: true, isSpicy: false, isChefsSpecial: false },
-  { id: PlaceHolderImages[1].id, name: 'Pasta Carbonara', description: PlaceHolderImages[1].description, price: 15.50, category: 'pasta', imageUrl: PlaceHolderImages[1].imageUrl, imageHint: PlaceHolderImages[1].imageHint, isAvailable: true, isVeg: false, isSpicy: false, isChefsSpecial: false },
-  { id: PlaceHolderImages[2].id, name: 'Spicy Arrabbiata', description: PlaceHolderImages[2].description, price: 14.00, category: 'pasta', imageUrl: PlaceHolderImages[2].imageUrl, imageHint: PlaceHolderImages[2].imageHint, isAvailable: true, isVeg: true, isSpicy: true, isChefsSpecial: false },
-  { id: PlaceHolderImages[3].id, name: 'Veggie Delight Pizza', description: PlaceHolderImages[3].description, price: 14.50, category: 'pizza', imageUrl: PlaceHolderImages[3].imageUrl, imageHint: PlaceHolderImages[3].imageHint, isAvailable: true, isVeg: true, isSpicy: false, isChefsSpecial: false },
-  { id: PlaceHolderImages[4].id, name: "Chef's Risotto", description: PlaceHolderImages[4].description, price: 18.00, category: 'pasta', imageUrl: PlaceHolderImages[4].imageUrl, imageHint: PlaceHolderImages[4].imageHint, isAvailable: false, isVeg: false, isSpicy: false, isChefsSpecial: true },
-  { id: PlaceHolderImages[5].id, name: 'Classic Burger', description: PlaceHolderImages[5].description, price: 11.99, category: 'burgers', imageUrl: PlaceHolderImages[5].imageUrl, imageHint: PlaceHolderImages[5].imageHint, isAvailable: true, isVeg: false, isSpicy: false, isChefsSpecial: false },
-  { id: PlaceHolderImages[6].id, name: 'Caesar Salad', description: PlaceHolderImages[6].description, price: 9.50, category: 'salads', imageUrl: PlaceHolderImages[6].imageUrl, imageHint: PlaceHolderImages[6].imageHint, isAvailable: true, isVeg: true, isSpicy: false, isChefsSpecial: false },
-  { id: PlaceHolderImages[7].id, name: 'Chocolate Lava Cake', description: PlaceHolderImages[7].description, price: 8.00, category: 'desserts', imageUrl: PlaceHolderImages[7].imageUrl, imageHint: PlaceHolderImages[7].imageHint, isAvailable: true, isVeg: true, isSpicy: false, isChefsSpecial: false },
-];
+  const menuItemsSnap = await getDocs(query(menuItemsRef));
+  const categoriesSnap = await getDocs(query(categoriesRef));
+
+  const batch = writeBatch(db);
+
+  if (categoriesSnap.empty) {
+    console.log('Seeding categories...');
+    const initialCategories: Omit<Category, 'id'>[] = [
+      { name: 'Pizza' }, { name: 'Pasta' }, { name: 'Salads' },
+      { name: 'Burgers' }, { name: 'Desserts' },
+    ];
+    initialCategories.forEach(cat => {
+      const docRef = doc(collection(db, 'categories'));
+      batch.set(docRef, cat);
+    });
+  }
+
+  if (menuItemsSnap.empty) {
+    console.log('Seeding menu items...');
+    PlaceHolderImages.forEach(item => {
+      const { id, ...rest } = item; // placeholder ID is not needed
+      const docRef = doc(collection(db, 'menu-items'));
+      const categoryName = rest.category;
+      
+      // We need to find the category ID from the initial data.
+      // This is a bit of a hack for seeding, in a real app you'd have better relations.
+      const categoryMap: { [key: string]: string } = {
+          'pizza': 'Pizza',
+          'pasta': 'Pasta',
+          'salads': 'Salads',
+          'burgers': 'Burgers',
+          'desserts': 'Desserts',
+      };
+      
+      const categoryId = Object.keys(categoryMap).find(key => categoryMap[key].toLowerCase() === categoryName.toLowerCase()) || 'pizza';
+
+      batch.set(docRef, { ...rest, category: categoryId });
+    });
+  }
+  
+  await batch.commit();
+  console.log('Seeding complete.');
+}
+
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -48,49 +91,104 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate fetching data from Firestore
-    setTimeout(() => {
-      setMenuItems(initialMenuItems);
-      setCategories(initialCategories);
-      setLoading(false);
-    }, 1000);
+    const initializeData = async () => {
+      setLoading(true);
+      await seedInitialData();
+
+      const unsubscribeMenuItems = onSnapshot(collection(db, "menu-items"), (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+        setMenuItems(items);
+        setLoading(false);
+      }, (err) => {
+        console.error("Error fetching menu items: ", err);
+        setError("Failed to load menu items.");
+        setLoading(false);
+      });
+
+      const unsubscribeCategories = onSnapshot(collection(db, "categories"), (snapshot) => {
+        const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+        
+        // This is a temp fix to map category ID to name for display in menu list
+        setMenuItems(prevItems => prevItems.map(item => {
+            const category = cats.find(c => c.id === item.category);
+            return {...item, category: category ? category.name : 'Uncategorized'}
+        }));
+
+        setCategories(cats);
+      }, (err) => {
+        console.error("Error fetching categories: ", err);
+        setError("Failed to load categories.");
+      });
+      
+      // Note: Orders are still in-memory. They can be moved to Firestore next.
+      
+      return () => {
+        unsubscribeMenuItems();
+        unsubscribeCategories();
+      };
+    }
+
+    initializeData();
   }, []);
 
-  const addMenuItem = (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList }) => {
-    const newId = `new-item-${Date.now()}`;
-    const newItem: MenuItem = {
-      ...item,
-      id: newId,
-      imageUrl: URL.createObjectURL(item.image[0]),
-      imageHint: "custom item",
-    };
-    setMenuItems(prev => [newItem, ...prev]);
+  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageUrl' | 'imageHint'> & { image: FileList }) => {
+    // Note: Image upload to Firebase Storage is not implemented yet.
+    // We'll use a local blob URL for now.
+    try {
+      const imageUrl = URL.createObjectURL(item.image[0]);
+      const newItemData = {
+        ...item,
+        imageUrl: imageUrl, // Replace with storage URL later
+        imageHint: 'custom item'
+      };
+      await addDoc(collection(db, 'menu-items'), newItemData);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      setError("Failed to add menu item.");
+    }
   };
 
-  const updateMenuItem = (id: string, updates: Partial<MenuItem> & { image?: FileList }) => {
-    setMenuItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const { image, ...rest } = updates;
-        const newImageProps = image && image.length > 0
-          ? { imageUrl: URL.createObjectURL(image[0]), imageHint: 'custom item' }
-          : {};
-        return { ...item, ...rest, ...newImageProps };
+  const updateMenuItem = async (id: string, updates: Partial<MenuItem> & { image?: FileList }) => {
+     try {
+      const itemDoc = doc(db, 'menu-items', id);
+      const { image, ...rest } = updates;
+      let newImageProps = {};
+      if (image && image.length > 0) {
+        // Image upload logic to be added here. For now, use blob URL.
+        newImageProps = { imageUrl: URL.createObjectURL(image[0]), imageHint: 'custom item' };
       }
-      return item;
-    }));
+      await updateDoc(itemDoc, { ...rest, ...newImageProps });
+    } catch (e) {
+      console.error("Error updating document: ", e);
+      setError("Failed to update menu item.");
+    }
   };
 
-  const deleteMenuItem = (id: string) => {
-    setMenuItems(prev => prev.filter(item => item.id !== id));
+  const deleteMenuItem = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, 'menu-items', id));
+    } catch(e) {
+        console.error("Error deleting document: ", e);
+        setError("Failed to delete menu item.");
+    }
   };
   
-  const addCategory = (category: Omit<Category, 'id'>) => {
-    const newCategory = { ...category, id: `cat-${Date.now()}` };
-    setCategories(prev => [...prev, newCategory]);
+  const addCategory = async (category: Omit<Category, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'categories'), category);
+    } catch (e) {
+      console.error("Error adding category: ", e);
+      setError("Failed to add category.");
+    }
   };
 
-  const deleteCategory = (id: string) => {
-    setCategories(prev => prev.filter(cat => cat.id !== id));
+  const deleteCategory = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'categories', id));
+    } catch(e) {
+        console.error("Error deleting category: ", e);
+        setError("Failed to delete category.");
+    }
   };
 
   const placeOrder = (items: OrderItem[], customerInfo: CustomerInfo): Order => {
@@ -104,11 +202,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       createdAt: Date.now(),
     };
     setOrders(prev => [newOrder, ...prev]);
+    // TODO: Save order to Firestore
     return newOrder;
   };
   
   const updateOrderStatus = (id: string, status: Order['status']) => {
     setOrders(prev => prev.map(order => order.id === id ? { ...order, status } : order));
+    // TODO: Update order status in Firestore
   };
 
   const value = {
