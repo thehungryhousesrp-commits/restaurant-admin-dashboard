@@ -66,16 +66,6 @@ export default function OrderEntryPoint() {
         {/* Left Column: Menu */}
         <div className="lg:w-2/3">
           <div className="space-y-6">
-             <div className="flex flex-col items-center mb-4 text-center">
-                <Image 
-                    src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png"
-                    alt="The Hungry House Hub Logo"
-                    width={150}
-                    height={150}
-                    priority
-                    className="mb-2"
-                />
-            </div>
             <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Menu</h1>
                 <p className="text-muted-foreground">Select items to build an order.</p>

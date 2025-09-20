@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { UtensilsCrossed } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Header() {
   const pathname = usePathname();
@@ -31,7 +31,12 @@ export default function Header() {
       <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
-            <UtensilsCrossed className="h-6 w-6 text-primary" />
+            <Image 
+                src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png" 
+                alt="The Hungry House Hub Logo"
+                width={40}
+                height={40}
+            />
             <span className="inline-block font-bold font-headline text-lg">The Hungry House Hub</span>
           </Link>
           <nav className="hidden md:flex gap-6">
