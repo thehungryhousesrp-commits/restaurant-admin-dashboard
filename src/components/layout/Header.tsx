@@ -23,7 +23,7 @@ export default function Header() {
   const handleLogout = async () => {
     await logout();
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    router.push('/login');
+    router.push('/');
   };
 
   return (
@@ -63,9 +63,11 @@ export default function Header() {
                 Logout
               </Button>
             ) : (
-              <Button asChild variant="default" size="sm">
-                <Link href="/login">Login</Link>
-              </Button>
+               pathname !== '/login' && (
+                <Button asChild variant="default" size="sm">
+                  <Link href="/login">Login</Link>
+                </Button>
+               )
             )}
           </nav>
         </div>
