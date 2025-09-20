@@ -66,13 +66,14 @@ export default function OrderEntryPoint() {
         {/* Left Column: Menu */}
         <div className="lg:w-2/3">
           <div className="space-y-6">
-             <div className="flex justify-center mb-4">
+             <div className="flex flex-col items-center mb-4 text-center">
                 <Image 
                     src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png"
-                    alt="Hungry House Hub Logo"
+                    alt="The Hungry House Hub Logo"
                     width={150}
                     height={150}
                     priority
+                    className="mb-2"
                 />
             </div>
             <div>
