@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getOrderById } from '@/lib/firebase-helpers';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import InvoiceDisplay from '@/components/order/InvoiceDisplay';
 import { notFound } from 'next/navigation';
 import { type Order } from '@/lib/types';
@@ -23,11 +24,13 @@ export default function InvoicePage({ params }: InvoicePageProps) {
     const fetchOrder = async () => {
       try {
         setLoading(true);
-        const fetchedOrder = await getOrderById(params.orderId);
-        if (!fetchedOrder) {
+        const docRef = doc(db, 'orders', params.orderId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
           setError('Order not found.');
         } else {
-          setOrder(fetchedOrder);
+          setOrder({ id: docSnap.id, ...docSnap.data() } as Order);
         }
       } catch (err) {
         console.error(err);
