@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { type MenuItem } from "@/lib/types";
+import { type MenuItem, type Order } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, HardDriveUpload, Check, X, ShieldAlert } from "lucide-react";
+import { PlusCircle, Edit, Trash2, HardDriveUpload, Eye } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -38,11 +38,13 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import MenuForm from "@/components/admin/MenuForm";
 import CategoryManager from "@/components/admin/CategoryManager";
+import { InvoicePreview } from "@/components/order/InvoicePreview";
 
 export default function AdminDashboard() {
-  const { menuItems, categories, deleteMenuItem, updateMenuItem } = useAppContext();
+  const { menuItems, categories, orders, deleteMenuItem, updateMenuItem } = useAppContext();
   const [isFormOpen, setFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<MenuItem | undefined>(undefined);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
   const handleEditClick = (item: MenuItem) => {
@@ -64,13 +66,15 @@ export default function AdminDashboard() {
     const category = categories.find(cat => cat.id === categoryId);
     return category ? category.name : 'Uncategorized';
   };
+  
+  const sortedOrders = [...orders].sort((a, b) => b.createdAt - a.createdAt);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your restaurant's menu and categories.</p>
+            <p className="text-muted-foreground">Manage your restaurant's menu, categories, and orders.</p>
         </div>
         <div className="flex gap-2">
             <Button variant="outline" disabled>
@@ -100,7 +104,7 @@ export default function AdminDashboard() {
         <TabsList>
           <TabsTrigger value="items">Menu Items</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
-           <TabsTrigger value="orders" disabled>Orders <Badge variant="outline" className="ml-2">Soon</Badge></TabsTrigger>
+           <TabsTrigger value="orders">Orders</TabsTrigger>
         </TabsList>
         <TabsContent value="items" className="mt-4">
           <div className="border rounded-lg">
@@ -173,6 +177,52 @@ export default function AdminDashboard() {
             <div className="max-w-md mx-auto">
                 <CategoryManager />
             </div>
+        </TabsContent>
+        <TabsContent value="orders" className="mt-4">
+            <div className="border rounded-lg">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Invoice #</TableHead>
+                            <TableHead>Customer</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-center">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {sortedOrders.map((order) => (
+                            <TableRow key={order.id}>
+                                <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
+                                <TableCell>{order.customerInfo.name}</TableCell>
+                                <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                                <TableCell>
+                                    <Badge>{order.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">₹{order.total.toFixed(2)}</TableCell>
+                                <TableCell className="text-center">
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm">
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                View
+                                            </Button>
+                                        </DialogTrigger>
+                                        <InvoicePreview order={order} />
+                                    </Dialog>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+             {sortedOrders.length === 0 && (
+                <div className="text-center py-16 text-muted-foreground">
+                    <p className="text-lg font-semibold">No Orders Found</p>
+                    <p>New orders will appear here once they are placed.</p>
+                </div>
+            )}
         </TabsContent>
       </Tabs>
     </div>
