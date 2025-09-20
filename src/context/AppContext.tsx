@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo } from '@/lib/types';
-import { db, auth, storage } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { 
   collection, 
   onSnapshot, 
@@ -13,14 +13,7 @@ import {
   query,
   getDocs,
   writeBatch,
-  setDoc
 } from 'firebase/firestore';
-import { 
-  ref, 
-  uploadString, 
-  getDownloadURL, 
-  deleteObject 
-} from "firebase/storage";
 import { 
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -37,8 +30,8 @@ interface AppContextType {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageHint'>) => Promise<void>;
-  updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => Promise<void>;
+  addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
+  updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, 'id'>>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
@@ -49,14 +42,6 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-// Helper to upload a dataURI image, returning the download URL
-async function uploadImage(dataUri: string, itemId: string): Promise<string> {
-    const storageRef = ref(storage, `menu-images/${itemId}-${Date.now()}`);
-    // 'data_url' is the format for Base64 data URI
-    const uploadResult = await uploadString(storageRef, dataUri, 'data_url');
-    return getDownloadURL(uploadResult.ref);
-}
 
 // Helper to seed initial data if collections are empty
 async function seedInitialData() {
@@ -161,18 +146,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     initializeData();
   }, []);
 
-  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'>) => {
+  const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
     try {
-        const docRef = doc(collection(db, 'menu-items'));
-        // The form gives us a data URI, so we upload it to get a public URL.
-        const newImageUrl = await uploadImage(item.imageUrl, docRef.id);
-
-        const newItemData = {
-            ...item,
-            imageUrl: newImageUrl, // Store the public URL
-            imageHint: 'custom item'
-        };
-        await setDoc(docRef, newItemData);
+        await addDoc(collection(db, 'menu-items'), item);
     } catch (e) {
       console.error("Error adding document: ", e);
       setError("Failed to add menu item.");
@@ -180,19 +156,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateMenuItem = async (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => {
+  const updateMenuItem = async (id: string, updates: Partial<Omit<MenuItem, 'id'>>) => {
      try {
       const itemDoc = doc(db, 'menu-items', id);
-      const finalUpdates: Partial<MenuItem> = { ...updates };
-      
-      // If a new image data URI is provided, upload it and update the URL
-      if (updates.imageUrl && updates.imageUrl.startsWith('data:image')) {
-        const newImageUrl = await uploadImage(updates.imageUrl, id);
-        finalUpdates.imageUrl = newImageUrl;
-        finalUpdates.imageHint = 'custom item'; // Mark as custom
-      }
-
-      await updateDoc(itemDoc, finalUpdates);
+      await updateDoc(itemDoc, updates);
     } catch (e) {
       console.error("Error updating document: ", e);
       setError("Failed to update menu item.");
@@ -202,17 +169,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteMenuItem = async (id: string) => {
     try {
-        // First, delete the image from storage if it's a firebase URL
-        const itemToDelete = menuItems.find(item => item.id === id);
-        if (itemToDelete && itemToDelete.imageUrl.includes('firebasestorage')) {
-            try {
-                const imageRef = ref(storage, itemToDelete.imageUrl);
-                await deleteObject(imageRef);
-            } catch (storageError) {
-                // Log error but don't block firestore deletion
-                console.error("Could not delete image from storage: ", storageError);
-            }
-        }
         await deleteDoc(doc(db, 'menu-items', id));
     } catch(e) {
         console.error("Error deleting document: ", e);

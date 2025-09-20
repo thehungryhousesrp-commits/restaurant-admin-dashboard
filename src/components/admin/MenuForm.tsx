@@ -27,23 +27,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Wand2, Loader2, Sparkles } from "lucide-react";
 import { generateDescription } from "@/ai/flows/generateDescription";
 import { suggestPrice } from "@/ai/flows/suggestPrice";
+import { findImageUrl } from "@/ai/flows/findImageUrl";
 import { Checkbox } from "@/components/ui/checkbox";
 
-type MenuFormValues = z.infer<typeof menuItemSchema>;
+// We are removing imageUrl from the form schema as it will be auto-generated.
+// We keep the rest of the schema for validation.
+const formSchema = menuItemSchema.omit({ imageUrl: true, imageHint: true });
+type MenuFormValues = z.infer<typeof formSchema>;
 
 interface MenuFormProps {
   itemToEdit?: MenuItem;
   onFormSubmit: () => void;
-}
-
-// Helper to convert file to Base64 data URI
-function fileToDataUri(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
@@ -52,11 +46,12 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(itemToEdit?.imageUrl || null);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
+  const [isAiBusy, setIsAiBusy] = useState(false);
   
   const isEditing = !!itemToEdit;
 
   const form = useForm<MenuFormValues>({
-    resolver: zodResolver(menuItemSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: itemToEdit?.name || "",
       description: itemToEdit?.description || "",
@@ -66,7 +61,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       isVeg: itemToEdit?.isVeg ?? false,
       isSpicy: itemToEdit?.isSpicy ?? false,
       isChefsSpecial: itemToEdit?.isChefsSpecial ?? false,
-      imageUrl: itemToEdit?.imageUrl || "",
     },
   });
 
@@ -84,7 +78,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         isVeg: itemToEdit.isVeg,
         isSpicy: itemToEdit.isSpicy,
         isChefsSpecial: itemToEdit.isChefsSpecial,
-        imageUrl: itemToEdit.imageUrl,
       });
       setImagePreview(itemToEdit.imageUrl);
     } else {
@@ -97,15 +90,17 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         isVeg: false,
         isSpicy: false,
         isChefsSpecial: false,
-        imageUrl: "",
       });
       setImagePreview(null);
     }
   }, [itemToEdit, form]);
 
+  useEffect(() => {
+    setIsAiBusy(isGeneratingDesc || isSuggestingPrice);
+  }, [isGeneratingDesc, isSuggestingPrice]);
+
   const handleGenerateDescription = async () => {
-    const currentName = form.getValues("name");
-    if (!currentName) {
+    if (!itemName) {
       toast({
         title: "Item Name Required",
         description: "Please enter an item name before generating a description.",
@@ -115,7 +110,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
     setIsGeneratingDesc(true);
     try {
-      const result = await generateDescription({ itemName: currentName });
+      const result = await generateDescription({ itemName });
       if (result.description) {
         form.setValue("description", result.description, { shouldValidate: true });
         toast({ title: "Description Generated!", description: "The AI has written a new description." });
@@ -129,9 +124,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   };
 
   const handleSuggestPrice = async () => {
-    const currentName = form.getValues("name");
-    const currentDescription = form.getValues("description");
-    if (!currentName || !currentDescription) {
+    if (!itemName || !itemDescription) {
       toast({
         title: "Name and Description Required",
         description: "Please enter item name and description before suggesting a price.",
@@ -141,7 +134,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
     setIsSuggestingPrice(true);
     try {
-      const result = await suggestPrice({ itemName: currentName, description: currentDescription });
+      const result = await suggestPrice({ itemName, description: itemDescription });
       if (result.price) {
         form.setValue("price", result.price, { shouldValidate: true });
         toast({ title: "Price Suggested!", description: `The AI suggested a price of ₹${result.price}.` });
@@ -155,33 +148,46 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   };
 
   const onSubmit = async (data: MenuFormValues) => {
+    setIsAiBusy(true);
     try {
-      if (!data.imageUrl) {
-         toast({ title: "Image required", description: "Please upload an image for the item.", variant: "destructive"});
-         return;
-      }
-
       if (isEditing && itemToEdit) {
+        // For editing, we only update the data. We don't change the image unless the user uploads a new one.
+        // Since we removed manual upload, we will just pass the existing data.
         await updateMenuItem(itemToEdit.id, data);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        await addMenuItem(data as Omit<MenuItem, 'id' | 'imageHint'>);
-        toast({ title: "Success", description: "New menu item added." });
+        // For a new item, we generate the image URL.
+        if (!data.name) {
+             toast({ title: "Item name is required", description: "Please provide a name to find an image.", variant: "destructive"});
+             setIsAiBusy(false);
+             return;
+        }
+
+        toast({ title: "Finding an image...", description: "The AI is searching for a suitable image for your item." });
+        const imageResult = await findImageUrl({ itemName: data.name });
+        
+        const newItemPayload = {
+            ...data,
+            imageUrl: imageResult.imageUrl,
+            imageHint: imageResult.imageHint,
+        }
+        
+        await addMenuItem(newItemPayload);
+        toast({ title: "Success", description: "New menu item added with an AI-found image." });
       }
       onFormSubmit();
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
       console.error(error);
+    } finally {
+        setIsAiBusy(false);
     }
   };
   
-  const isAiBusy = isGeneratingDesc || isSuggestingPrice;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-6">
+        <div className="space-y-6">
             <FormField
               control={form.control}
               name="name"
@@ -303,42 +309,16 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 )} />
               </div>
             </div>
-          </div>
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                   <div className="flex items-center justify-between">
-                     <FormLabel>Menu Image</FormLabel>
-                   </div>
-                  <FormControl>
-                    <Input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={async (e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          const file = e.target.files[0];
-                          const dataUri = await fileToDataUri(file);
-                          field.onChange(dataUri); // Update form with data URI
-                          setImagePreview(dataUri);
-                        }
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription>Upload a new image. PNG, JPG, WEBP. Max 1MB.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
+          
             { imagePreview && (
-              <div className="relative aspect-video w-full rounded-md overflow-hidden border">
-                <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+              <div>
+                <Label>Current Image</Label>
+                <div className="relative aspect-video w-full rounded-md overflow-hidden border mt-2">
+                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">A relevant image will be found automatically for new items. Existing images are not changed.</p>
               </div>
             )}
-          </div>
         </div>
         <Button type="submit" disabled={isAiBusy}>{isEditing ? 'Save Changes' : 'Add Item'}</Button>
       </form>

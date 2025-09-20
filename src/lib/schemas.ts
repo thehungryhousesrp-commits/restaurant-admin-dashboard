@@ -9,8 +9,8 @@ export const menuItemSchema = z.object({
   isVeg: z.boolean(),
   isSpicy: z.boolean(),
   isChefsSpecial: z.boolean(),
-  // The imageUrl will now be a URL from Firebase Storage, but the form will handle a data URI string initially.
-  imageUrl: z.string().min(1, "Image is required."),
+  imageUrl: z.string().url("Image must be a valid URL."),
+  imageHint: z.string(),
 });
 
 export const categorySchema = z.object({
