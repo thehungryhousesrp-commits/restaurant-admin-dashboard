@@ -112,4 +112,3 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
 
 InvoiceDisplay.displayName = 'InvoiceDisplay';
 export default InvoiceDisplay;
-    

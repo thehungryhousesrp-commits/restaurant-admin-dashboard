@@ -17,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import Image from "next/image";
 import Logo from "@/components/icons/Logo";
 
 interface InvoicePreviewProps {
@@ -195,7 +194,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       <DialogFooter className="p-4 border-t">
         <div className="w-full text-center">
             <h4 className="font-semibold font-headline text-base">Thank you for choosing us!</h4>
-            <p className="text-xs text-muted-foreground">Please Visit Again</p>
+            <p className="text-sm text-muted-foreground">Please Visit Again</p>
         </div>
       </DialogFooter>
     </DialogContent>

@@ -20,12 +20,12 @@ interface InvoicePageProps {
 }
 
 export default function InvoicePage({ params }: InvoicePageProps) {
+  const { orderId } = params; // Correctly destructure here
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
-  const { orderId } = params;
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -133,8 +133,4 @@ export default function InvoicePage({ params }: InvoicePageProps) {
                 Download PDF
             </Button>
         </div>
-        <InvoiceDisplay order={order} ref={invoiceRef} />
-      </div>
-    </div>
-  );
-}
+        <InvoiceDisplay order={order} ref
