@@ -52,7 +52,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // PUBLIC LISTENERS (MENU & CATEGORIES)
     const menuQuery = query(collection(db, "menu-items"));
     const categoryQuery = query(collection(db, "categories"));
 
@@ -75,14 +74,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error("Error fetching categories:", err);
     });
 
-    // AUTH & ADMIN-ONLY LISTENERS
     let ordersUnsubscribe: (() => void) | undefined;
 
     const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoadingAuth(false);
       
-      // If a user is logged in, start listening for orders.
       if (currentUser) {
         const ordersQuery = query(collection(db, "orders"));
         ordersUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
@@ -91,11 +88,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setOrders(ords);
         }, (err) => {
             console.error("Error fetching orders:", err);
-            // This error is expected for non-admin users, so we can clear orders and maybe show a limited view.
             setOrders([]);
         });
       } else {
-        // If user logs out, stop listening to orders and clear them.
         if (ordersUnsubscribe) {
           ordersUnsubscribe();
         }
@@ -103,7 +98,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Cleanup function
     return () => {
       authUnsubscribe();
       menuUnsubscribe();
@@ -241,11 +235,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  const login = async (email:string, pass: string) => {
+  const login = (email:string, pass: string) => {
       return signInWithEmailAndPassword(auth, email, pass);
   };
   
-  const logout = async () => {
+  const logout = () => {
       return signOut(auth);
   };
 
