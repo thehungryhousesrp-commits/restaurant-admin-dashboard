@@ -81,11 +81,12 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       <ScrollArea className="flex-1">
         <div ref={invoiceRef} className="p-6 bg-white">
           <div className="flex flex-col items-center gap-4 text-center mb-6">
-              <div className="relative h-20 w-20">
+              <div className="relative h-24 w-24">
                   <Image
                     src="/logo.jpg"
                     alt="The Hungry House Hub Logo"
                     fill
+                    sizes="100px"
                     style={{ objectFit: 'contain' }}
                   />
                 </div>

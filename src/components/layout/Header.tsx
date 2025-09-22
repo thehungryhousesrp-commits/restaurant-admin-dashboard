@@ -32,11 +32,12 @@ export default function Header() {
       <div className="container flex h-20 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="relative h-10 w-40">
+            <div className="relative h-16 w-40">
                 <Image
                     src="/logo.jpg" 
                     alt="The Hungry House Hub Logo"
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     style={{ objectFit: 'contain' }}
                     priority
                 />
