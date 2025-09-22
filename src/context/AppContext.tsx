@@ -11,9 +11,7 @@ import {
   deleteDoc, 
   doc,
   query,
-  getDoc,
   writeBatch,
-  setDoc,
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged,
@@ -21,7 +19,6 @@ import {
   signOut,
   type User
 } from "firebase/auth";
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface AppContextType {
   user: User | null;
@@ -245,14 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const login = async (email:string, pass: string) => {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      const user = userCredential.user;
-
-      if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, { email: user.email, role: 'admin' }, { merge: true });
-      }
-      return userCredential;
+      return signInWithEmailAndPassword(auth, email, pass);
   };
   
   const logout = async () => {
