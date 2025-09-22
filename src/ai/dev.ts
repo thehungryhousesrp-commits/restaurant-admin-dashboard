@@ -3,3 +3,4 @@
 import "./flows/generateDescription";
 import "./flows/suggestPrice";
 import "./flows/findImageUrl";
+import "./flows/generateBulkItems";

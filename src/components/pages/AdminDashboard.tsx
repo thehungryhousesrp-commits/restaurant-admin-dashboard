@@ -4,7 +4,7 @@ import { useState } from "react";
 import { type MenuItem, type Order } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Eye } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Eye, UploadCloud } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import MenuForm from "@/components/admin/MenuForm";
 import CategoryManager from "@/components/admin/CategoryManager";
 import { InvoicePreview } from "@/components/order/InvoicePreview";
+import BulkUploader from "@/components/admin/BulkUploader";
 
 export default function AdminDashboard() {
   const { menuItems, categories, orders, deleteMenuItem, updateMenuItem, deleteOrder } = useAppContext();
@@ -115,7 +116,11 @@ export default function AdminDashboard() {
         <TabsList>
           <TabsTrigger value="items">Menu Items</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
-           <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="bulk-upload">
+            <UploadCloud className="mr-2 h-4 w-4" />
+            Bulk AI Upload
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="items" className="mt-4">
           <div className="border rounded-lg">
@@ -252,6 +257,9 @@ export default function AdminDashboard() {
                     <p>New orders will appear here once they are placed.</p>
                 </div>
             )}
+        </TabsContent>
+        <TabsContent value="bulk-upload" className="mt-4">
+            <BulkUploader />
         </TabsContent>
       </Tabs>
     </div>
