@@ -1,34 +1,51 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Default deny all to prevent unsecured access, must be explicitly allowed.
+    // This rule is placed last to act as a catch-all.
+    // NOTE: Rules are not processed in order, but the most specific match wins.
+    // The /{document=**} is the least specific, so other matches will override it.
+
+    // Anyone can see the menu and categories
+    match /categories/{categoryId} {
+      allow read:  if true;
+      allow write: if isAdmin() || isStaff();
+    }
+
+    match /menu-items/{itemId} {
+      allow read:  if true;
+      allow write: if isAdmin() || isStaff();
+    }
+
+    // Orders can be created by anyone (e.g., from the public order form)
+    // Orders can be read by anyone with the link (get)
+    // Only staff/admin can see the full list of orders
+    // Only admins can modify or delete an order record
+    match /orders/{orderId} {
+      allow create, get:       if true;
+      allow list:              if isAdmin() || isStaff();
+      allow update, delete:    if isAdmin();
+    }
+
+    // Brand Asset can be read by anyone, but only changed by staff/admin.
+    match /'Brand Asset'/{assetId} {
+      allow read:  if true;
+      allow write: if isAdmin() || isStaff();
+    }
+
+    // A catch-all to ensure nothing is left open.
     match /{document=**} {
       allow read, write: if false;
     }
+  }
 
-    // MENU AND CATEGORIES: Admins (authenticated) can read/write.
-    // Public cannot access these directly.
-    match /menu-items/{itemId} {
-      allow read, write: if request.auth != null;
-    }
-    match /categories/{categoryId} {
-      allow read, write: if request.auth != null;
-    }
+  // Helper functions for role checks. Assumes you have a `role` claim in your custom tokens.
+  function isStaff() {
+    return request.auth != null && request.auth.token.role == 'staff';
+  }
 
-    // ORDERS: Anyone can read an order (for public invoice links), but only admins can create/update/delete.
-    match /orders/{orderId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // BRAND ASSET: Anyone can read the logo, but only admins can change it.
-    // The collection name must be in quotes because it contains a space.
-    match /'Brand Asset'/{assetId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
+  function isAdmin() {
+    return request.auth != null && request.auth.token.role == 'admin';
   }
 }
