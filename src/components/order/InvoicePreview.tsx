@@ -116,7 +116,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
                         <span className="text-muted-foreground">SGST @ 2.5%</span>
                         <span>₹{order.sgst.toFixed(2)}</span>
                     </div>
-                    {roundOff !== 0 && (
+                    {roundOff.toFixed(2) !== '0.00' && roundOff.toFixed(2) !== '-0.00' && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Round Off</span>
                         <span>{roundOff > 0 ? '+' : '-'}₹{Math.abs(roundOff).toFixed(2)}</span>
@@ -154,5 +154,3 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     </DialogContent>
   );
 }
-
-    
