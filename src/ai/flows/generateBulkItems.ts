@@ -75,14 +75,14 @@ const generateBulkItemsFlow = ai.defineFlow(
             // Pre-process the input to remove extra spaces.
             const cleanInput = input.itemInput.trim();
             if (!cleanInput) {
-                 return {} as GenerateBulkItemsOutput;
+                 return {} as GeneratedItem;
             }
             
             // If the line doesn't contain a price indicator, it's likely a heading.
             // A simple check for a number is a good heuristic.
             if (!/[-–]\s*₹?\s*\d/.test(cleanInput)) {
                 console.log(`Skipping heading: ${cleanInput}`);
-                return {} as GenerateBulkItemsOutput;
+                return {} as GeneratedItem;
             }
 
             const {output: aiOutput} = await prompt({...input, itemInput: cleanInput});
@@ -100,7 +100,7 @@ const generateBulkItemsFlow = ai.defineFlow(
             } else {
                 console.warn(`AI returned empty output for "${input.itemInput}". Skipping.`);
                 // Return an empty object that can be filtered out by the frontend.
-                return {} as GenerateBulkItemsOutput;
+                return {} as GeneratedItem;
             }
         } catch(e) {
             console.error(`Attempt ${i+1} failed for "${input.itemInput}":`, e);
@@ -110,6 +110,6 @@ const generateBulkItemsFlow = ai.defineFlow(
     // This prevents one failed item from stopping the entire batch.
     // The frontend will be responsible for notifying the user about the failure.
     console.error(`Failed to generate details for "${input.itemInput}" after multiple attempts. Skipping.`);
-    return {} as GenerateBulkItemsOutput;
+    return {} as GeneratedItem;
   }
 );

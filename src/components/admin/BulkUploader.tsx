@@ -147,7 +147,11 @@ export default function BulkUploader() {
     setIsSubmitting(true);
     try {
         // We need to omit the temporary 'id' field before sending to Firestore
-        const creationPromises = data.items.map(({ id, ...item }) => addMenuItem(item as Omit<MenuItem, 'id'>));
+        const creationPromises = data.items.map(item => {
+            const { id, ...itemToCreate } = item;
+            return addMenuItem(itemToCreate);
+        });
+
         await Promise.all(creationPromises);
 
         toast({ title: 'Upload Successful!', description: `${data.items.length} items have been added to the menu.` });
