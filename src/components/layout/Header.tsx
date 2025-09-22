@@ -34,7 +34,7 @@ export default function Header() {
           <Link href="/" className="flex items-center space-x-2">
              <div className="relative h-16 w-40">
                 <Image
-                    src="/Picsart_24-07-25_17-21-43-345.png" 
+                    src="/Picsart_25-07-02_21-51-50-642 (1).png"
                     alt="The Hungry House Hub Logo"
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

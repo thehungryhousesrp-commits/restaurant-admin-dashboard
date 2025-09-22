@@ -18,7 +18,7 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
             <div className="flex flex-col items-center gap-4 text-center mb-6">
                 <div className="relative h-24 w-48">
                   <Image
-                    src="/Picsart_24-07-25_17-21-43-345.png"
+                    src="/Picsart_25-07-02_21-51-50-642 (1).png"
                     alt="The Hungry House Hub Logo"
                     fill
                     style={{ objectFit: 'contain' }}
