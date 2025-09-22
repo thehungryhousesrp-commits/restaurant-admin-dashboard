@@ -114,6 +114,8 @@ export default function BulkUploader() {
                 // The AI returns a category NAME, we need to convert it to a category ID for the form.
                 const categoryId = getCategoryId(result.category);
                 generatedItems.push({ ...result, category: categoryId });
+            } else {
+                failedCount++;
             }
         } catch (err: any) {
             console.error(`Failed to process line "${line}":`, err);
@@ -178,9 +180,9 @@ Paneer Tikka – ₹280"
             value={rawInput}
             onChange={(e) => setRawInput(e.target.value)}
             rows={10}
-            disabled={isGenerating}
+            disabled={isGenerating || isSubmitting}
           />
-          <Button onClick={handleGenerate} disabled={isGenerating || !rawInput.trim()}>
+          <Button onClick={handleGenerate} disabled={isGenerating || isSubmitting || !rawInput.trim()}>
             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             {isGenerating ? 'Generating...' : 'Generate & Review'}
           </Button>
@@ -271,9 +273,9 @@ Paneer Tikka – ₹280"
                 </div>
             </CardContent>
             <CardFooter>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || isGenerating}>
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                    Upload All to Menu
+                    {isSubmitting ? 'Uploading...' : 'Upload All to Menu'}
                 </Button>
             </CardFooter>
           </form>
