@@ -33,7 +33,7 @@ const prompt = ai.definePrompt({
 
   The image should be suitable for a restaurant menu. It should be on a clean, simple background. The food should look delicious and be the main focus of the image.
 
-  Provide a direct image URL from a known free stock photo website like Pexels, Unsplash, or Pixabay.
+  Provide a direct image URL from a known free stock photo website like Pexels, Unsplash, or Pixabay. The URL must point directly to the image file (e.g., .jpg, .png).
 
   Also, provide a simple two-word "imageHint" based on the item name that can be used for accessibility and future searches.
 
@@ -53,16 +53,22 @@ const findImageUrlFlow = ai.defineFlow(
     console.log("Using placeholder image service for menu item:", input.itemName);
     const hint = input.itemName.toLowerCase().split(' ').slice(0, 2).join(' ');
 
-    // Using a consistent placeholder from a whitelisted domain.
-    // This example uses a known image. In a real scenario, you could have a list of placeholders.
+    // This is a simple map to provide consistent images for common items.
+    // In a real application, this could be expanded or replaced with a more dynamic solution.
     const placeholderImages: Record<string, string> = {
       'chicken biryani': 'https://i.ibb.co/FbNpyCkT/Ambur-Chicken-Biriyani.jpg',
       'pizza': 'https://i.ibb.co/P9rBxcf/margherita-pizza.jpg',
       'pasta': 'https://i.ibb.co/jZxBprT/pasta-carbonara.jpg',
-      'burger': 'https://i.ibb.co/Vvz8mPq/classic-burger.jpg'
+      'burger': 'https://i.ibb.co/Vvz8mPq/classic-burger.jpg',
+      'coffee': 'https://i.ibb.co/wYkWLzD/cold-coffee.jpg',
+      'naan': 'https://i.ibb.co/g6P8C5T/butter-naan.jpg',
+      'roti': 'https://i.ibb.co/mFxT3z1/tandoori-roti.jpg',
+      'paneer': 'https://i.ibb.co/Y2jY0g5/paneer-butter-masala.jpg',
+      'chicken tikka': 'https://i.ibb.co/N2d7sJ4/chicken-tikka.jpg',
+      'fish fingers': 'https://i.ibb.co/P9YqGkM/fish-fingers.jpg',
     }
 
-    let imageUrl = 'https://i.ibb.co/P9rBxcf/margherita-pizza.jpg'; // default
+    let imageUrl = `https://picsum.photos/seed/${input.itemName.replace(/\s/g, '-')}/600/400`; // default placeholder
     for (const key in placeholderImages) {
         if (input.itemName.toLowerCase().includes(key)) {
             imageUrl = placeholderImages[key];
@@ -81,7 +87,7 @@ const findImageUrlFlow = ai.defineFlow(
         try {
             const {output} = await prompt(input);
             // Basic validation to ensure we got a URL
-            if (output && output.imageUrl && output.imageUrl.startsWith('https')) {
+            if (output && output.imageUrl && output.imageUrl.startsWith('http')) {
                 return output;
             }
         } catch(e) {
