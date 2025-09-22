@@ -16,8 +16,8 @@ service cloud.firestore {
     }
 
     // Orders can be CREATED by anyone (staff).
-    // A single order can be VIEWED by anyone with the link (customer invoice).
-    // Only ADMINS can LIST all orders, UPDATE, or DELETE them.
+    // An individual invoice can be viewed by anyone with the link (get).
+    // Only logged-in admins can LIST all orders, update, or delete them.
     match /orders/{orderId} {
       allow create, get: if true;
       allow list, update, delete: if request.auth != null;
