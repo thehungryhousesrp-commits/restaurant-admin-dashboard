@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
 import { Share2, Copy, Download, Loader2 } from "lucide-react";
-import Image from "next/image";
+// Removed Next.js Image component
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
@@ -79,11 +79,13 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       <ScrollArea className="flex-1">
         <div ref={invoiceRef} className="p-6 bg-white">
           <div className="flex flex-col items-center gap-2 text-center mb-6">
-              <Image 
+              {/* Using standard img tag instead of Next/Image */}
+              <img 
                   src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png" 
                   alt="The Hungry House Hub Logo"
-                  width={60}
-                  height={60}
+                  width="60"
+                  height="60"
+                  style={{ width: '60px', height: '60px' }}
               />
               <div className="space-y-0.5">
                 <h3 className="font-headline text-2xl">The Hungry House Hub</h3>
@@ -137,31 +139,31 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
           <Separator className="my-4" />
           
           <div className="flex justify-end">
-              <div className="w-full max-w-[200px] space-y-1 text-sm">
+            <div className="w-full max-w-[200px] space-y-1 text-sm">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>₹{order.subtotal.toFixed(2)}</span>
+                </div>
                   <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>₹{order.subtotal.toFixed(2)}</span>
-                  </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">CGST @ 2.5%</span>
-                      <span>₹{order.cgst.toFixed(2)}</span>
-                  </div>
+                    <span className="text-muted-foreground">CGST @ 2.5%</span>
+                    <span>₹{order.cgst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">SGST @ 2.5%</span>
+                    <span>₹{order.sgst.toFixed(2)}</span>
+                </div>
+                {roundOff.toFixed(2) !== '0.00' && roundOff.toFixed(2) !== '-0.00' && (
                   <div className="flex justify-between">
-                      <span className="text-muted-foreground">SGST @ 2.5%</span>
-                      <span>₹{order.sgst.toFixed(2)}</span>
+                    <span className="text-muted-foreground">Round Off</span>
+                    <span>{roundOff > 0 ? '+' : '-'}₹{Math.abs(roundOff).toFixed(2)}</span>
                   </div>
-                  {roundOff.toFixed(2) !== '0.00' && roundOff.toFixed(2) !== '-0.00' && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Round Off</span>
-                      <span>{roundOff > 0 ? '+' : '-'}₹{Math.abs(roundOff).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <Separator className="my-1"/>
-                  <div className="flex justify-between font-bold text-base">
-                      <span>Total</span>
-                      <span>₹{order.total.toFixed(2)}</span>
-                  </div>
-              </div>
+                )}
+                <Separator className="my-1"/>
+                <div className="flex justify-between font-bold text-base">
+                    <span>Total</span>
+                    <span>₹{order.total.toFixed(2)}</span>
+                </div>
+            </div>
           </div>
         </div>
       </ScrollArea>
