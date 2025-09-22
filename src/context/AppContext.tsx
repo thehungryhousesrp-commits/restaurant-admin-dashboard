@@ -30,7 +30,6 @@ interface AppContextType {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  logoDataUri: string | null;
   addMenuItem: (item: Omit<MenuItem, 'id' | 'imageHint'>) => Promise<void>;
   updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
@@ -45,20 +44,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Helper function to clean up the logo data URI
-const cleanDataUri = (uri: string | null | undefined): string | null => {
-  if (!uri) return null;
-  // Look for the start of the data URI scheme
-  const startIndex = uri.indexOf('data:image');
-  if (startIndex !== -1) {
-    // Return the substring from 'data:image' to the end, removing any leading characters or quotes
-    return uri.substring(startIndex).replace(/'/g, '');
-  }
-  // If the scheme is not found, it might be a direct URL, so return it as is.
-  return uri;
-};
-
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -67,7 +52,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [logoDataUri, setLogoDataUri] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -79,10 +63,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
         try {
-            // Fallback to a local logo if not found in Firestore
-            setLogoDataUri('/logo.jpg');
-            
-
             const menuQuery = query(collection(db, "menu-items"));
             const categoryQuery = query(collection(db, "categories"));
             const ordersQuery = query(collection(db, "orders"));
@@ -255,7 +235,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     orders,
     loading,
     error,
-    logoDataUri,
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,

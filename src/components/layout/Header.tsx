@@ -8,7 +8,7 @@ import { useAppContext } from '@/context/AppContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import Logo from '@/components/icons/Logo';
+import Image from 'next/image';
 
 export default function Header() {
   const pathname = usePathname();
@@ -32,7 +32,7 @@ export default function Header() {
       <div className="container flex h-20 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
-            <Logo className="h-10 w-10" />
+            {/* You can place your logo here using the methods described */}
             <span className="inline-block font-bold font-headline text-lg">The Hungry House Hub</span>
           </Link>
           <nav className="hidden md:flex gap-6">
