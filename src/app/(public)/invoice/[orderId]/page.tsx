@@ -80,7 +80,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
 
       pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
       pdf.save(`invoice-${order.id.slice(-6).toUpperCase()}.pdf`);
-    } catch (error)      console.error("Error generating PDF:", error);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
       // You might want to show a toast message to the user here
     } finally {
       setIsDownloading(false);
