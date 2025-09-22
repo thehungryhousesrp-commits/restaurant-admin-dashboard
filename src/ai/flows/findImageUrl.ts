@@ -54,9 +54,9 @@ const findImageUrlFlow = ai.defineFlow(
     const hint = input.itemName.toLowerCase().split(' ').slice(0, 2).join(' ');
 
     // This is a simple map to provide consistent images for common items.
-    // In a real application, this could be expanded or replaced with a more dynamic solution.
+    // This is much more reliable than a random image generator.
     const placeholderImages: Record<string, string> = {
-      'chicken biryani': 'https://i.ibb.co/FbNpyCkT/Ambur-Chicken-Biriyani.jpg',
+      'biryani': 'https://i.ibb.co/FbNpyCkT/Ambur-Chicken-Biriyani.jpg',
       'pizza': 'https://i.ibb.co/P9rBxcf/margherita-pizza.jpg',
       'pasta': 'https://i.ibb.co/jZxBprT/pasta-carbonara.jpg',
       'burger': 'https://i.ibb.co/Vvz8mPq/classic-burger.jpg',
@@ -65,12 +65,29 @@ const findImageUrlFlow = ai.defineFlow(
       'roti': 'https://i.ibb.co/mFxT3z1/tandoori-roti.jpg',
       'paneer': 'https://i.ibb.co/Y2jY0g5/paneer-butter-masala.jpg',
       'chicken tikka': 'https://i.ibb.co/N2d7sJ4/chicken-tikka.jpg',
+      'chilli chicken': 'https://i.ibb.co/xJq3v42/chilli-chicken.jpg',
       'fish fingers': 'https://i.ibb.co/P9YqGkM/fish-fingers.jpg',
-    }
+      'kofta': 'https://i.ibb.co/Qv5fPz9/malai-kofta.jpg',
+      'dal makhani': 'https://i.ibb.co/wK4H4T5/dal-makhani.jpg',
+      'butter chicken': 'https://i.ibb.co/n7Z0M3m/butter-chicken.jpg',
+      'rogan josh': 'https://i.ibb.co/VDB2MTP/mutton-rogan-josh.jpg',
+      'egg curry': 'https://i.ibb.co/Kz2b6sV/egg-curry.jpg',
+      'fried rice': 'https://i.ibb.co/R4m2GjY/veg-fried-rice.jpg',
+      'gulab jamun': 'https://i.ibb.co/L8mD9Yf/gulab-jamun.jpg',
+      'brownie': 'https://i.ibb.co/mFkbtJp/brownie-ice-cream.jpg',
+      'rasmalai': 'https://i.ibb.co/b3F9gN6/rasmalai.jpg',
+      'soda': 'https://i.ibb.co/D88qf9R/fresh-lime-soda.jpg',
+      'mocktail': 'https://i.ibb.co/9vCVzY7/mocktail.jpg',
+      'soup': 'https://i.ibb.co/pwnLdZG/tomato-soup.jpg',
+      'spring roll': 'https://i.ibb.co/K2vSgqX/spring-rolls.jpg',
+      'chilli potato': 'https://i.ibb.co/w6gT1S6/chilli-potato.jpg',
+    };
 
-    let imageUrl = `https://picsum.photos/seed/${input.itemName.replace(/\s/g, '-')}/600/400`; // default placeholder
+    const itemNameLower = input.itemName.toLowerCase();
+    let imageUrl = `https://i.ibb.co/yYc7Pgm/generic-food-placeholder.jpg`; // A generic, but relevant, default placeholder
+
     for (const key in placeholderImages) {
-        if (input.itemName.toLowerCase().includes(key)) {
+        if (itemNameLower.includes(key)) {
             imageUrl = placeholderImages[key];
             break;
         }
@@ -80,26 +97,5 @@ const findImageUrlFlow = ai.defineFlow(
         imageUrl: imageUrl,
         imageHint: hint
     };
-    
-    /*
-    // A simple retry mechanism in case the model doesn't return a valid URL
-    for (let i = 0; i < 3; i++) {
-        try {
-            const {output} = await prompt(input);
-            // Basic validation to ensure we got a URL
-            if (output && output.imageUrl && output.imageUrl.startsWith('http')) {
-                return output;
-            }
-        } catch(e) {
-            console.error(`Attempt ${i+1} failed to find image URL:`, e);
-        }
-    }
-    // If all attempts fail, return a fallback placeholder
-    console.warn("Could not find an image URL after multiple attempts. Using a placeholder.");
-    return { 
-        imageUrl: `https://picsum.photos/seed/${input.itemName.replace(/\s/g, '-')}/600/400`,
-        imageHint: input.itemName.toLowerCase().split(' ').slice(0, 2).join(' ')
-    };
-    */
   }
 );

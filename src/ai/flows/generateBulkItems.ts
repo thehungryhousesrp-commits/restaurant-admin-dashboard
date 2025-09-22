@@ -98,13 +98,18 @@ const generateBulkItemsFlow = ai.defineFlow(
                     imageHint: imageResult.imageHint
                 };
             } else {
+                console.warn(`AI returned empty output for "${input.itemInput}". Skipping.`);
+                // Return an empty object that can be filtered out by the frontend.
                 return {} as GenerateBulkItemsOutput;
             }
         } catch(e) {
             console.error(`Attempt ${i+1} failed for "${input.itemInput}":`, e);
         }
     }
-    // If all attempts fail, throw an error to be caught by the frontend.
-    throw new Error(`Failed to generate details for "${input.itemInput}" after multiple attempts.`);
+    // If all attempts fail, DO NOT throw an error. Instead, return an empty object.
+    // This prevents one failed item from stopping the entire batch.
+    // The frontend will be responsible for notifying the user about the failure.
+    console.error(`Failed to generate details for "${input.itemInput}" after multiple attempts. Skipping.`);
+    return {} as GenerateBulkItemsOutput;
   }
 );
