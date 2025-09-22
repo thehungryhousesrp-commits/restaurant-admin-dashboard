@@ -19,7 +19,7 @@ const GeneratedItemSchema = menuItemSchema.extend({
 
 const GenerateBulkItemsInputSchema = z.object({
   itemInput: z.string().describe(
-    'A single line of text representing a menu item. It might just be a name like "Chicken Biryani", or a name with a price like "Chicken Biryani - 450" or "Fish Fingers – ₹380".'
+    'A single line of text representing a menu item or a category heading. It might be a name like "Chicken Biryani", a name with a price like "Chicken Biryani - 450", or a category heading like "Soups" or "Starters (Veg)".'
   ),
 });
 export type GenerateBulkItemsInput = z.infer<typeof GenerateBulkItemsInputSchema>;
@@ -43,15 +43,16 @@ const prompt = ai.definePrompt({
 
 The input is: {{{itemInput}}}
 
-Follow these steps:
-1.  **Parse Input**: The input might be just a name (e.g., "Margherita Pizza") or a name with a price (e.g., "Margherita Pizza - 499" or "Fish Fingers – ₹380"). Extract the name and the price if provided. Ignore any currency symbols like '₹', 'Rs.', etc.
-2.  **Generate Description**: Write a short, appealing, and delicious-sounding description for the menu item. Max 25 words.
-3.  **Suggest Price**: If a price was NOT provided in the input, suggest a competitive price in Indian Rupees (INR) based on the item, for a mid-range restaurant in Sreerampur, West Bengal. If a price WAS provided, use that exact price. The final price must be a number.
-4.  **Determine Category**: Based on the item name, determine the most logical category ID from this list: [starters, main-course, pizza, pasta, burgers, salads, desserts, beverages]. If it doesn't fit, default to 'main-course'. The category must be one of these exact IDs.
-5.  **Find Image URL**: Find a direct URL for a high-quality, professional, appetizing, copyright-free stock photo of the food item. The URL must start with "https://i.ibb.co/". A good service for this is ImgBB.
-6.  **Set Flags**: Determine if the item is 'isVeg', 'isSpicy', and 'isChefsSpecial' based on its name and common ingredients. 'isAvailable' should always be true by default.
+IMPORTANT: The input might be a category heading (e.g., "Soups", "Starters (Veg)", "Indian Curries (Non-Veg)"). If the input line does NOT contain a price (like '– ₹150'), it is a category heading. In that case, YOU MUST NOT generate an item. Instead, you must remember this category for the subsequent items that do have a price. For an item like "Tomato Soup – ₹150", you must use the last seen category heading ("Soups") as its category.
 
-Return a single, valid JSON object that conforms to the output schema.
+Follow these steps for lines that ARE menu items (i.e., they contain a price):
+1.  **Parse Input**: The input will be a name with a price (e.g., "Margherita Pizza - 499" or "Fish Fingers – ₹380"). Extract the name and the price. Ignore any currency symbols like '₹', 'Rs.', etc.
+2.  **Generate Description**: Write a short, appealing, and delicious-sounding description for the menu item. Max 25 words.
+3.  **Determine Category**: Use the category heading seen in previous lines. For example, if the last heading was "Starters (Veg)", use 'starters' as the category ID. If no category heading was seen, determine the most logical category ID from this list: [starters, main-course, pizza, pasta, burgers, salads, desserts, beverages]. If it doesn't fit, default to 'main-course'. The category must be one of these exact IDs.
+4.  **Find Image URL**: Find a direct URL for a high-quality, professional, appetizing, copyright-free stock photo of the food item. The URL must start with "https://i.ibb.co/". A good service for this is ImgBB.
+5.  **Set Flags**: Determine if the item is 'isVeg', 'isSpicy', and 'isChefsSpecial' based on its name and common ingredients. 'isAvailable' should always be true by default.
+
+If the input line is just a category heading (e.g., "Soups"), you must return an empty JSON object {} so it can be filtered out later. For valid menu items, return a single, valid JSON object that conforms to the output schema.
 `,
 });
 
@@ -65,13 +66,28 @@ const generateBulkItemsFlow = ai.defineFlow(
     // A simple retry mechanism
     for (let i = 0; i < 3; i++) {
         try {
+            // If the line doesn't contain a price indicator, it's likely a heading.
+            // We can skip calling the AI for it to save costs and avoid errors.
+            // A simple check for a number is a good heuristic.
+            if (!/[-–]\s*₹?\s*\d/.test(input.itemInput)) {
+                console.log(`Skipping heading: ${input.itemInput}`);
+                // Return a special value or an empty object that can be filtered out.
+                // Forcing a return that doesn't match the schema will cause an error,
+                // so we return a "valid" but empty-like object to be filtered.
+                // A better approach would be to pre-process the text, but this works within the current structure.
+                return {} as GenerateBulkItemsOutput;
+            }
+
             const {output} = await prompt(input);
-            if (output) {
+            if (output && output.name) { // Check if the output is a valid item
                 // Add a hint for the image based on the name
                 return {
                     ...output,
                     imageHint: output.name.toLowerCase().split(' ').slice(0, 2).join(' ')
                 };
+            } else {
+                 // Handle cases where the AI returns an empty object for headings
+                return {} as GenerateBulkItemsOutput;
             }
         } catch(e) {
             console.error(`Attempt ${i+1} failed for "${input.itemInput}":`, e);
