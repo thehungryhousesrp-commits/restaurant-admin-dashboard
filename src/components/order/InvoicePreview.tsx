@@ -49,7 +49,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
                 height={60}
             />
             <div className="space-y-0.5">
-              <DialogTitle className="font-headline text-2xl">The Hungry House</DialogTitle>
+              <DialogTitle className="font-headline text-2xl">The Hungry House Hub</DialogTitle>
               <p className="text-xs text-muted-foreground">
                 62/A Netaji Subhas Avenue, Serampore, Hooghly, 712201
               </p>
@@ -89,8 +89,8 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {order.items.map((item) => (
-                  <TableRow key={item.id} className="h-8">
+                {order.items.map((item, index) => (
+                  <TableRow key={index} className="h-8">
                     <TableCell className="font-medium py-1">{item.name}</TableCell>
                     <TableCell className="text-center py-1">{item.quantity}</TableCell>
                     <TableCell className="text-right py-1">₹{item.price.toFixed(2)}</TableCell>
