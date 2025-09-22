@@ -51,10 +51,28 @@ const findImageUrlFlow = ai.defineFlow(
     // For this app, we will use a placeholder service to avoid external dependencies and costs.
     // In a real app, you might use the prompt logic below.
     console.log("Using placeholder image service for menu item:", input.itemName);
-    const seed = input.itemName.replace(/\s+/g, '-').toLowerCase();
+    const hint = input.itemName.toLowerCase().split(' ').slice(0, 2).join(' ');
+
+    // Using a consistent placeholder from a whitelisted domain.
+    // This example uses a known image. In a real scenario, you could have a list of placeholders.
+    const placeholderImages: Record<string, string> = {
+      'chicken biryani': 'https://i.ibb.co/FbNpyCkT/Ambur-Chicken-Biriyani.jpg',
+      'pizza': 'https://i.ibb.co/P9rBxcf/margherita-pizza.jpg',
+      'pasta': 'https://i.ibb.co/jZxBprT/pasta-carbonara.jpg',
+      'burger': 'https://i.ibb.co/Vvz8mPq/classic-burger.jpg'
+    }
+
+    let imageUrl = 'https://i.ibb.co/P9rBxcf/margherita-pizza.jpg'; // default
+    for (const key in placeholderImages) {
+        if (input.itemName.toLowerCase().includes(key)) {
+            imageUrl = placeholderImages[key];
+            break;
+        }
+    }
+    
     return { 
-        imageUrl: `https://picsum.photos/seed/${seed}/600/400`,
-        imageHint: input.itemName.toLowerCase().split(' ').slice(0, 2).join(' ')
+        imageUrl: imageUrl,
+        imageHint: hint
     };
     
     /*
