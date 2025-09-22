@@ -22,6 +22,7 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                     alt="The Hungry House Hub Logo"
                     width="80"
                     height="80"
+                    style={{ objectFit: 'contain' }}
                 />
                 <div className="space-y-0.5">
                     <h1 className="font-headline text-3xl">The Hungry House Hub</h1>

@@ -85,8 +85,9 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
               <img 
                   src={logoDataUri} 
                   alt="The Hungry House Hub Logo"
-                  width="60"
-                  height="60"
+                  width="80"
+                  height="80"
+                  style={{ objectFit: 'contain' }}
               />
               <div className="space-y-0.5">
                 <h3 className="font-headline text-2xl">The Hungry House Hub</h3>
