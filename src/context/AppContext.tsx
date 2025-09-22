@@ -28,7 +28,7 @@ interface AppContextType {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  addMenuItem: (item: Omit<MenuItem, 'id' | 'imageHint'>) => Promise<void>;
+  addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   updateMenuItem: (id: string, updates: Partial<MenuItem>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
@@ -108,13 +108,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'>) => {
+  const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
     try {
-      const itemWithHint = {
-        ...item,
-        imageHint: item.name.toLowerCase().split(' ').slice(0, 2).join(' '),
-      };
-      await addDoc(collection(db, 'menu-items'), itemWithHint);
+      await addDoc(collection(db, 'menu-items'), item);
     } catch (e) {
       console.error("Error adding document: ", e);
       throw e;
