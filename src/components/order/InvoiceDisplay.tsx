@@ -15,21 +15,15 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
 
     return (
         <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
-            <div className="flex flex-col items-center gap-2 text-center mb-6">
-                {/* 
-                  To add your logo here, use one of the methods described.
-                  For example, using the /public folder:
-                  1. Place your logo, e.g., 'logo.png', in the `public` folder.
-                  2. Uncomment the <Image> component below.
-                
+            <div className="flex flex-col items-center gap-4 text-center mb-6">
+                <div className="relative h-20 w-20">
                   <Image
-                    src="/logo.png"
+                    src="/logo.jpg"
                     alt="The Hungry House Hub Logo"
-                    width={80}
-                    height={80}
+                    fill
                     style={{ objectFit: 'contain' }}
                   />
-                */}
+                </div>
                 <div className="space-y-0.5">
                     <h1 className="font-headline text-3xl">The Hungry House Hub</h1>
                     <p className="text-xs text-muted-foreground">

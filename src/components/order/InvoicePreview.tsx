@@ -80,21 +80,15 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       
       <ScrollArea className="flex-1">
         <div ref={invoiceRef} className="p-6 bg-white">
-          <div className="flex flex-col items-center gap-2 text-center mb-6">
-              {/* 
-                To add your logo here, use one of the methods described.
-                For example, using the /public folder:
-                1. Place your logo, e.g., 'logo.png', in the `public` folder.
-                2. Uncomment the <Image> component below.
-              
-                <Image
-                  src="/logo.png"
-                  alt="The Hungry House Hub Logo"
-                  width={80}
-                  height={80}
-                  style={{ objectFit: 'contain' }}
-                />
-              */}
+          <div className="flex flex-col items-center gap-4 text-center mb-6">
+              <div className="relative h-20 w-20">
+                  <Image
+                    src="/logo.jpg"
+                    alt="The Hungry House Hub Logo"
+                    fill
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
               <div className="space-y-0.5">
                 <h3 className="font-headline text-2xl">The Hungry House Hub</h3>
                 <p className="text-xs text-muted-foreground">
