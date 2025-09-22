@@ -13,6 +13,7 @@ import {
   query,
   getDoc,
   writeBatch,
+  setDoc,
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged,
@@ -240,7 +241,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const login = async (email:string, pass: string) => {
-      return signInWithEmailAndPassword(auth, email, pass);
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const user = userCredential.user;
+
+      // After successful login, set the user's role in Firestore.
+      // This is crucial for the security rules to work.
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, { email: user.email, role: 'admin' }, { merge: true });
+      }
+      return userCredential;
   };
   
   const logout = async () => {

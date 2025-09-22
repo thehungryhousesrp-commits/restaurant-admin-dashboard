@@ -2,50 +2,40 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // By default, deny all reads and writes
+
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Default deny all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // --- Authentication Rules ---
-    // Helper function to check if a user is an admin
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    
-    // Helper function to check if a user is staff (or admin)
-    function isStaff() {
-      return request.auth != null && (request.auth.token.role == 'staff' || isAdmin());
-    }
-
-    // --- Collection Rules ---
-
-    // Menu Items: Public can read, Admins can do anything
+    // Menu Items: Public can read, Admins can write
     match /menu-items/{itemId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
-    
-    // Categories: Public can read, Admins can do anything
+
+    // Categories: Public can read, Admins can write
     match /categories/{categoryId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    // Orders: Authenticated users can create. Admins can read and delete.
-    // The user who created the order can read their own invoice.
+    // Orders: Authenticated users can create, Admins can read/delete
     match /orders/{orderId} {
-      allow create: if request.auth != null; // Any signed-in user can place an order
-      allow read: if isAdmin() || request.auth.uid == resource.data.createdBy; // Admins or the creator can read
-      allow delete: if isAdmin();
+      allow create: if request.auth != null;
+      allow read, delete: if isAdmin();
+      // Allow admins to update status in the future
+      allow update: if isAdmin();
     }
     
-    // Admins collection: Only admins can read this collection
-    match /admins/{adminId} {
-      allow read: if isAdmin();
-      // Generally, writes to this collection should be done via a secure backend function
-      // or directly in the Firebase Console for security.
-      allow write: if false; 
+    // Users: Users can only see and edit their own role document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
