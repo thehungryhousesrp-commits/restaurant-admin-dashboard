@@ -15,19 +15,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Wand2, Loader2, UploadCloud, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateBulkItems } from '@/ai/flows/generateBulkItems';
+import { generateBulkItems, type GeneratedItem, GeneratedItemSchema } from '@/ai/flows/generateBulkItems';
 import { useAppContext } from '@/context/AppContext';
 import { menuItemSchema } from '@/lib/schemas';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { type MenuItem } from '@/lib/types';
-
-
-// Define the output for a single processed item, which now includes an optional imageHint
-export const GeneratedItemSchema = menuItemSchema.extend({
-    imageHint: z.string().optional(),
-});
-export type GeneratedItem = z.infer<typeof GeneratedItemSchema>;
+import { Progress } from '@/components/ui/progress';
 
 
 const bulkUploaderSchema = z.object({
@@ -43,6 +37,9 @@ export default function BulkUploader() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState('');
+
 
   const form = useForm<BulkUploaderFormValues>({
     resolver: zodResolver(bulkUploaderSchema),
@@ -57,7 +54,8 @@ export default function BulkUploader() {
   });
 
   const handleGenerate = async () => {
-    const lines = rawInput.split('\n').filter(line => line.trim() !== '');
+    // 1. Pre-processing Input
+    const lines = rawInput.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     if (lines.length === 0) {
       toast({ title: 'Input required', description: 'Please enter at least one item name.', variant: 'destructive' });
       return;
@@ -65,24 +63,60 @@ export default function BulkUploader() {
 
     setIsGenerating(true);
     setError(null);
-    form.reset({ items: [] }); // Clear previous results
+    form.reset({ items: [] });
+    setProgress(0);
+    setProgressText('');
 
-    try {
-      const promises = lines.map(line => generateBulkItems({ itemInput: line }));
-      const results = await Promise.all(promises);
-      
-      // Filter out any potential null/undefined results if the AI fails
-      const validItems = results.filter(item => item) as GeneratedItem[];
-      append(validItems);
+    let lastSeenCategory = '';
+    const generatedItems: GeneratedItem[] = [];
+    let failedCount = 0;
 
-      toast({ title: 'Generation Complete!', description: `Processed ${validItems.length} items. Please review before uploading.` });
-    } catch (err: any) {
-      console.error('Bulk generation error:', err);
-      setError('An error occurred during AI generation. Please check the console for details.');
-      toast({ title: 'AI Error', description: err.message || 'Could not generate items.', variant: 'destructive' });
-    } finally {
-      setIsGenerating(false);
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Update progress
+        const currentProgress = Math.round(((i + 1) / lines.length) * 100);
+        setProgress(currentProgress);
+        setProgressText(`Processing item ${i + 1} of ${lines.length}...`);
+
+        // Check if the line is a category heading
+        const isHeading = !/[-–]\s*₹?\s*\d/.test(line);
+
+        if (isHeading) {
+            lastSeenCategory = line;
+            continue; // Skip to the next line
+        }
+
+        try {
+            const result = await generateBulkItems({ 
+                itemInput: line,
+                lastSeenCategory: lastSeenCategory 
+            });
+
+            // The AI returns an empty object for headings or failures sometimes
+            if (result && result.name) {
+                generatedItems.push(result);
+            }
+        } catch (err: any) {
+            console.error(`Failed to process line "${line}":`, err);
+            failedCount++;
+        }
     }
+    
+    append(generatedItems);
+
+    if (failedCount > 0) {
+        setError(`${failedCount} items could not be processed. Please review them in the raw input and add them manually if needed.`);
+    }
+
+    toast({ 
+        title: 'Generation Complete!', 
+        description: `Successfully processed ${generatedItems.length} items. Please review before uploading.` 
+    });
+
+    setIsGenerating(false);
+    setProgress(0);
+    setProgressText('');
   };
 
   const onSubmit = async (data: BulkUploaderFormValues) => {
@@ -112,29 +146,35 @@ export default function BulkUploader() {
       <CardHeader>
         <CardTitle className="font-headline">Bulk AI Uploader</CardTitle>
         <CardDescription>
-          Enter a list of menu items (one per line). You can optionally add a price after a hyphen (e.g., "Latte - 150"). The AI will generate the rest.
+          Paste your full menu below, including category headings. The AI will process each item under its respective category.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid w-full gap-2">
           <Textarea
-            placeholder="Cold Coffee
-Chicken Tikka Pizza - 550
-Paneer Butter Masala
-Garlic Naan - 50"
+            placeholder="Soups
+Tomato Soup – ₹150
+Starters (Veg)
+Paneer Tikka – ₹280"
             value={rawInput}
             onChange={(e) => setRawInput(e.target.value)}
-            rows={6}
+            rows={10}
             disabled={isGenerating}
           />
           <Button onClick={handleGenerate} disabled={isGenerating || !rawInput.trim()}>
             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-            Generate & Review
+            {isGenerating ? 'Generating...' : 'Generate & Review'}
           </Button>
         </div>
+        {isGenerating && (
+            <div className="space-y-2">
+                <Progress value={progress} className="w-full" />
+                <p className="text-sm text-muted-foreground text-center">{progressText}</p>
+            </div>
+        )}
         {error && (
             <Alert variant="destructive">
-                <AlertTitle>Generation Failed</AlertTitle>
+                <AlertTitle>Generation Issue</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
             </Alert>
         )}

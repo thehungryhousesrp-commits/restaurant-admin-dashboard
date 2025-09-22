@@ -11,16 +11,20 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { menuItemSchema } from '@/lib/schemas';
 
-// Define the output for a single processed item
-const GeneratedItemSchema = menuItemSchema.extend({
-    // We expect the AI to return everything needed to create a MenuItem
+// Define the output for a single processed item, now including an optional imageHint
+// This is used internally and by the calling component.
+export const GeneratedItemSchema = menuItemSchema.extend({
     imageHint: z.string().optional(),
 });
+export type GeneratedItem = z.infer<typeof GeneratedItemSchema>;
+
 
 const GenerateBulkItemsInputSchema = z.object({
   itemInput: z.string().describe(
     'A single line of text representing a menu item or a category heading. It might be a name like "Chicken Biryani", a name with a price like "Chicken Biryani - 450", or a category heading like "Soups" or "Starters (Veg)".'
   ),
+  // We pass the last seen category as context to the AI
+  lastSeenCategory: z.string().optional().describe('The last category heading seen in the list. This provides context for the current item.'),
 });
 export type GenerateBulkItemsInput = z.infer<typeof GenerateBulkItemsInputSchema>;
 
@@ -42,13 +46,14 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert restaurant consultant AI. Your task is to take a single line of input for a menu item and generate a complete, structured JSON object for it.
 
 The input is: {{{itemInput}}}
+The category context from the previous line is: {{{lastSeenCategory}}}
 
-IMPORTANT: The input might be a category heading (e.g., "Soups", "Starters (Veg)", "Indian Curries (Non-Veg)"). If the input line does NOT contain a price (like '– ₹150'), it is a category heading. In that case, YOU MUST NOT generate an item. Instead, you must remember this category for the subsequent items that do have a price. For an item like "Tomato Soup – ₹150", you must use the last seen category heading ("Soups") as its category.
+IMPORTANT: The input might be a category heading (e.g., "Soups", "Starters (Veg)", "Indian Curries (Non-Veg)"). If the input line does NOT contain a price (like '– ₹150'), it is a category heading. In that case, YOU MUST NOT generate an item. Instead, you must return an empty JSON object {} so it can be filtered out later.
 
 Follow these steps for lines that ARE menu items (i.e., they contain a price):
 1.  **Parse Input**: The input will be a name with a price (e.g., "Margherita Pizza - 499" or "Fish Fingers – ₹380"). Extract the name and the price. Ignore any currency symbols like '₹', 'Rs.', etc.
 2.  **Generate Description**: Write a short, appealing, and delicious-sounding description for the menu item. Max 25 words.
-3.  **Determine Category**: Use the category heading seen in previous lines. For example, if the last heading was "Starters (Veg)", use 'starters' as the category ID. If no category heading was seen, determine the most logical category ID from this list: [starters, main-course, pizza, pasta, burgers, salads, desserts, beverages]. If it doesn't fit, default to 'main-course'. The category must be one of these exact IDs.
+3.  **Determine Category**: Use the '{{lastSeenCategory}}' as the primary context for the category. For example, if the last seen category was "Starters (Veg)", use 'starters' as the category ID. If '{{lastSeenCategory}}' is not available, determine the most logical category ID from this list: [starters, main-course, pizza, pasta, burgers, salads, desserts, beverages]. If it doesn't fit, default to 'main-course'. The category must be one of these exact IDs.
 4.  **Find Image URL**: Find a direct URL for a high-quality, professional, appetizing, copyright-free stock photo of the food item. The URL must start with "https://i.ibb.co/". A good service for this is ImgBB.
 5.  **Set Flags**: Determine if the item is 'isVeg', 'isSpicy', and 'isChefsSpecial' based on its name and common ingredients. 'isAvailable' should always be true by default.
 
