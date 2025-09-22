@@ -16,12 +16,10 @@ const GeneratedItemSchema = menuItemSchema.extend({
     // We expect the AI to return everything needed to create a MenuItem
     imageHint: z.string().optional(),
 });
-export type GeneratedItem = z.infer<typeof GeneratedItemSchema>;
-
 
 const GenerateBulkItemsInputSchema = z.object({
   itemInput: z.string().describe(
-    'A single line of text representing a menu item. It might just be a name like "Chicken Biryani", or a name with a price like "Chicken Biryani - 450".'
+    'A single line of text representing a menu item. It might just be a name like "Chicken Biryani", or a name with a price like "Chicken Biryani - 450" or "Fish Fingers – ₹380".'
   ),
 });
 export type GenerateBulkItemsInput = z.infer<typeof GenerateBulkItemsInputSchema>;
@@ -46,7 +44,7 @@ const prompt = ai.definePrompt({
 The input is: {{{itemInput}}}
 
 Follow these steps:
-1.  **Parse Input**: The input might be just a name (e.g., "Margherita Pizza") or a name with a price (e.g., "Margherita Pizza - 499"). Extract the name and the price if provided.
+1.  **Parse Input**: The input might be just a name (e.g., "Margherita Pizza") or a name with a price (e.g., "Margherita Pizza - 499" or "Fish Fingers – ₹380"). Extract the name and the price if provided. Ignore any currency symbols like '₹', 'Rs.', etc.
 2.  **Generate Description**: Write a short, appealing, and delicious-sounding description for the menu item. Max 25 words.
 3.  **Suggest Price**: If a price was NOT provided in the input, suggest a competitive price in Indian Rupees (INR) based on the item, for a mid-range restaurant in Sreerampur, West Bengal. If a price WAS provided, use that exact price. The final price must be a number.
 4.  **Determine Category**: Based on the item name, determine the most logical category ID from this list: [starters, main-course, pizza, pasta, burgers, salads, desserts, beverages]. If it doesn't fit, default to 'main-course'. The category must be one of these exact IDs.
