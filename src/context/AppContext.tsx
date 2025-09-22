@@ -55,61 +55,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoadingAuth(false);
+    // PUBLIC LISTENERS (MENU & CATEGORIES)
+    const menuQuery = query(collection(db, "menu-items"));
+    const categoryQuery = query(collection(db, "categories"));
+
+    const menuUnsubscribe = onSnapshot(menuQuery, (snapshot) => {
+        const items: MenuItem[] = [];
+        snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() } as MenuItem));
+        setMenuItems(items);
+        setLoading(false);
+    }, (err) => {
+        console.error("Error fetching menu items:", err);
+        setError("Failed to load menu data.");
+        setLoading(false);
+    });
+    
+    const categoryUnsubscribe = onSnapshot(categoryQuery, (snapshot) => {
+        const cats: Category[] = [];
+        snapshot.forEach(doc => cats.push({ id: doc.id, ...doc.data() } as Category));
+        setCategories(cats);
+    }, (err) => {
+        console.error("Error fetching categories:", err);
     });
 
-    const fetchInitialData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const menuQuery = query(collection(db, "menu-items"));
-            const categoryQuery = query(collection(db, "categories"));
-            const ordersQuery = query(collection(db, "orders"));
+    // AUTH & ADMIN-ONLY LISTENERS
+    let ordersUnsubscribe: (() => void) | undefined;
 
-            const menuSnapshot = onSnapshot(menuQuery, (snapshot) => {
-                const items: MenuItem[] = [];
-                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() } as MenuItem));
-                setMenuItems(items);
-                setLoading(false);
-            }, (err) => {
-                console.error("Error fetching menu items:", err);
-                setError("Failed to load menu data. Please check your connection and Firestore rules.");
-                setLoading(false);
-            });
-            
-            const categorySnapshot = onSnapshot(categoryQuery, (snapshot) => {
-                const cats: Category[] = [];
-                snapshot.forEach(doc => cats.push({ id: doc.id, ...doc.data() } as Category));
-                setCategories(cats);
-            }, (err) => {
-                console.error("Error fetching categories:", err);
-            });
-            
-            const orderSnapshot = onSnapshot(ordersQuery, (snapshot) => {
-                const ords: Order[] = [];
-                snapshot.forEach(doc => ords.push({ id: doc.id, ...doc.data() } as Order));
-                setOrders(ords);
-            }, (err) => {
-                console.error("Error fetching orders:", err);
-            });
-
-            return () => {
-                menuSnapshot();
-                categorySnapshot();
-                orderSnapshot();
-            };
-        } catch (err) {
-            console.error(err);
-            setError("Failed to initialize data fetching.");
-            setLoading(false);
+    const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoadingAuth(false);
+      
+      // If a user is logged in, start listening for orders.
+      if (currentUser) {
+        const ordersQuery = query(collection(db, "orders"));
+        ordersUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+            const ords: Order[] = [];
+            snapshot.forEach(doc => ords.push({ id: doc.id, ...doc.data() } as Order));
+            setOrders(ords);
+        }, (err) => {
+            console.error("Error fetching orders:", err);
+            // This error is expected for non-admin users, so we can clear orders and maybe show a limited view.
+            setOrders([]);
+        });
+      } else {
+        // If user logs out, stop listening to orders and clear them.
+        if (ordersUnsubscribe) {
+          ordersUnsubscribe();
         }
-    };
-    
-    fetchInitialData();
+        setOrders([]);
+      }
+    });
 
-    return () => unsubscribeAuth();
+    // Cleanup function
+    return () => {
+      authUnsubscribe();
+      menuUnsubscribe();
+      categoryUnsubscribe();
+      if (ordersUnsubscribe) {
+        ordersUnsubscribe();
+      }
+    };
   }, []);
 
   const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'>) => {
@@ -162,7 +167,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const itemsInCategory = menuItems.filter(item => item.category === id);
       if (itemsInCategory.length > 0) {
-        // We will now allow deleting categories and will re-categorize items.
         const batch = writeBatch(db);
         const uncategorized = categories.find(c => c.name === "Uncategorized");
         let uncategorizedId = uncategorized ? uncategorized.id : null;
@@ -244,8 +248,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
 
-      // After successful login, set the user's role in Firestore.
-      // This is crucial for the security rules to work.
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
         await setDoc(userDocRef, { email: user.email, role: 'admin' }, { merge: true });
