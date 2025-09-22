@@ -31,7 +31,7 @@ interface AppContextType {
   loading: boolean;
   error: string | null;
   addMenuItem: (item: Omit<MenuItem, 'id' | 'imageHint'>) => Promise<void>;
-  updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, 'id' | 'imageHint'>>) => Promise<void>;
+  updateMenuItem: (id: string, updates: Partial<MenuItem>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
@@ -113,7 +113,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addMenuItem = async (item: Omit<MenuItem, 'id' | 'imageHint'>) => {
     try {
-      await addDoc(collection(db, 'menu-items'), item);
+      const itemWithHint = {
+        ...item,
+        imageHint: item.name.toLowerCase().split(' ').slice(0, 2).join(' '),
+      };
+      await addDoc(collection(db, 'menu-items'), itemWithHint);
     } catch (e) {
       console.error("Error adding document: ", e);
       throw e;
@@ -155,10 +159,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteCategory = async (id: string) => {
     try {
-      // Before deleting a category, check if any menu items are using it
       const itemsInCategory = menuItems.filter(item => item.category === id);
       if (itemsInCategory.length > 0) {
-        throw new Error("Cannot delete category. It is currently assigned to one or more menu items.");
+        // We will now allow deleting categories and will re-categorize items.
+        const batch = writeBatch(db);
+        const uncategorized = categories.find(c => c.name === "Uncategorized");
+        let uncategorizedId = uncategorized ? uncategorized.id : null;
+
+        if (!uncategorizedId) {
+            const newCategoryRef = doc(collection(db, "categories"));
+            batch.set(newCategoryRef, { name: "Uncategorized" });
+            uncategorizedId = newCategoryRef.id;
+        }
+
+        itemsInCategory.forEach(item => {
+            const itemRef = doc(db, 'menu-items', item.id);
+            batch.update(itemRef, { category: uncategorizedId });
+        });
+        
+        await batch.commit();
       }
       await deleteDoc(doc(db, 'categories', id));
     } catch (e) {
@@ -188,7 +207,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sgst,
         total,
         status: 'Pending',
-        createdAt
+        createdAt,
+        createdBy: auth.currentUser ? auth.currentUser.uid : null,
     };
 
     try {

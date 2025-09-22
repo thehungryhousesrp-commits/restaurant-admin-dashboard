@@ -38,6 +38,7 @@ export interface Order {
   total: number;
   status: 'Pending' | 'Preparing' | 'Completed';
   createdAt: number;
+  createdBy: string | null;
 }
 
     

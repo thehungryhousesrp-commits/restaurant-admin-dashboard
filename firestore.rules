@@ -1,45 +1,51 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Deny everything else by default
+    // By default, deny all reads and writes
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Categories can be read by anyone, but only written by staff/admins
-    match /categories/{categoryId} {
-      allow read:  if true;
-      allow write: if isStaff() || isAdmin();
-    }
-
-    // Menu items can be read by anyone, but only written by staff/admins
-    match /menu-items/{itemId} {
-      allow read:  if true;
-      allow write: if isStaff() || isAdmin();
-    }
-
-    // Orders can be created and read by anyone (for public invoices),
-    // but only staff can list them, and only admins can modify/delete them.
-    match /orders/{orderId} {
-      allow get, create: if true;
-      allow list, update, delete: if request.auth != null && (isAdmin() || isStaff());
+    // --- Authentication Rules ---
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
-    // Brand Asset can be read by anyone, written by staff/admins
-    match /'Brand Asset'/{assetId} {
-      allow read: if true;
-      write: if request.auth != null && (isAdmin() || isStaff());
-    }
-
+    // Helper function to check if a user is staff (or admin)
     function isStaff() {
-      // This checks if a user is logged in and has a 'role' custom claim of 'staff'.
-      return request.auth != null && request.auth.token.role == 'staff';
+      return request.auth != null && (request.auth.token.role == 'staff' || isAdmin());
     }
 
-    function isAdmin() {
-      // This checks if a user is logged in and has a 'role' custom claim of 'admin'.
-      return request.auth != null && request.auth.token.role == 'admin';
+    // --- Collection Rules ---
+
+    // Menu Items: Public can read, Admins can do anything
+    match /menu-items/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Categories: Public can read, Admins can do anything
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Orders: Authenticated users can create. Admins can read and delete.
+    // The user who created the order can read their own invoice.
+    match /orders/{orderId} {
+      allow create: if request.auth != null; // Any signed-in user can place an order
+      allow read: if isAdmin() || request.auth.uid == resource.data.createdBy; // Admins or the creator can read
+      allow delete: if isAdmin();
+    }
+    
+    // Admins collection: Only admins can read this collection
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      // Generally, writes to this collection should be done via a secure backend function
+      // or directly in the Firebase Console for security.
+      allow write: if false; 
     }
   }
 }
