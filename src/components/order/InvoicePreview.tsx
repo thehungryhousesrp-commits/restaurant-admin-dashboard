@@ -17,14 +17,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useAppContext } from "@/context/AppContext";
+import Image from "next/image";
+import Logo from "@/components/icons/Logo";
 
 interface InvoicePreviewProps {
   order: Order;
 }
 
 export function InvoicePreview({ order }: InvoicePreviewProps) {
-  const { logoDataUri } = useAppContext();
   const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
   const { toast } = useToast();
   const [shareableLink, setShareableLink] = useState('');
@@ -82,8 +82,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       <ScrollArea className="flex-1">
         <div ref={invoiceRef} className="p-6 bg-white">
           <div className="flex flex-col items-center gap-2 text-center mb-6">
-              <img 
-                  src={logoDataUri} 
+              <Logo
                   alt="The Hungry House Hub Logo"
                   width="80"
                   height="80"

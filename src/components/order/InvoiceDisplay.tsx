@@ -4,21 +4,20 @@ import React from 'react';
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
-import { useAppContext } from '@/context/AppContext';
+import Image from "next/image";
+import Logo from "@/components/icons/Logo";
 
 interface InvoiceDisplayProps {
   order: Order;
 }
 
 const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ order }, ref) => {
-    const { logoDataUri } = useAppContext();
     const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
 
     return (
         <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
             <div className="flex flex-col items-center gap-2 text-center mb-6">
-                <img 
-                    src={logoDataUri} 
+                <Logo
                     alt="The Hungry House Hub Logo"
                     width="80"
                     height="80"
