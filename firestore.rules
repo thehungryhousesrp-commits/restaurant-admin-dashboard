@@ -3,39 +3,50 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is an admin
+    // Helper function to check for admin role by looking up the user's role in the 'users' collection.
     function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Default deny all
+    // Default security: Deny all reads and writes unless explicitly allowed.
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Menu Items: Public can read, Admins can write
+    // --- Public & Admin Rules ---
+
+    // Menu items can be read by anyone, but only written by admins.
     match /menu-items/{itemId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
-    // Categories: Public can read, Admins can write
+    // Categories can be read by anyone, but only written by admins.
     match /categories/{categoryId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
-    // Orders: Authenticated users can create, Admins can read/delete
+    // --- Order Rules ---
+
     match /orders/{orderId} {
+      // ANY logged-in user (staff/admin) can create a new order.
       allow create: if request.auth != null;
-      allow read, delete: if isAdmin();
-      // Allow admins to update status in the future
-      allow update: if isAdmin();
+      
+      // ANYONE can read a single invoice if they have the direct link. This is for the public invoice page.
+      allow get: if true; 
+
+      // ONLY ADMINS can list all orders, update, or delete them.
+      // The 'list' permission is crucial for the admin dashboard query.
+      allow list, update, delete: if isAdmin();
     }
-    
-    // Users: Users can only see and edit their own role document
+
+    // --- User Role Management Rules ---
+
+    // Admins can read and write user roles.
+    // Individual users can read their own role document.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAdmin() || request.auth.uid == userId;
     }
   }
 }
