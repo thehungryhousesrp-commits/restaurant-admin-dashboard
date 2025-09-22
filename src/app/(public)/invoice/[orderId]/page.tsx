@@ -19,10 +19,11 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { orderId } = params;
 
   useEffect(() => {
     const fetchOrder = async () => {
-      if (!params.orderId) {
+      if (!orderId) {
           setError("No Order ID provided.");
           setLoading(false);
           return;
@@ -30,7 +31,7 @@ export default function InvoicePage({ params }: InvoicePageProps) {
       
       try {
         setLoading(true);
-        const docRef = doc(db, 'orders', params.orderId);
+        const docRef = doc(db, 'orders', orderId);
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
@@ -51,7 +52,7 @@ export default function InvoicePage({ params }: InvoicePageProps) {
     };
 
     fetchOrder();
-  }, [params.orderId]);
+  }, [orderId]);
 
   if (loading) {
     return (
