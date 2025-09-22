@@ -12,8 +12,9 @@ import {z} from 'genkit';
 import { menuItemSchema } from '@/lib/schemas';
 
 // Define the output for a single processed item
-export const GeneratedItemSchema = menuItemSchema.extend({
+const GeneratedItemSchema = menuItemSchema.extend({
     // We expect the AI to return everything needed to create a MenuItem
+    imageHint: z.string().optional(),
 });
 export type GeneratedItem = z.infer<typeof GeneratedItemSchema>;
 

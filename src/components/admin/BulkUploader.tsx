@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Wand2, Loader2, UploadCloud, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateBulkItems, type GeneratedItem } from '@/ai/flows/generateBulkItems';
+import { generateBulkItems } from '@/ai/flows/generateBulkItems';
 import { useAppContext } from '@/context/AppContext';
 import { menuItemSchema } from '@/lib/schemas';
 import Image from 'next/image';
@@ -23,8 +23,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { type MenuItem } from '@/lib/types';
 
 
+// Define the output for a single processed item, which now includes an optional imageHint
+export const GeneratedItemSchema = menuItemSchema.extend({
+    imageHint: z.string().optional(),
+});
+export type GeneratedItem = z.infer<typeof GeneratedItemSchema>;
+
+
 const bulkUploaderSchema = z.object({
-  items: z.array(menuItemSchema),
+  items: z.array(GeneratedItemSchema),
 });
 
 type BulkUploaderFormValues = z.infer<typeof bulkUploaderSchema>;
