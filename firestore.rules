@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny all to prevent unsecured access
+    // Default deny all to prevent unsecured access, must be explicitly allowed.
     match /{document=**} {
       allow read, write: if false;
     }
@@ -15,16 +15,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // ORDERS: Anyone can read an order (for public invoice links),
-    // but only admins (authenticated) can create, update, or delete.
+    // ORDERS: Anyone can read an order (for public invoice links), but only admins can create/update/delete.
     match /orders/{orderId} {
       allow read: if true;
       allow write: if request.auth != null;
     }
-    
-    // BRAND ASSET: Anyone can read the logo,
-    // but only admins (authenticated) can write/update it.
-    match /"Brand Asset"/{assetId} {
+
+    // BRAND ASSET: Anyone can read the logo, but only admins can change it.
+    match /Brand Asset/{assetId} {
       allow read: if true;
       allow write: if request.auth != null;
     }
