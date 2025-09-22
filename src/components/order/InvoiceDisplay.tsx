@@ -16,7 +16,7 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
     return (
         <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
             <div className="flex flex-col items-center gap-4 text-center mb-6">
-                <div className="relative h-24 w-48">
+                <div className="relative h-16 w-32">
                   <Image
                     src="/Picsart_25-07-02_21-51-50-642 (1).png"
                     alt="The Hungry House Hub Logo"
