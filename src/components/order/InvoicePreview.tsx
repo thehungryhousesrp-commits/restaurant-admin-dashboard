@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
-import { Share2, Copy, Download, Loader2 } from "lucide-react";
+import { Share2, Copy, Download, Loader2, MessageCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
@@ -39,6 +39,31 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
   const copyLink = () => {
     navigator.clipboard.writeText(shareableLink);
     toast({ title: "Link Copied!", description: "Invoice link copied to clipboard." });
+  };
+
+  const handleShareOnWhatsApp = () => {
+    const customerName = order.customerInfo.name;
+    const totalAmount = order.total.toFixed(2);
+    const orderDate = new Date(order.createdAt).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    const message = `Dear ${customerName},\n\nThank you for your recent order at The Hungry House! Your invoice is now available. ✨\n\n💰 Amount : ₹${totalAmount}\n🗓️ Date : ${orderDate}\n\n🔗 View Invoice : ${shareableLink}`;
+    
+    // Basic phone number cleaning (remove spaces, +, etc.) and prepend country code if missing
+    let phoneNumber = order.customerInfo.phone.replace(/[\s+()-]/g, '');
+    if (phoneNumber.length === 10) {
+      phoneNumber = `91${phoneNumber}`;
+    }
+
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
   };
   
   const handleDownloadPdf = async () => {
@@ -178,20 +203,26 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
                 Shareable Link
               </label>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 mb-4">
             <Input id="share-link" type="text" readOnly value={shareableLink} className="text-xs bg-white" />
             <Button type="button" size="icon" variant="outline" onClick={copyLink}>
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <Button className="w-full mt-4" onClick={handleDownloadPdf} disabled={isDownloading}>
-            {isDownloading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <Download className="mr-2 h-4 w-4" />
-            )}
-            Download PDF
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+             <Button className="w-full" onClick={handleDownloadPdf} disabled={isDownloading}>
+                {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                )}
+                Download PDF
+              </Button>
+              <Button className="w-full" onClick={handleShareOnWhatsApp} style={{ backgroundColor: '#25D366', color: 'white' }}>
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Share on WhatsApp
+              </Button>
+          </div>
         </div>
       
       <DialogFooter className="p-4 border-t">
