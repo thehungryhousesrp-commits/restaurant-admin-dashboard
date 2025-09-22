@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -8,7 +9,8 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // MENU AND CATEGORIES: Admins (authenticated) can read/write
+    // MENU AND CATEGORIES: Admins (authenticated) can read/write.
+    // Public cannot access these directly.
     match /menu-items/{itemId} {
       allow read, write: if request.auth != null;
     }
@@ -23,7 +25,7 @@ service cloud.firestore {
     }
 
     // BRAND ASSET: Anyone can read the logo, but only admins can change it.
-    // The collection name "Brand Asset" must be in single quotes because it contains a space.
+    // The collection name must be in quotes because it contains a space.
     match /'Brand Asset'/{assetId} {
       allow read: if true;
       allow write: if request.auth != null;
