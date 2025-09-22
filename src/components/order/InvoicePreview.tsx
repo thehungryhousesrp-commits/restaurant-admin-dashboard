@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
 import { Share2, Copy, Download, Loader2 } from "lucide-react";
-// Removed Next.js Image component
+import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
@@ -48,7 +48,9 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     try {
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2, // Improve resolution
-        backgroundColor: '#ffffff' // Ensure background is white
+        backgroundColor: '#ffffff', // Ensure background is white
+        allowTaint: true,
+        useCORS: true,
       });
       const imgData = canvas.toDataURL('image/png');
       
@@ -79,13 +81,11 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       <ScrollArea className="flex-1">
         <div ref={invoiceRef} className="p-6 bg-white">
           <div className="flex flex-col items-center gap-2 text-center mb-6">
-              {/* Using standard img tag instead of Next/Image */}
-              <img 
+              <Image 
                   src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png" 
                   alt="The Hungry House Hub Logo"
                   width="60"
                   height="60"
-                  style={{ width: '60px', height: '60px' }}
               />
               <div className="space-y-0.5">
                 <h3 className="font-headline text-2xl">The Hungry House Hub</h3>

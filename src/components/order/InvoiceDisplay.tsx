@@ -4,7 +4,7 @@ import React from 'react';
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
-// Removed Next.js Image component
+import Image from 'next/image';
 
 interface InvoiceDisplayProps {
   order: Order;
@@ -16,13 +16,11 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
     return (
         <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
             <div className="flex flex-col items-center gap-2 text-center mb-6">
-                {/* Using standard img tag instead of Next/Image */}
-                <img 
+                <Image 
                     src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png" 
                     alt="The Hungry House Hub Logo"
                     width="80"
                     height="80"
-                    style={{ width: '80px', height: '80px' }}
                 />
                 <div className="space-y-0.5">
                     <h1 className="font-headline text-3xl">The Hungry House Hub</h1>

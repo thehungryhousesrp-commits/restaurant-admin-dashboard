@@ -67,6 +67,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
     try {
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2, // Improve resolution
+        allowTaint: true,
+        useCORS: true,
       });
       const imgData = canvas.toDataURL('image/png');
       
