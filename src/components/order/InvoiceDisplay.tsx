@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order } from "@/lib/types";
@@ -9,11 +10,11 @@ interface InvoiceDisplayProps {
   order: Order;
 }
 
-export default function InvoiceDisplay({ order }: InvoiceDisplayProps) {
+const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ order }, ref) => {
     const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
 
     return (
-        <div className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
+        <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
             <div className="flex flex-col items-center gap-2 text-center mb-6">
                 <Image 
                     src="https://i.ibb.co/j7YWcvy/Picsart-25-07-02-21-51-50-642-1.png" 
@@ -86,7 +87,7 @@ export default function InvoiceDisplay({ order }: InvoiceDisplayProps) {
                         <span className="text-muted-foreground">SGST @ 2.5%</span>
                         <span>₹{order.sgst.toFixed(2)}</span>
                     </div>
-                    {roundOff !== 0 && (
+                    {roundOff.toFixed(2) !== '0.00' && roundOff.toFixed(2) !== '-0.00' && (
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Round Off</span>
                             <span>{roundOff > 0 ? '+' : '-'}₹{Math.abs(roundOff).toFixed(2)}</span>
@@ -106,5 +107,8 @@ export default function InvoiceDisplay({ order }: InvoiceDisplayProps) {
             </div>
         </div>
     );
-}
+});
+
+InvoiceDisplay.displayName = 'InvoiceDisplay';
+export default InvoiceDisplay;
     

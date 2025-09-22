@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import InvoiceDisplay from '@/components/order/InvoiceDisplay';
@@ -8,6 +8,10 @@ import { notFound } from 'next/navigation';
 import { type Order } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from "@/components/ui/separator";
+import { Button } from '@/components/ui/button';
+import { Download, Loader2 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface InvoicePageProps {
   params: {
@@ -19,6 +23,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const invoiceRef = useRef<HTMLDivElement>(null);
   const { orderId } = params;
 
   useEffect(() => {
@@ -53,6 +59,32 @@ export default function InvoicePage({ params }: InvoicePageProps) {
 
     fetchOrder();
   }, [orderId]);
+
+  const handleDownloadPdf = async () => {
+    if (!invoiceRef.current || !order) return;
+    setIsDownloading(true);
+
+    try {
+      const canvas = await html2canvas(invoiceRef.current, {
+        scale: 2, // Improve resolution
+      });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`invoice-${order.id.slice(-6).toUpperCase()}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      // You might want to show a toast message to the user here
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -89,7 +121,17 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   return (
     <div className="bg-gray-100 min-h-screen py-8 sm:py-12">
       <div className="container mx-auto px-4">
-        <InvoiceDisplay order={order} />
+        <div className="max-w-md mx-auto mb-4 text-right">
+            <Button onClick={handleDownloadPdf} disabled={isDownloading}>
+                {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                )}
+                Download PDF
+            </Button>
+        </div>
+        <InvoiceDisplay order={order} ref={invoiceRef} />
       </div>
     </div>
   );
