@@ -68,7 +68,7 @@ export default function BulkUploader() {
     }
     // If we want to auto-create categories, we would do it here.
     // For now, we'll assign to a default if not found.
-    const defaultCategory = categories.find(c => c.name.toLowerCase() === 'main-course');
+    const defaultCategory = categories.find(c => c.name.toLowerCase() === 'main-course' || c.name.toLowerCase() === 'main course');
     return defaultCategory ? defaultCategory.id : categories[0]?.id || '';
   };
   
@@ -87,8 +87,8 @@ export default function BulkUploader() {
     setProgressText('');
 
     let lastSeenCategory = '';
-    const generatedItems: GeneratedItem[] = [];
     let failedCount = 0;
+    let successfulCount = 0;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -97,10 +97,12 @@ export default function BulkUploader() {
         setProgress(currentProgress);
         setProgressText(`Processing item ${i + 1} of ${lines.length}...`);
 
+        // This is a simple heuristic: if the line does NOT contain a price-like pattern (e.g., - 280, – ₹280), it's a category.
         const isHeading = !/[-–]\s*₹?\s*\d/.test(line);
 
         if (isHeading) {
-            lastSeenCategory = line;
+            // It's a category heading, store it for context for subsequent items.
+            lastSeenCategory = line.replace(/[:(].*/, '').trim(); // Clean up the category name
             continue; 
         }
 
@@ -109,11 +111,12 @@ export default function BulkUploader() {
                 itemInput: line,
                 lastSeenCategory: lastSeenCategory 
             });
-
+            
             if (result && result.name) {
-                // The AI returns a category NAME, we need to convert it to a category ID for the form.
                 const categoryId = getCategoryId(result.category);
-                generatedItems.push({ ...result, category: categoryId });
+                // Immediately append the successfully generated item to the form array
+                append({ ...result, category: categoryId });
+                successfulCount++;
             } else {
                 failedCount++;
             }
@@ -122,8 +125,6 @@ export default function BulkUploader() {
             failedCount++;
         }
     }
-    
-    append(generatedItems);
 
     if (failedCount > 0) {
         setError(`${failedCount} items could not be processed. Please review them in the raw input and add them manually if needed.`);
@@ -131,7 +132,7 @@ export default function BulkUploader() {
 
     toast({ 
         title: 'Generation Complete!', 
-        description: `Successfully processed ${generatedItems.length} items. Please review before uploading.` 
+        description: `Successfully processed ${successfulCount} items. Please review before uploading.` 
     });
 
     setIsGenerating(false);
@@ -147,10 +148,12 @@ export default function BulkUploader() {
     setIsSubmitting(true);
     try {
         const creationPromises = data.items.map(item => {
+            // Remove the temporary 'id' and 'imageHint' if it exists, as it's not part of the final MenuItem schema in the DB.
             const { id, imageHint, ...itemToCreate } = item;
             
             const payload: Omit<MenuItem, 'id'> = {
                 ...itemToCreate,
+                // Ensure imageHint is a simple string derived from the name
                 imageHint: item.name.toLowerCase().split(' ').slice(0, 2).join(' '),
             };
             return addMenuItem(payload);
@@ -175,7 +178,7 @@ export default function BulkUploader() {
       <CardHeader>
         <CardTitle className="font-headline text-2xl bg-gradient-to-r from-yellow-400 to-amber-600 text-transparent bg-clip-text flex items-center gap-2">
             <Sparkles className="text-yellow-500"/>
-            AI Genesis Bulk Uploader
+            AI Genesis Uploader
         </CardTitle>
         <CardDescription>
           Paste your menu, and our advanced AI will intelligently parse, enrich, and prepare each item for your restaurant.
@@ -184,10 +187,11 @@ export default function BulkUploader() {
       <CardContent className="space-y-4">
         <div className="grid w-full gap-2">
           <Textarea
-            placeholder="Indian Curries (Non-Veg)
-Butter Chicken – ₹420
-Mutton Rogan Josh – ₹550
-..."
+            placeholder="Appetizers (Starters)
+Paneer Tikka – ₹280
+Samosa - 100
+...
+"
             value={rawInput}
             onChange={(e) => setRawInput(e.target.value)}
             rows={10}
@@ -255,7 +259,7 @@ Mutton Rogan Josh – ₹550
                                         <div className="flex flex-col gap-2">
                                             <Input {...form.register(`items.${index}.imageUrl`)} />
                                             <div className="relative aspect-video w-full rounded-md overflow-hidden border bg-muted">
-                                                <Image src={form.watch(`items.${index}.imageUrl`) || ''} alt="Preview" fill className="object-cover" />
+                                                <Image src={form.watch(`items.${index}.imageUrl`) || '/placeholder.png'} alt="Preview" fill className="object-cover" />
                                             </div>
                                         </div>
                                     </TableCell>
@@ -264,7 +268,7 @@ Mutton Rogan Josh – ₹550
                                             <FormItem className="flex items-center gap-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Available</FormLabel></FormItem>
                                         )} />
                                        <FormField control={form.control} name={`items.${index}.isVeg`} render={({ field }) => (
-                                            <FormItem className="flex items-center gap-2 spacey-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Veg</FormLabel></FormItem>
+                                            <FormItem className="flex items-center gap-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Veg</FormLabel></FormItem>
                                         )} />
                                        <FormField control={form.control} name={`items.${index}.isSpicy`} render={({ field }) => (
                                             <FormItem className="flex items-center gap-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Spicy</FormLabel></FormItem>
@@ -296,3 +300,4 @@ Mutton Rogan Josh – ₹550
     </Card>
   );
 }
+    
