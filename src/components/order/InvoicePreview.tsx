@@ -45,12 +45,8 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     const customerName = order.customerInfo.name;
     const totalAmount = order.total.toFixed(2);
     const orderDate = new Date(order.createdAt).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
     
     const message = `Dear ${customerName},\n\nThank you for your recent order at The Hungry House! Your invoice is now available. ✨\n\n💰 Amount : ₹${totalAmount}\n🗓️ Date : ${orderDate}\n\n🔗 View Invoice : ${shareableLink}`;
