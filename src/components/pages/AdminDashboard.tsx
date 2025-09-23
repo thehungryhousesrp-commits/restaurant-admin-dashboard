@@ -4,7 +4,7 @@ import { useState } from "react";
 import { type MenuItem, type Order } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Eye, UploadCloud } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Eye, UploadCloud, Image as ImageIconPlaceholder } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -139,13 +139,19 @@ export default function AdminDashboard() {
                 {menuItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        width={50}
-                        height={50}
-                        className="rounded-md object-cover"
-                      />
+                      <div className="w-[50px] h-[50px] rounded-md bg-muted flex items-center justify-center">
+                        {item.imageUrl ? (
+                           <Image
+                            src={item.imageUrl}
+                            alt={item.name}
+                            width={50}
+                            height={50}
+                            className="rounded-md object-cover w-full h-full"
+                          />
+                        ) : (
+                          <ImageIconPlaceholder className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{getCategoryName(item.category)}</TableCell>
