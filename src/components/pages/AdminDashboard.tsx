@@ -42,7 +42,7 @@ import { InvoicePreview } from "@/components/order/InvoicePreview";
 import BulkUploader from "@/components/admin/BulkUploader";
 
 export default function AdminDashboard() {
-  const { menuItems, categories, orders, deleteMenuItem, updateMenuItem, deleteOrder } = useAppContext();
+  const { user, menuItems, categories, orders, deleteMenuItem, updateMenuItem, deleteOrder } = useAppContext();
   const [isFormOpen, setFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<MenuItem | undefined>(undefined);
   const { toast } = useToast();
@@ -84,13 +84,15 @@ export default function AdminDashboard() {
   };
   
   const sortedOrders = [...orders].sort((a, b) => b.createdAt - a.createdAt);
+  
+  const displayName = user?.displayName || 'Admin';
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your restaurant's menu, categories, and orders.</p>
+            <p className="text-muted-foreground">Hello, {displayName}. Manage your restaurant's menu, categories, and orders.</p>
         </div>
         <div className="flex gap-2">
             <Dialog open={isFormOpen} onOpenChange={setFormOpen}>
