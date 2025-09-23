@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Wand2, Loader2, UploadCloud, Trash2 } from 'lucide-react';
+import { Wand2, Loader2, UploadCloud, Trash2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateBulkItems } from '@/ai/flows/generateBulkItems';
 import { useAppContext } from '@/context/AppContext';
@@ -146,10 +146,14 @@ export default function BulkUploader() {
     }
     setIsSubmitting(true);
     try {
-        // We need to omit the temporary 'id' field before sending to Firestore
         const creationPromises = data.items.map(item => {
-            const { id, ...itemToCreate } = item;
-            return addMenuItem(itemToCreate);
+            const { id, imageHint, ...itemToCreate } = item;
+            
+            const payload: Omit<MenuItem, 'id'> = {
+                ...itemToCreate,
+                imageHint: item.name.toLowerCase().split(' ').slice(0, 2).join(' '),
+            };
+            return addMenuItem(payload);
         });
 
         await Promise.all(creationPromises);
@@ -167,33 +171,37 @@ export default function BulkUploader() {
   };
 
   return (
-    <Card>
+    <Card className="border-yellow-500/50 border-2 shadow-lg">
       <CardHeader>
-        <CardTitle className="font-headline">Bulk AI Uploader</CardTitle>
+        <CardTitle className="font-headline text-2xl bg-gradient-to-r from-yellow-400 to-amber-600 text-transparent bg-clip-text flex items-center gap-2">
+            <Sparkles className="text-yellow-500"/>
+            AI Genesis Bulk Uploader
+        </CardTitle>
         <CardDescription>
-          Paste your full menu below, including category headings. The AI will process each item under its respective category.
+          Paste your menu, and our advanced AI will intelligently parse, enrich, and prepare each item for your restaurant.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid w-full gap-2">
           <Textarea
-            placeholder="Soups
-Tomato Soup – ₹150
-Starters (Veg)
-Paneer Tikka – ₹280"
+            placeholder="Indian Curries (Non-Veg)
+Butter Chicken – ₹420
+Mutton Rogan Josh – ₹550
+..."
             value={rawInput}
             onChange={(e) => setRawInput(e.target.value)}
             rows={10}
             disabled={isGenerating || isSubmitting}
+            className="focus-visible:ring-yellow-500"
           />
-          <Button onClick={handleGenerate} disabled={isGenerating || isSubmitting || !rawInput.trim()}>
+          <Button onClick={handleGenerate} disabled={isGenerating || isSubmitting || !rawInput.trim()} className="bg-gradient-to-r from-yellow-400 to-amber-600 text-white hover:opacity-90">
             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             {isGenerating ? 'Generating...' : 'Generate & Review'}
           </Button>
         </div>
         {isGenerating && (
             <div className="space-y-2">
-                <Progress value={progress} className="w-full" />
+                <Progress value={progress} className="w-full [&>div]:bg-yellow-500" />
                 <p className="text-sm text-muted-foreground text-center">{progressText}</p>
             </div>
         )}
@@ -247,7 +255,7 @@ Paneer Tikka – ₹280"
                                         <div className="flex flex-col gap-2">
                                             <Input {...form.register(`items.${index}.imageUrl`)} />
                                             <div className="relative aspect-video w-full rounded-md overflow-hidden border bg-muted">
-                                                <Image src={form.watch(`items.${index}.imageUrl`)} alt="Preview" fill className="object-cover" />
+                                                <Image src={form.watch(`items.${index}.imageUrl`) || ''} alt="Preview" fill className="object-cover" />
                                             </div>
                                         </div>
                                     </TableCell>
@@ -256,7 +264,7 @@ Paneer Tikka – ₹280"
                                             <FormItem className="flex items-center gap-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Available</FormLabel></FormItem>
                                         )} />
                                        <FormField control={form.control} name={`items.${index}.isVeg`} render={({ field }) => (
-                                            <FormItem className="flex items-center gap-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Veg</FormLabel></FormItem>
+                                            <FormItem className="flex items-center gap-2 spacey-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Veg</FormLabel></FormItem>
                                         )} />
                                        <FormField control={form.control} name={`items.${index}.isSpicy`} render={({ field }) => (
                                             <FormItem className="flex items-center gap-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><FormLabel className="font-normal">Spicy</FormLabel></FormItem>
@@ -277,7 +285,7 @@ Paneer Tikka – ₹280"
                 </div>
             </CardContent>
             <CardFooter>
-                <Button type="submit" disabled={isSubmitting || isGenerating}>
+                <Button type="submit" disabled={isSubmitting || isGenerating} className="bg-slate-700 text-white hover:bg-slate-800">
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
                     {isSubmitting ? 'Uploading...' : 'Upload All to Menu'}
                 </Button>
