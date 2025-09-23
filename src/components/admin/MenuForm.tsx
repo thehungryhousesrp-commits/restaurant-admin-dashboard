@@ -162,8 +162,14 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
     try {
-      const payload: Omit<MenuItem, 'id'> & { id?: string } = {
+      // Ensure imageUrl is an empty string if it's undefined or null
+      const finalData = {
         ...data,
+        imageUrl: data.imageUrl || "",
+      };
+
+      const payload: Omit<MenuItem, 'id'> & { id?: string } = {
+        ...finalData,
         imageHint: data.name.toLowerCase().split(' ').slice(0, 2).join(' '),
       };
 
@@ -200,7 +206,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Name <span className="text-destructive">*</span></FormLabel>
                   <FormControl><Input placeholder="Margherita Pizza" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -212,7 +218,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
               render={({ field }) => (
                 <FormItem>
                    <div className="flex items-center justify-between">
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
                     <Button
                       type="button"
                       variant="outline"
@@ -240,7 +246,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 render={({ field }) => (
                   <FormItem className="flex-grow">
                     <div className="flex items-center justify-between">
-                      <FormLabel>Price (INR)</FormLabel>
+                      <FormLabel>Price (INR) <span className="text-destructive">*</span></FormLabel>
                        <Button
                         type="button"
                         variant="outline"
@@ -268,7 +274,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 name="category"
                 render={({ field }) => (
                   <FormItem className="flex-grow">
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>Category <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
