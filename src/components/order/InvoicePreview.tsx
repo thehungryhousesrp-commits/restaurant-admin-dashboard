@@ -51,7 +51,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     
     const googleReviewLink = "https://g.page/r/CdfS9oZ-wvLdEBM/review";
 
-    const message = `Dear ${customerName},\n\nThank you for your recent order at The Hungry House! Your invoice is now available. ✨\n\n💰 Amount : ₹${totalAmount}\n🗓️ Date : ${orderDate}\n\n🔗 View Invoice : ${shareableLink}\n\n---\n\nHow was your experience? We'd love your feedback!\n⭐ Rate us on Google:\n${googleReviewLink}\n\nWe appreciate your support! 🙏`;
+    const message = `Dear ${customerName},\n\nThank you for your recent order at The Hungry House! Your invoice is now available.\n\nAmount : ₹${totalAmount}\nDate : ${orderDate}\n\nView Invoice : ${shareableLink}\n\n---\n\nHow was your experience? We'd love your feedback!\n⭐ Rate us on Google:\n${googleReviewLink}\n\nWe appreciate your support! 🙏`;
     
     // Basic phone number cleaning (remove spaces, +, etc.) and prepend country code if missing
     let phoneNumber = order.customerInfo.phone.replace(/[\s+()-]/g, '');
@@ -232,5 +232,3 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     </DialogContent>
   );
 }
-
-    
