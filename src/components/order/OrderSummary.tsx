@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -37,9 +38,34 @@ export default function OrderSummary({
   const sgst = subtotal * 0.025;
   const total = subtotal + cgst + sgst;
 
-  const validatePhoneNumber = (phone: string) => {
-    const phoneRegex = /^\d{10}$/;
-    return phoneRegex.test(phone.trim());
+  const validatePhoneNumber = (phone: string): boolean => {
+    const trimmedPhone = phone.trim();
+    // 1. Must be 10 digits
+    if (!/^\d{10}$/.test(trimmedPhone)) return false;
+    // 2. Must start with 6, 7, 8, or 9
+    if (!/^[6-9]/.test(trimmedPhone)) return false;
+    // 3. Check for excessive repetition (e.g., 9999999999)
+    if (/^(\d)\1{9}$/.test(trimmedPhone)) return false;
+     // 4. Check for more than 4 consecutive repeating digits
+    if (/(\d)\1{4,}/.test(trimmedPhone)) return false;
+    // 5. Check for simple sequential numbers
+    if ("0123456789".includes(trimmedPhone) || "9876543210".includes(trimmedPhone)) return false;
+    
+    return true;
+  };
+
+  const validateCustomerName = (name: string): boolean => {
+    const trimmedName = name.trim();
+    // 1. Minimum length of 3
+    if (trimmedName.length < 3) return false;
+    // 2. Must not contain numbers or special characters (except spaces)
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) return false;
+    // 3. Check for excessive character repetition (e.g., 'rammmmmm')
+    if (/([a-zA-Z])\1{2,}/.test(trimmedName)) return false;
+    // 4. Check if it contains at least one vowel (heuristic for gibberish like 'rhythm' is an exception, but 'dfghjklp' is not)
+    if (!/[aeiou]/i.test(trimmedName)) return false;
+
+    return true;
   };
 
   const handlePlaceOrder = async () => {
@@ -47,12 +73,12 @@ export default function OrderSummary({
       toast({ title: "Cannot place an empty order.", variant: "destructive" });
       return;
     }
-    if (!customerInfo.name) {
-      toast({ title: "Please enter customer name.", variant: "destructive" });
+    if (!validateCustomerName(customerInfo.name)) {
+      toast({ title: "Invalid Customer Name", description: "Please enter a valid name (at least 3 letters, no numbers or excessive repetition).", variant: "destructive" });
       return;
     }
     if (!validatePhoneNumber(customerInfo.phone)) {
-        toast({ title: "Invalid Phone Number", description: "Please enter a valid 10-digit phone number.", variant: "destructive" });
+        toast({ title: "Invalid Phone Number", description: "Please enter a valid 10-digit Indian mobile number.", variant: "destructive" });
         return;
     }
 
