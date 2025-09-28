@@ -1,6 +1,7 @@
 "use client";
 
 import Head from 'next/head';
+import { AnimatedDiagrams } from './AnimatedDiagrams';
 
 
 const AboutPageContent = ({ adminName }: { adminName: string }) => {
@@ -250,6 +251,12 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
                     <span className="bg-sky-900/50 text-sky-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Tailwind CSS</span>
                 </div>
             </div>
+
+            <div className="bg-gray-800/20 rounded-lg p-6 md:p-8">
+                 <h3 className="text-2xl font-headline font-bold text-white mb-4 text-center">Live Architecture Diagrams</h3>
+                <AnimatedDiagrams />
+            </div>
+
         </div>
       </div>
     </>
