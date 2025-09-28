@@ -8,8 +8,59 @@ const primary = 'data-[state=active]:bg-blue-900/80 data-[state=active]:text-blu
 const secondary = 'data-[state=active]:bg-teal-900/80 data-[state=active]:text-teal-200 text-gray-300'
 const accent = 'data-[state=active]:bg-orange-900/80 data-[state=active]:text-orange-200 text-gray-300'
 
+const accentColor = '#FF6B35'
+const primaryColor = '#0052CC'
+const secondaryColor = '#2EC4B6'
+const bgColor = '#1D2D3A'
+
+
+interface StepProps {
+  from: 'Customer/UI' | 'React FE' | 'Firebase Auth' | 'Firestore DB';
+  to: 'Customer/UI' | 'React FE' | 'Firebase Auth' | 'Firestore DB';
+  text: string;
+  delay: number;
+}
+
+const MessageArrow: React.FC<StepProps> = ({ from, to, text, delay }) => {
+    // Example: columns positions (x) in px:
+    const positions = { 'Customer/UI': 100, 'React FE': 280, 'Firebase Auth': 460, 'Firestore DB': 640 }
+    const yStart = 80 + delay * 40
+    const xStart = positions[from]
+    const xEnd = positions[to]
+  
+    return (
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: delay * 0.8 + 0.5 }}>
+            <motion.path
+                d={`M${xStart},${yStart} L${xEnd},${yStart}`}
+                stroke={accentColor}
+                strokeWidth={2}
+                fill="none"
+                markerEnd="url(#arrowhead)"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.8, ease: 'easeInOut' }}
+            />
+            <motion.text
+                x={(xStart + xEnd) / 2}
+                y={yStart - 10}
+                fill={accentColor}
+                style={{ fontSize: '0.85rem', fontWeight: 600 }}
+                textAnchor="middle"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+            >
+                {text}
+            </motion.text>
+      </motion.g>
+    )
+}
+
+
 export const AnimatedDiagrams: React.FC = () => {
   const [tab, setTab] = useState<'er' | 'seq' | 'flow'>('er')
+  const [seqKey, setSeqKey] = useState(0)
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
   const erControls = useAnimationControls();
   const seqControls = useAnimationControls();
@@ -17,21 +68,14 @@ export const AnimatedDiagrams: React.FC = () => {
 
   useEffect(() => {
     // Reset and start animation when tab changes
-    if (tab === 'er') {
-        erControls.start('visible');
-    } else {
-        erControls.start('hidden');
-    }
-    if (tab === 'seq') {
-        seqControls.start('visible');
-    } else {
-        seqControls.start('hidden');
-    }
-    if (tab === 'flow') {
-        flowControls.start('visible');
-    } else {
-        flowControls.start('hidden');
-    }
+    const controls = { er: erControls, seq: seqControls, flow: flowControls };
+    Object.entries(controls).forEach(([key, control]) => {
+        if (key === tab) {
+            control.start('visible');
+        } else {
+            control.start('hidden');
+        }
+    });
   }, [tab, erControls, seqControls, flowControls]);
 
   const fadeIn = { 
@@ -50,43 +94,52 @@ export const AnimatedDiagrams: React.FC = () => {
   const nodeVariant = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
 
 
-  const nodes = [
-    { label: 'Users', x: 100, y: 175 },
+  const erNodes = [
+    { label: 'Users', x: 150, y: 200 },
     { label: 'Categories', x: 350, y: 100 },
-    { label: 'Menu-Items', x: 600, y: 100 },
-    { label: 'Orders', x: 350, y: 250 }
+    { label: 'Menu-Items', x: 550, y: 200 },
+    { label: 'Orders', x: 350, y: 300 }
   ];
 
-  const relationships = [
-    { from: 1, to: 2, classes: "stroke-[#2EC4B6]", d: `M ${nodes[1].x + 60},${nodes[1].y} L ${nodes[2].x - 60},${nodes[2].y}` },
-    { from: 0, to: 3, classes: "stroke-[#FF6B35]", d: `M ${nodes[0].x + 60},${nodes[0].y} L ${nodes[3].x - 60},${nodes[3].y}` },
-    { from: 2, to: 3, classes: "stroke-gray-500", d: `M ${nodes[2].x-30},${nodes[2].y+30} Q ${nodes[2].x},${nodes[2].y+80} ${nodes[3].x+30},${nodes[3].y-30}` },
+  const erRelationships = [
+    { from: 1, to: 2, classes: "stroke-[#2EC4B6]", d: `M ${erNodes[1].x + 60},${erNodes[1].y + 15} C ${erNodes[1].x + 150},${erNodes[1].y + 15} ${erNodes[2].x - 150},${erNodes[2].y - 15} ${erNodes[2].x - 60},${erNodes[2].y - 15}` },
+    { from: 0, to: 3, classes: "stroke-[#FF6B35]", d: `M ${erNodes[0].x + 60},${erNodes[0].y} L ${erNodes[3].x - 60},${erNodes[3].y}` },
+    { from: 2, to: 3, classes: "stroke-gray-500", d: `M ${erNodes[2].x-30},${erNodes[2].y+30} L ${erNodes[3].x+30},${erNodes[3].y-30}` },
   ];
   
-  const seqParticipants = ['Customer/UI', 'React FE', 'Auth', 'Firestore DB'];
-  const seqMessages = [
-    { from: 0, to: 1, text: 'placeOrder(items, info)', y: 80, delay: 0.5 },
-    { from: 1, to: 2, text: 'check auth.currentUser', y: 130, delay: 1.2 },
-    { from: 2, to: 1, text: 'user UID', y: 180, delay: 1.9, dashed: true },
-    { from: 1, to: 3, text: 'addDoc(orderData)', y: 230, delay: 2.6 },
-    { from: 3, to: 1, text: 'order ID', y: 280, delay: 3.3, dashed: true },
+  const userFlowNodes = [
+    { id: 'start', label: 'Start', x: 100, y: 200 },
+    { id: 'visit_site', label: 'Visit Site', x: 250, y: 200 },
+    { id: 'login_admin', label: 'Login Admin', x: 400, y: 100 },
+    { id: 'take_order', label: 'Take Order', x: 400, y: 300 },
+    { id: 'manage_menu', label: 'Manage Menu', x: 550, y: 100 },
+    { id: 'generate_invoice', label: 'Gen. Invoice', x: 550, y: 300 },
+    { id: 'end', label: 'End', x: 700, y: 200 }
   ];
 
-  const flowNodes = [
-    { label: 'Start', x: 80, y: 200 },
-    { label: 'Visit Site', x: 240, y: 200 },
-    { label: 'Login As Admin', x: 400, y: 100 },
-    { label: 'Take Order', x: 400, y: 300 },
-    { label: 'Manage Menu', x: 580, y: 100 },
-    { label: 'Generate Invoice', x: 580, y: 300 },
-    { label: 'End', x: 720, y: 200 }
+  const userFlowEdges = [
+    { from: 'start', to: 'visit_site' },
+    { from: 'visit_site', to: 'login_admin' },
+    { from: 'visit_site', to: 'take_order' },
+    { from: 'login_admin', to: 'manage_menu' },
+    { from: 'take_order', to: 'generate_invoice' },
+    { from: 'manage_menu', to: 'login_admin' },
+    { from: 'generate_invoice', to: 'take_order' },
+    { from: 'manage_menu', to: 'end' },
+    { from: 'generate_invoice', to: 'end' }
   ];
-
-  const flowPaths = [
-    { from: 0, to: 1 }, { from: 1, to: 2 }, { from: 1, to: 3 },
-    { from: 2, to: 4 }, { from: 3, to: 5 }, { from: 4, to: 2, isReturn: true },
-    { from: 5, to: 3, isReturn: true }, { from: 4, to: 6}, { from: 5, to: 6}
-  ];
+  
+  const handleReplay = () => {
+    seqControls.start('hidden').then(() => {
+        seqControls.start('visible');
+    });
+    setSeqKey(prev => prev + 1);
+  }
+  
+  const isEdgeActive = (edge: { from: string; to: string }) => {
+    if (!hoveredNode) return true // show all if none hovered
+    return edge.from === hoveredNode
+  }
 
   return (
     <Tabs value={tab} onValueChange={(val: any) => setTab(val)} className="w-full max-w-4xl mx-auto text-white">
@@ -104,7 +157,7 @@ export const AnimatedDiagrams: React.FC = () => {
                 viewBox="0 0 800 400"
                 className="w-full h-auto"
               >
-                {relationships.map((rel, i) => (
+                {erRelationships.map((rel, i) => (
                   <motion.path
                     key={i}
                     d={rel.d}
@@ -113,7 +166,7 @@ export const AnimatedDiagrams: React.FC = () => {
                     custom={i}
                   />
                 ))}
-                {nodes.map((entity) => (
+                {erNodes.map((entity) => (
                   <motion.g
                     key={entity.label}
                     className="cursor-pointer"
@@ -130,91 +183,117 @@ export const AnimatedDiagrams: React.FC = () => {
 
           {tab === 'seq' && (
              <motion.div key="seq" initial="hidden" animate={seqControls} variants={fadeIn} exit={{ opacity: 0 }}>
-              <motion.svg
-                viewBox="0 0 800 350"
-                className="w-full h-auto"
-              >
-                <defs>
-                  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#FF6B35" />
-                  </marker>
-                   <marker id="arrow-dashed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#2EC4B6" />
-                  </marker>
-                </defs>
-
-                {seqParticipants.map((p, i) => (
-                  <motion.g key={p} variants={nodeVariant}>
-                    <line x1={120 + i * 180} y1={20} x2={120 + i * 180} y2={320} className="stroke-white/50 stroke-[1.5]"/>
-                    <text x={120 + i * 180} y={40} textAnchor="middle" className="fill-white font-medium">{p}</text>
-                  </motion.g>
-                ))}
-
-                {seqMessages.map((msg, i) => (
-                   <motion.g key={i} >
-                    <motion.path
-                      d={`M ${120 + msg.from * 180} ${msg.y} H ${120 + msg.to * 180}`}
-                      className={msg.dashed ? "stroke-[#2EC4B6] stroke-2" : "stroke-[#FF6B35] stroke-2"}
-                      strokeDasharray={msg.dashed ? "5 5" : "0"}
-                      markerEnd={msg.dashed ? 'url(#arrow-dashed)' : 'url(#arrow)'}
-                      variants={drawLine}
-                      custom={i}
-                    />
-                    <motion.text
-                      x={(120 + msg.from * 180 + 120 + msg.to * 180) / 2}
-                      y={msg.y - 8}
-                      textAnchor="middle"
-                      className="fill-gray-300 text-xs font-medium"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1, transition: { delay: msg.delay + 0.5 } }}
+                <section aria-label="Sequence Diagram: Place Order Process">
+                    <svg
+                        key={seqKey}
+                        viewBox="0 0 800 300"
+                        className="w-full h-auto"
+                        aria-hidden="true"
                     >
-                      {msg.text}
-                    </motion.text>
-                  </motion.g>
-                ))}
-              </motion.svg>
-              <div className="text-center mt-4">
-                <button
-                    className="px-4 py-2 bg-[#2EC4B6] text-[#1D2D3A] rounded-md font-semibold hover:brightness-110"
-                    onClick={() => seqControls.start('hidden').then(() => seqControls.start('visible'))}
-                > Replay Animation </button>
-              </div>
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill={accentColor}>
+                            <polygon points="0 0, 10 3.5, 0 7" />
+                            </marker>
+                        </defs>
+
+                        {['Customer/UI', 'React FE', 'Firebase Auth', 'Firestore DB'].map((p, i) => (
+                            <motion.g key={p} variants={nodeVariant}>
+                                <line
+                                    x1={100 + i * 180} y1={40} x2={100 + i * 180} y2={260}
+                                    stroke={primaryColor} strokeWidth={2} strokeDasharray="6 4"
+                                />
+                                <text
+                                    x={100 + i * 180} y={30} fill={primaryColor} fontWeight={700}
+                                    textAnchor="middle" fontSize={16}
+                                >
+                                    {p}
+                                </text>
+                            </motion.g>
+                        ))}
+                        <AnimatePresence>
+                             <motion.g variants={fadeIn}>
+                                <MessageArrow from="Customer/UI" to="React FE" text="placeOrder()" delay={0} />
+                                <MessageArrow from="React FE" to="Firestore DB" text="addDoc(order)" delay={1} />
+                                <MessageArrow from="Firestore DB" to="React FE" text="return orderId" delay={2} />
+                                <MessageArrow from="React FE" to="Customer/UI" text="Show Invoice" delay={3} />
+                            </motion.g>
+                        </AnimatePresence>
+                    </svg>
+                    <div className="text-center mt-4">
+                        <button
+                            onClick={handleReplay}
+                            className="mt-6 bg-[#2EC4B6] text-[#1D2D3A] px-5 py-2 rounded-full font-semibold hover:bg-[#24b6a7] transition"
+                            aria-label="Replay Sequence Animation"
+                        >
+                            Replay Animation
+                        </button>
+                    </div>
+                </section>
             </motion.div>
           )}
 
           {tab === 'flow' && (
             <motion.div key="flow" initial="hidden" animate={flowControls} variants={fadeIn} exit={{ opacity: 0 }}>
-              <motion.svg
-                viewBox="0 0 800 400"
-                className="w-full h-auto"
-              >
-                 <defs>
-                  <marker id="flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#0052CC" />
-                  </marker>
-                </defs>
+                <section aria-label="User Flow Diagram: Main Application Journey">
+                    <svg viewBox="0 0 800 400" className="w-full h-auto" aria-hidden="true">
+                        {userFlowEdges.map((edge, idx) => {
+                            const fromNode = userFlowNodes.find(n => n.id === edge.from)!
+                            const toNode = userFlowNodes.find(n => n.id === edge.to)!
+                            const isActive = hoveredNode === edge.from || !hoveredNode
+                            
+                            const isReturn = (edge.from === 'manage_menu' && edge.to === 'login_admin') || (edge.from === 'generate_invoice' && edge.to === 'take_order');
+                            const d = isReturn 
+                                ? `M ${fromNode.x} ${fromNode.y - 30} C ${fromNode.x - 50},${fromNode.y - 80} ${toNode.x + 50},${toNode.y - 80} ${toNode.x},${toNode.y + 30}`
+                                : `M ${fromNode.x + 37.5} ${fromNode.y} L ${toNode.x - 37.5} ${toNode.y}`;
 
-                {flowPaths.map((path, i) => {
-                  const fromNode = flowNodes[path.from];
-                  const toNode = flowNodes[path.to];
-                  const d = path.isReturn 
-                    ? `M ${fromNode.x} ${fromNode.y - 25} C ${fromNode.x},${fromNode.y - 80} ${toNode.x},${toNode.y - 80} ${toNode.x},${toNode.y + 25}`
-                    : `M ${fromNode.x + 60} ${fromNode.y} C ${fromNode.x + 100},${fromNode.y} ${toNode.x - 100},${toNode.y} ${toNode.x - 60},${toNode.y}`;
-                  return <motion.path key={i} d={d} className="stroke-[#0052CC] stroke-2 fill-transparent" markerEnd='url(#flow-arrow)' variants={drawLine} custom={i} />;
-                })}
+                            return (
+                            <motion.path
+                                key={idx}
+                                d={d}
+                                stroke={accentColor}
+                                strokeWidth={isActive ? 3 : 1.5}
+                                strokeLinecap="round"
+                                fill="none"
+                                initial={{ pathLength: 0, opacity: 0 }}
+                                animate={{ pathLength: 1, opacity: isActive ? 1 : 0.3 }}
+                                transition={{ duration: 1.5, delay: idx * 0.2, ease: 'easeInOut' }}
+                                style={{
+                                    filter: isActive ? 'drop-shadow(0 0 4px #FF6B35)' : 'none',
+                                }}
+                            />
+                            )
+                        })}
 
-                {flowNodes.map((node, i) => (
-                  <motion.g
-                    key={node.label}
-                    className="cursor-pointer"
-                    whileHover={{ scale: 1.08 }}
-                    variants={nodeVariant}
-                  >
-                    <rect x={node.x - 60} y={node.y - 25} width={120} height={50} rx={25} className="fill-gray-900 stroke-[#2EC4B6] stroke-2"/>
-                    <text x={node.x} y={node.y + 5} textAnchor="middle" className="fill-white text-sm font-medium">{node.label}</text>
-                  </motion.g>
-                ))}
-              </motion.svg>
+                        {userFlowNodes.map(node => (
+                            <g
+                                key={node.id}
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredNode(node.id)}
+                                onMouseLeave={() => setHoveredNode(null)}
+                            >
+                                <motion.rect
+                                    x={node.x - 75 / 2} y={node.y - 30} width={75} height={60}
+                                    rx={12} ry={12}
+                                    fill="#142D4C"
+                                    stroke={node.id === hoveredNode ? accentColor : secondaryColor}
+                                    strokeWidth={node.id === hoveredNode ? 3 : 2}
+                                    filter={node.id === hoveredNode ? 'drop-shadow(0 0 8px #FF6B35)' : 'none'}
+                                    variants={nodeVariant}
+                                />
+                                <motion.text
+                                    x={node.x} y={node.y + 5}
+                                    fill={node.id === hoveredNode ? accentColor : '#fff'}
+                                    fontWeight={600} fontSize={14}
+                                    textAnchor="middle"
+                                    pointerEvents="none"
+                                    variants={nodeVariant}
+                                >
+                                    {node.label}
+                                </motion.text>
+                            </g>
+                        ))}
+                    </svg>
+                </section>
             </motion.div>
           )}
         </AnimatePresence>
