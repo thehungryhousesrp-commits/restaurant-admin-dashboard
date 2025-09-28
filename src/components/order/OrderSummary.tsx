@@ -63,12 +63,21 @@ export default function OrderSummary({
       setPopupVisible(true);
       return;
     }
-    if (!validateCustomerName(customerInfo.name)) {
+
+    const isNameValid = validateCustomerName(customerInfo.name);
+    const isPhoneValid = validatePhoneNumber(customerInfo.phone);
+
+    if (!isNameValid && !isPhoneValid) {
+      setErrorMsg("Invalid name and phone number.");
+      setPopupVisible(true);
+      return;
+    }
+    if (!isNameValid) {
       setErrorMsg("Please enter a valid name (at least 3 letters).");
       setPopupVisible(true);
       return;
     }
-    if (!validatePhoneNumber(customerInfo.phone)) {
+    if (!isPhoneValid) {
       setErrorMsg("Please enter a valid 10-digit Indian mobile number.");
       setPopupVisible(true);
       return;
