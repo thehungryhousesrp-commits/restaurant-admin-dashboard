@@ -5,7 +5,7 @@ import { type MenuItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Vegan, Flame, Star, PlusCircle } from "lucide-react";
+import { Vegan, Flame, Star, PlusCircle, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MenuItemCardProps {
@@ -21,13 +21,19 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
     )}>
       <CardHeader className="p-0">
         <div className="relative aspect-video">
-          <Image
-            src={item.imageUrl}
-            alt={item.name}
-            data-ai-hint={item.imageHint}
-            fill
-            className={cn("object-cover", !item.isAvailable && "grayscale")}
-          />
+          {item.imageUrl ? (
+            <Image
+              src={item.imageUrl}
+              alt={item.name}
+              data-ai-hint={item.imageHint}
+              fill
+              className={cn("object-cover", !item.isAvailable && "grayscale")}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-muted">
+                <ImageIcon className="h-12 w-12 text-muted-foreground" />
+            </div>
+          )}
           {!item.isAvailable && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <Badge variant="destructive" className="text-lg">Out of Stock</Badge>
