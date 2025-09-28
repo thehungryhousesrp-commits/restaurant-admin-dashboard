@@ -31,7 +31,7 @@ interface AppContextType {
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   updateMenuItem: (id: string, updates: Partial<MenuItem>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
-  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<Category | undefined>;
   deleteCategory: (id: string) => Promise<void>;
   placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
@@ -136,14 +136,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  const addCategory = async (category: Omit<Category, 'id'>) => {
+  const addCategory = async (category: Omit<Category, 'id'>): Promise<Category | undefined> => {
     try {
         const existingCategory = categories.find(c => c.name.toLowerCase() === category.name.toLowerCase());
         if(existingCategory) {
             console.warn("Category already exists");
-            return;
+            return existingCategory;
         }
-      await addDoc(collection(db, 'categories'), category);
+      const docRef = await addDoc(collection(db, 'categories'), category);
+      return { id: docRef.id, ...category };
     } catch (e) {
       console.error("Error adding category: ", e);
       throw e;
