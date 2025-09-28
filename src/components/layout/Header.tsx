@@ -19,6 +19,7 @@ export default function Header() {
   const navItems = [
     { href: '/', label: 'Order Entry', public: true },
     { href: '/admin/menu', label: 'Admin', public: false },
+    { href: '/about', label: 'About Developer', public: false }
   ];
 
   const handleLogout = async () => {
