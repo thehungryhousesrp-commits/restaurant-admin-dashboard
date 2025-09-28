@@ -1,54 +1,6 @@
 "use client";
 
-import { Code, GitBranch, Workflow, Eye } from 'lucide-react';
 import Head from 'next/head';
-import Image from 'next/image';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-
-const DiagramCard = ({ title, icon: Icon, description, imageUrl, imageName }: { title: string, icon: React.ElementType, description: string, imageUrl: string, imageName: string }) => {
-    return (
-        <Card className="bg-gray-800/50 text-white border-gray-700/50">
-            <CardHeader className="flex-row items-center gap-4 space-y-0 pb-4">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-white">
-                    <Icon className="h-6 w-6" />
-                </div>
-                <CardTitle className="font-headline text-lg">{title}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <p className="text-sm text-gray-400 min-h-[40px]">
-                    {description}
-                </p>
-                <Dialog>
-                    <DialogTrigger asChild>
-                       <div className="relative aspect-video w-full rounded-md overflow-hidden border border-gray-600 cursor-pointer group">
-                           <Image src={imageUrl} alt={imageName} fill className="object-contain p-2" />
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <Eye className="h-8 w-8 text-white" />
-                           </div>
-                       </div>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl bg-gray-900 border-gray-700 text-white">
-                        <DialogHeader>
-                            <DialogTitle className="font-headline text-2xl">{title}</DialogTitle>
-                        </DialogHeader>
-                        <div className="relative aspect-video w-full mt-4">
-                             <Image src={imageUrl} alt={imageName} fill className="object-contain" />
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            </CardContent>
-        </Card>
-    )
-}
 
 
 const AboutPageContent = ({ adminName }: { adminName: string }) => {
@@ -298,31 +250,6 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
                     <span className="bg-sky-900/50 text-sky-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Tailwind CSS</span>
                 </div>
             </div>
-
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <DiagramCard 
-                    title="ER Diagram"
-                    icon={Workflow}
-                    description="Shows the database structure in Firestore, including collections (Orders, Menu Items, Categories) and their relationships."
-                    imageUrl="https://i.ibb.co/qjT9K9k/ER-Diagram.png"
-                    imageName="ER Diagram"
-                />
-                 <DiagramCard 
-                    title="Sequence Diagram (Order Placement)"
-                    icon={GitBranch}
-                    description="Illustrates the step-by-step interaction between the UI, App Context (State), and Firebase when a new order is placed."
-                    imageUrl="https://i.ibb.co/L6Vj4Yp/Sequence-Diagram.png"
-                    imageName="Sequence Diagram"
-                />
-                <DiagramCard 
-                    title="User Flow Diagram"
-                    icon={Code}
-                    description="Visualizes the primary paths a user (staff) takes through the application, from login to order entry and invoice generation."
-                    imageUrl="https://i.ibb.co/C0VdYmT/Flow-Diagram.png"
-                    imageName="Flow Diagram"
-                />
-            </div>
         </div>
       </div>
     </>
@@ -330,5 +257,3 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
 };
 
 export default AboutPageContent;
-
-    
