@@ -335,7 +335,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                         <FormField control={form.control} name="isSpicy" render={({ field }) => (
                             <FormItem className="flex items-center gap-2 space-y-0">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
-                            <Label htmlFor="isSpicy" className="font-normal">Spicy</FormLabel>
+                            <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
                             </FormItem>
                         )} />
                         <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
