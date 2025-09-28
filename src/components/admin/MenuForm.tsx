@@ -30,6 +30,7 @@ import { suggestPrice } from "@/ai/flows/suggestPrice";
 import { findImageUrl } from "@/ai/flows/findImageUrl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { extractDirectImageUrl } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
 
@@ -57,7 +58,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       category: itemToEdit?.category || "",
       imageUrl: itemToEdit?.imageUrl || "",
       isAvailable: itemToEdit?.isAvailable ?? true,
-      isVeg: itemToEdit?.isVeg ?? false,
+      isVeg: itemToEdit?.isVeg ?? true, // Default to Veg
       isSpicy: itemToEdit?.isSpicy ?? false,
       isChefsSpecial: itemToEdit?.isChefsSpecial ?? false,
     },
@@ -78,7 +79,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         category: "",
         imageUrl: "",
         isAvailable: true,
-        isVeg: false,
+        isVeg: true,
         isSpicy: false,
         isChefsSpecial: false,
       });
@@ -296,30 +297,55 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 name="isAvailable"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5"><FormLabel>Available</FormLabel></div>
+                    <div className="space-y-0.5"><FormLabel>Available for Serving</FormLabel></div>
                     <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   </FormItem>
                 )}
               />
-              <div className="flex gap-4">
-                <FormField control={form.control} name="isVeg" render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isVeg" /></FormControl>
-                      <Label htmlFor="isVeg" className="font-normal">Veg</Label>
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="isSpicy" render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
-                      <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
-                      <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
-                    </FormItem>
-                )} />
+              <div className="grid grid-cols-2 gap-4 rounded-lg border p-3 shadow-sm">
+                 <FormField
+                    control={form.control}
+                    name="isVeg"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>Food Type</FormLabel>
+                            <FormControl>
+                                <RadioGroup
+                                onValueChange={(value) => field.onChange(value === 'true')}
+                                value={String(field.value)}
+                                className="flex gap-4"
+                                >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="true" id="isVeg-true" /></FormControl>
+                                    <FormLabel htmlFor="isVeg-true" className="font-normal">Veg</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl><RadioGroupItem value="false" id="isVeg-false" /></FormControl>
+                                    <FormLabel htmlFor="isVeg-false" className="font-normal">Non-Veg</FormLabel>
+                                </FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                <div className="space-y-2">
+                    <Label>Other Flags</Label>
+                    <div className="flex flex-col gap-3 pt-1">
+                        <FormField control={form.control} name="isSpicy" render={({ field }) => (
+                            <FormItem className="flex items-center gap-2 space-y-0">
+                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
+                            <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
+                            <FormItem className="flex items-center gap-2 space-y-0">
+                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
+                            <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
+                            </FormItem>
+                        )} />
+                    </div>
+                </div>
               </div>
             </div>
           </div>
@@ -385,3 +411,5 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     </Form>
   );
 }
+
+    
