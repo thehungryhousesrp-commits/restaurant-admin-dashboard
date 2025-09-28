@@ -41,7 +41,19 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     toast({ title: "Link Copied!", description: "Invoice link copied to clipboard." });
   };
 
+  const validatePhoneNumber = (phone: string) => {
+    // This regex validates a 10-digit number, allowing for optional country code (+91) and spaces
+    const phoneRegex = /^(?:\+91)?[ -]?\d{10}$/;
+    return phoneRegex.test(phone.trim());
+  };
+
   const handleShareOnWhatsApp = () => {
+    const rawPhoneNumber = order.customerInfo.phone;
+    if (!validatePhoneNumber(rawPhoneNumber)) {
+        toast({ title: "Invalid Phone Number", description: "Cannot share on WhatsApp. The customer's phone number must be a valid 10-digit number.", variant: "destructive" });
+        return;
+    }
+
     const customerName = order.customerInfo.name;
     const totalAmount = order.total.toFixed(2);
     const orderDate = new Date(order.createdAt).toLocaleString('en-IN', {
@@ -53,8 +65,9 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
 
     const message = `Dear ${customerName},\n\nThank you for your recent order at The Hungry House! Your invoice is now available.\n\nAmount : ₹${totalAmount}\nDate : ${orderDate}\n\nView Invoice : ${shareableLink}\n\n---\n\nHow was your experience? We'd love your feedback!\n⭐ Rate us on Google:\n${googleReviewLink}\n\nWe appreciate your support! 🙏`;
     
-    // Basic phone number cleaning (remove spaces, +, etc.) and prepend country code if missing
-    let phoneNumber = order.customerInfo.phone.replace(/[\s+()-]/g, '');
+    // Clean the phone number to get just the digits
+    let phoneNumber = rawPhoneNumber.replace(/[\s+()-]/g, '');
+    // Ensure it has the Indian country code if it's 10 digits long
     if (phoneNumber.length === 10) {
       phoneNumber = `91${phoneNumber}`;
     }

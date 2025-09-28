@@ -37,21 +37,30 @@ export default function OrderSummary({
   const sgst = subtotal * 0.025;
   const total = subtotal + cgst + sgst;
 
+  const validatePhoneNumber = (phone: string) => {
+    const phoneRegex = /^\d{10}$/;
+    return phoneRegex.test(phone.trim());
+  };
+
   const handlePlaceOrder = async () => {
     if (currentOrder.length === 0) {
       toast({ title: "Cannot place an empty order.", variant: "destructive" });
       return;
     }
-    if (!customerInfo.name || !customerInfo.phone) {
-      toast({ title: "Please enter customer name and phone number.", variant: "destructive" });
+    if (!customerInfo.name) {
+      toast({ title: "Please enter customer name.", variant: "destructive" });
       return;
+    }
+    if (!validatePhoneNumber(customerInfo.phone)) {
+        toast({ title: "Invalid Phone Number", description: "Please enter a valid 10-digit phone number.", variant: "destructive" });
+        return;
     }
 
     setIsPlacingOrder(true);
     try {
       const newOrder = await placeOrder(currentOrder, customerInfo);
       setPlacedOrder(newOrder);
-      toast({ title: "Order Placed Successfully!", description: `Order ID: ${newOrder.id}`, variant: "default" });
+      toast({ title: "Order Placed Successfully!", description: `Order ID: ${newOrder.id.slice(-6).toUpperCase()}`, variant: "default" });
     } catch (error) {
       toast({ title: "Failed to place order.", variant: "destructive" });
     } finally {
@@ -151,7 +160,7 @@ export default function OrderSummary({
             </div>
             <Dialog onOpenChange={handleDialogClose}>
                 <DialogTrigger asChild>
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={!customerInfo.name || !customerInfo.phone || isPlacingOrder}>
+                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={isPlacingOrder}>
                         {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Place Order & Generate Invoice
                     </Button>
@@ -163,5 +172,3 @@ export default function OrderSummary({
     </Card>
   );
 }
-
-    
