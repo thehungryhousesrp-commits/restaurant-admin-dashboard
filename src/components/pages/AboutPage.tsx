@@ -1,7 +1,55 @@
 "use client";
 
-import { Code, GitBranch, Workflow } from 'lucide-react';
+import { Code, GitBranch, Workflow, Eye } from 'lucide-react';
 import Head from 'next/head';
+import Image from 'next/image';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+
+const DiagramCard = ({ title, icon: Icon, description, imageUrl, imageName }: { title: string, icon: React.ElementType, description: string, imageUrl: string, imageName: string }) => {
+    return (
+        <Card className="bg-gray-800/50 text-white border-gray-700/50">
+            <CardHeader className="flex-row items-center gap-4 space-y-0 pb-4">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-white">
+                    <Icon className="h-6 w-6" />
+                </div>
+                <CardTitle className="font-headline text-lg">{title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <p className="text-sm text-gray-400 min-h-[40px]">
+                    {description}
+                </p>
+                <Dialog>
+                    <DialogTrigger asChild>
+                       <div className="relative aspect-video w-full rounded-md overflow-hidden border border-gray-600 cursor-pointer group">
+                           <Image src={imageUrl} alt={imageName} fill className="object-contain p-2" />
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <Eye className="h-8 w-8 text-white" />
+                           </div>
+                       </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl bg-gray-900 border-gray-700 text-white">
+                        <DialogHeader>
+                            <DialogTitle className="font-headline text-2xl">{title}</DialogTitle>
+                        </DialogHeader>
+                        <div className="relative aspect-video w-full mt-4">
+                             <Image src={imageUrl} alt={imageName} fill className="object-contain" />
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
+    )
+}
+
 
 const AboutPageContent = ({ adminName }: { adminName: string }) => {
   return (
@@ -29,12 +77,11 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
         .pps-banner {
             position: relative;
             width: 100%;
-            min-height: 600px;
+            min-height: 500px;
             padding: 50px 70px;
             overflow: hidden;
             background: linear-gradient(135deg, var(--primary-color) 0%, #0d2f5a 100%);
             color: var(--text-dark);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
         }
         
         .pps-banner::before {
@@ -160,31 +207,7 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
             width: 24px;
             height: 24px;
         }
-
-        .pps-extra-info {
-            width: 100%;
-            max-width: 1200px;
-            margin: 30px auto;
-            color: var(--text-light);
-            font-weight: 600;
-            font-size: 0.9rem;
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .pps-extra-info span {
-            background: rgba(255 255 255 / 0.08);
-            padding: 10px 20px;
-            border-radius: 20px;
-            transition: all 0.3s ease;
-            cursor: default;
-        }
-        .pps-extra-info span:hover {
-            background: rgba(255 255 255 / 0.15);
-            transform: translateY(-2px);
-        }
-
+        
         @keyframes pps-fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -216,7 +239,6 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
         @media (max-width: 480px) {
             .pps-headline { font-size: 2rem; }
             .pps-cta-buttons { flex-direction: column; }
-            .pps-extra-info { font-size: 0.8rem; }
         }
       `}</style>
       <div className="pps-banner-body">
@@ -258,41 +280,48 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
                 <h2 className="text-4xl font-headline font-extrabold tracking-tight text-white sm:text-5xl">
                     Welcome, {adminName}!
                 </h2>
-                <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
-                    This is your developer insight panel for the Hungry House Hub application.
+                <p className="mt-4 max-w-3xl mx-auto text-xl text-gray-400">
+                    This is the Developer Insight Panel for the <span className="text-primary-color font-bold">Hungry House Hub</span> application. This page serves as a technical manual and overview of the app's architecture.
                 </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-gray-800/50 rounded-lg p-6 text-center">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-white mx-auto">
-                        <Code className="h-6 w-6" />
-                    </div>
-                    <h3 className="mt-5 text-lg font-medium text-white font-headline">ER Diagram</h3>
-                    <p className="mt-2 text-base text-gray-400">
-                        Placeholder for the Entity-Relationship diagram showing database schema and relations.
-                    </p>
+            
+            <div className="bg-gray-800/20 rounded-lg p-6 md:p-8 mb-12">
+                <h3 className="text-2xl font-headline font-bold text-white mb-4">Application Overview</h3>
+                <p className="text-gray-300 mb-4">
+                    The Hungry House Hub is a modern, AI-powered restaurant management system designed for seamless operation. It allows staff to quickly take orders, manage the menu, and automatically generate invoices. The admin panel provides powerful tools, including an AI-driven bulk menu uploader, to simplify restaurant management.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                    <span className="bg-blue-900/50 text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Next.js</span>
+                    <span className="bg-yellow-900/50 text-yellow-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Firebase</span>
+                    <span className="bg-green-900/50 text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Genkit (Gemini AI)</span>
+                    <span className="bg-indigo-900/50 text-indigo-300 text-xs font-medium px-2.5 py-0.5 rounded-full">React</span>
+                    <span className="bg-sky-900/50 text-sky-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Tailwind CSS</span>
                 </div>
+            </div>
 
-                <div className="bg-gray-800/50 rounded-lg p-6 text-center">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-white mx-auto">
-                        <Workflow className="h-6 w-6" />
-                    </div>
-                    <h3 className="mt-5 text-lg font-medium text-white font-headline">Flow Diagram</h3>
-                    <p className="mt-2 text-base text-gray-400">
-                        Placeholder for the application's main user and data flow diagrams.
-                    </p>
-                </div>
 
-                <div className="bg-gray-800/50 rounded-lg p-6 text-center">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-md bg-primary text-white mx-auto">
-                        <GitBranch className="h-6 w-6" />
-                    </div>
-                    <h3 className="mt-5 text-lg font-medium text-white font-headline">Sequence Diagram</h3>
-                    <p className="mt-2 text-base text-gray-400">
-                        Placeholder for sequence diagrams illustrating key interactions, e.g., order placement.
-                    </p>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <DiagramCard 
+                    title="ER Diagram"
+                    icon={Workflow}
+                    description="Shows the database structure in Firestore, including collections (Orders, Menu Items, Categories) and their relationships."
+                    imageUrl="https://i.ibb.co/qjT9K9k/ER-Diagram.png"
+                    imageName="ER Diagram"
+                />
+                 <DiagramCard 
+                    title="Sequence Diagram (Order Placement)"
+                    icon={GitBranch}
+                    description="Illustrates the step-by-step interaction between the UI, App Context (State), and Firebase when a new order is placed."
+                    imageUrl="https://i.ibb.co/L6Vj4Yp/Sequence-Diagram.png"
+                    imageName="Sequence Diagram"
+                />
+                <DiagramCard 
+                    title="User Flow Diagram"
+                    icon={Code}
+                    description="Visualizes the primary paths a user (staff) takes through the application, from login to order entry and invoice generation."
+                    imageUrl="https://i.ibb.co/C0VdYmT/Flow-Diagram.png"
+                    imageName="Flow Diagram"
+                />
             </div>
         </div>
       </div>
@@ -301,3 +330,5 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
 };
 
 export default AboutPageContent;
+
+    
