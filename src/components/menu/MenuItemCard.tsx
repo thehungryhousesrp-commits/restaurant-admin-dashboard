@@ -45,7 +45,7 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
         <div className="flex justify-between items-start gap-2">
             <CardTitle className="text-lg font-headline mb-1">{item.name}</CardTitle>
             <div className="flex gap-2 items-center text-primary">
-                {item.isVeg && <Vegan className="h-5 w-5" title="Vegetarian" />}
+                {item.isVeg && <Vegan className="h-5 w-5 text-green-500" title="Vegetarian" />}
                 {item.isSpicy && <Flame className="h-5 w-5 text-orange-500" title="Spicy" />}
                 {item.isChefsSpecial && <Star className="h-5 w-5 text-yellow-400" title="Chef's Special" />}
             </div>
