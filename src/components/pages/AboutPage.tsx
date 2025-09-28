@@ -113,6 +113,7 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
 
         .pps-cta-buttons {
             display: flex;
+            flex-wrap: wrap;
             gap: 20px;
             margin-bottom: 45px;
             animation: pps-fadeInUp 0.8s 0.6s ease-out backwards;
@@ -143,10 +144,13 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
         }
         .pps-btn-primary { background-color: var(--accent-color); color: var(--text-dark); }
         .pps-btn-secondary { background-color: rgba(255, 255, 255, 0.15); color: var(--text-dark); backdrop-filter: blur(10px); }
+        .pps-btn-whatsapp { background-color: #25D366; color: white; }
+        .pps-btn-whatsapp:hover { background-color: #1DA851; }
 
         .pps-contact-info {
             display: flex;
-            gap: 30px;
+            flex-direction: column;
+            gap: 15px;
             animation: pps-fadeInUp 0.8s 0.8s ease-out backwards;
         }
         .pps-contact-item {
@@ -166,6 +170,13 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
             fill: var(--accent-color);
             width: 24px;
             height: 24px;
+            flex-shrink: 0;
+        }
+        .pps-contact-label {
+            font-weight: normal;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-right: 8px;
         }
         
         @keyframes pps-fadeInUp {
@@ -187,9 +198,6 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
             .pps-content { max-width: 100%; }
             .pps-cta-buttons { justify-content: center; }
             .pps-contact-info {
-                flex-direction: column;
-                justify-content: center;
-                gap: 15px;
                 align-items: center;
             }
             .pps-headline { font-size: 2.5rem; }
@@ -226,11 +234,22 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.054 15.054 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1v3.49a1 1 0 0 1-1 1C10.01 22 3 14.99 3 6a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57c.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
                             Call Us
                         </a>
-                        <a href="https://wa.me/918062180843" target="_blank" rel="noopener" className="pps-btn pps-btn-secondary" role="button">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M19.03 4.97a10 10 0 0 0-14.06 0 10 10 0 0 0 0 14.06c3.8 3.8 10.26 3.8 14.06 0s3.8-10.26 0-14.06zM9.43 17.52c-.34 0-.68-.06-1-.18l-2.6.68.7-2.54a5.4 5.4 0 0 1-1.03-2.92c0-3 2.44-5.44 5.44-5.44a5.34 5.34 0 0 1 3.82 1.62c2.12 2.12 2.12 5.56 0 7.68-1.08 1.08-2.5 1.7-4.04 1.76h-.29zm5.17-5.18c-.28-.14-1.65-.82-1.9-.91-.26-.1-.45-.14-.64.14-.19.28-.72.91-.88 1.1-.16.19-.32.21-.6.07-.28-.14-1.17-.43-2.23-1.37-.83-.73-1.39-1.63-1.55-1.9-.16-.28-.02-.43.12-.57.13-.13.28-.32.42-.48.14-.16.19-.28.28-.47.1-.19.05-.36-.02-.5L9.9 9.17c-.24-.58-.5-.63-.68-.64-.18-.01-.38-.01-.58-.01-.2 0-.52.07-.78.35-.26.28-.99.97-.99 2.37s1.01 2.76 1.15 2.95c.14.19 1.99 3.03 4.83 4.25 2.84 1.22 2.84.82 3.36.75.52-.07 1.65-.67 1.88-1.32.23-.65.23-1.2.16-1.32c-.07-.12-.26-.19-.54-.33z"/></svg>
+                        <a href="https://wa.me/918062180843" target="_blank" rel="noopener" className="pps-btn pps-btn-whatsapp" role="button">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.04c-5.5 0-9.96 4.46-9.96 9.96c0 1.77.46 3.45 1.28 4.91L2 22l5.25-1.38c1.41.78 3.02 1.22 4.75 1.22c5.5 0 9.96-4.46 9.96-9.96S17.5 2.04 12 2.04zm4.47 12.28c-.28.48-1.03 1.03-1.48 1.18c-.45.15-1.02.16-1.52-.05c-.5-.21-2.07-.76-3.95-2.43c-1.48-1.3-2.47-2.9-2.87-3.52c-.4-.62-.05-1.03.2-1.32c.2-.23.44-.3.6-.42c.16-.12.3-.21.43-.35c.13-.14.23-.28.16-.48c-.07-.2-.68-1.63-.92-2.17c-.24-.54-.48-.58-.66-.59c-.18-.01-.38-.01-.58-.01c-.2 0-.52.07-.78.35c-.26.28-1 .97-1 2.37s1.02 2.76 1.16 2.95c.14.19 2.1 3.2 5.1 4.5c.75.32 1.35.5 1.8.62c.45.12 1.03.1 1.48-.05c.45-.15 1.29-.86 1.48-1.18c.19-.32.19-.6.12-.74c-.07-.14-.26-.23-.54-.37z"/></svg>
                             Tap to Chat
                         </a>
                     </nav>
+
+                    <div className="pps-contact-info" aria-label="Contact information">
+                         <div className="pps-contact-item">
+                            <span className="pps-contact-label">Sales &amp; Inquiries:</span>
+                            <a href="mailto:info@pragatipathsolutions.com">info@pragatipathsolutions.com</a>
+                        </div>
+                        <div className="pps-contact-item">
+                           <span className="pps-contact-label">Technical Support:</span>
+                           <a href="mailto:support@pragatipathsolutions.com">support@pragatipathsolutions.com</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -294,5 +313,3 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
 };
 
 export default AboutPageContent;
-
-    
