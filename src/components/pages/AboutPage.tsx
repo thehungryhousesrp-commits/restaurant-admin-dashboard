@@ -2,9 +2,16 @@
 
 import Head from 'next/head';
 import { AnimatedDiagrams } from './AnimatedDiagrams';
+import { Info, GitBranch, Calendar } from 'lucide-react';
 
 
 const AboutPageContent = ({ adminName }: { adminName: string }) => {
+  const lastUpdatedDate = new Date().toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
   return (
     <>
       <Head>
@@ -229,15 +236,24 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
         </section>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
                 <h2 className="text-4xl font-headline font-extrabold tracking-tight text-white sm:text-5xl">
                     Welcome, {adminName}!
                 </h2>
                 <p className="mt-4 max-w-3xl mx-auto text-xl text-gray-400">
-                    This is the Developer Insight Panel for the <span className="text-primary-color font-bold">Hungry House Hub</span> application. This page serves as a technical manual and overview of the app's architecture.
+                    This is the Developer Insight Panel for the <span className="text-primary-color font-bold">Hungry House Hub</span> application.
                 </p>
             </div>
             
+            <div className="max-w-4xl mx-auto p-4 rounded-lg border border-yellow-500/50 bg-yellow-900/30 text-yellow-200 mb-12 flex items-start gap-4">
+                <Info className="h-5 w-5 flex-shrink-0 mt-1" />
+                <div>
+                    <h4 className="font-bold">Confidential Information</h4>
+                    <p className="text-sm text-yellow-300/90">The diagrams and technical details on this page are for admin and business development purposes only. Please do not share them publicly.</p>
+                </div>
+            </div>
+
+
             <div className="bg-gray-800/20 rounded-lg p-6 md:p-8 mb-12">
                 <h3 className="text-2xl font-headline font-bold text-white mb-4">Application Overview</h3>
                 <p className="text-gray-300 mb-4">
@@ -257,6 +273,20 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
                 <AnimatedDiagrams />
             </div>
 
+            <div className="mt-12 text-center text-gray-500 text-sm space-y-2">
+                <div className="flex items-center justify-center gap-6">
+                    <div className="flex items-center gap-2">
+                        <GitBranch className="h-4 w-4" />
+                        <span>Version 1.1</span>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Last Updated: {lastUpdatedDate}</span>
+                    </div>
+                </div>
+                 <p>by Team Pragati Path Solutions</p>
+            </div>
+
         </div>
       </div>
     </>
@@ -264,3 +294,5 @@ const AboutPageContent = ({ adminName }: { adminName: string }) => {
 };
 
 export default AboutPageContent;
+
+    
