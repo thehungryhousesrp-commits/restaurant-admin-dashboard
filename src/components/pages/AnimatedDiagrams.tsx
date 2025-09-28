@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react'
-import { motion, useAnimationControls } from 'framer-motion'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs' // adjust import paths
+import React, { useState, useEffect } from 'react'
+import { motion, useAnimationControls, AnimatePresence } from 'framer-motion'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs' 
 
 const primary = 'data-[state=active]:bg-blue-900/80 data-[state=active]:text-blue-200 text-gray-300'
 const secondary = 'data-[state=active]:bg-teal-900/80 data-[state=active]:text-teal-200 text-gray-300'
@@ -16,9 +16,22 @@ export const AnimatedDiagrams: React.FC = () => {
   const flowControls = useAnimationControls();
 
   useEffect(() => {
-    if (tab === 'er') erControls.start('visible');
-    if (tab === 'seq') seqControls.start('visible');
-    if (tab === 'flow') flowControls.start('visible');
+    // Reset and start animation when tab changes
+    if (tab === 'er') {
+        erControls.start('visible');
+    } else {
+        erControls.start('hidden');
+    }
+    if (tab === 'seq') {
+        seqControls.start('visible');
+    } else {
+        seqControls.start('hidden');
+    }
+    if (tab === 'flow') {
+        flowControls.start('visible');
+    } else {
+        flowControls.start('hidden');
+    }
   }, [tab, erControls, seqControls, flowControls]);
 
   const fadeIn = { 
@@ -27,34 +40,36 @@ export const AnimatedDiagrams: React.FC = () => {
   }
   const drawLine = {
     hidden: { pathLength: 0, opacity: 0 },
-    visible: { 
+    visible: (custom: number = 0) => ({ 
       pathLength: 1, 
       opacity: 1, 
-      transition: { duration: 1, ease: 'easeInOut' } 
-    }
+      transition: { duration: 1, ease: 'easeInOut', delay: custom * 0.4 } 
+    })
   }
+  
+  const nodeVariant = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
+
 
   const nodes = [
     { label: 'Users', x: 100, y: 175 },
-    { label: 'Categories', x: 300, y: 100 },
-    { label: 'Menu-Items', x: 500, y: 100 },
-    { label: 'Orders', x: 300, y: 250 }
+    { label: 'Categories', x: 350, y: 100 },
+    { label: 'Menu-Items', x: 600, y: 100 },
+    { label: 'Orders', x: 350, y: 250 }
   ];
 
   const relationships = [
-    { from: 1, to: 2, classes: "stroke-[#2EC4B6]" }, // Categories -> Menu-Items
-    { from: 0, to: 3, classes: "stroke-[#FF6B35]" }, // Users -> Orders
-    { from: 2, to: 3, classes: "stroke-gray-500" }, // Menu-Items -> Orders (as part of order)
+    { from: 1, to: 2, classes: "stroke-[#2EC4B6]", d: `M ${nodes[1].x + 60},${nodes[1].y} L ${nodes[2].x - 60},${nodes[2].y}` },
+    { from: 0, to: 3, classes: "stroke-[#FF6B35]", d: `M ${nodes[0].x + 60},${nodes[0].y} L ${nodes[3].x - 60},${nodes[3].y}` },
+    { from: 2, to: 3, classes: "stroke-gray-500", d: `M ${nodes[2].x-30},${nodes[2].y+30} Q ${nodes[2].x},${nodes[2].y+80} ${nodes[3].x+30},${nodes[3].y-30}` },
   ];
   
   const seqParticipants = ['Customer/UI', 'React FE', 'Auth', 'Firestore DB'];
   const seqMessages = [
     { from: 0, to: 1, text: 'placeOrder(items, info)', y: 80, delay: 0.5 },
-    { from: 1, to: 2, text: 'check auth.currentUser', y: 120, delay: 1 },
-    { from: 2, to: 1, text: 'user UID', y: 160, delay: 1.5, dashed: true },
-    { from: 1, to: 3, text: 'addDoc(orderData)', y: 200, delay: 2 },
-    { from: 3, to: 1, text: 'order ID', y: 240, delay: 2.8, dashed: true },
-    { from: 1, to: 0, text: 'showInvoice(order)', y: 280, delay: 3.2, dashed: true }
+    { from: 1, to: 2, text: 'check auth.currentUser', y: 130, delay: 1.2 },
+    { from: 2, to: 1, text: 'user UID', y: 180, delay: 1.9, dashed: true },
+    { from: 1, to: 3, text: 'addDoc(orderData)', y: 230, delay: 2.6 },
+    { from: 3, to: 1, text: 'order ID', y: 280, delay: 3.3, dashed: true },
   ];
 
   const flowNodes = [
@@ -69,8 +84,8 @@ export const AnimatedDiagrams: React.FC = () => {
 
   const flowPaths = [
     { from: 0, to: 1 }, { from: 1, to: 2 }, { from: 1, to: 3 },
-    { from: 2, to: 4 }, { from: 3, to: 5 }, { from: 4, to: 2 },
-    { from: 5, to: 3 }, { from: 4, to: 6}, { from: 5, to: 6}
+    { from: 2, to: 4 }, { from: 3, to: 5 }, { from: 4, to: 2, isReturn: true },
+    { from: 5, to: 3, isReturn: true }, { from: 4, to: 6}, { from: 5, to: 6}
   ];
 
   return (
@@ -84,20 +99,18 @@ export const AnimatedDiagrams: React.FC = () => {
       <div className="mt-4 bg-gray-800/50 rounded-lg p-4 min-h-[450px]">
         <AnimatePresence mode="wait">
           {tab === 'er' && (
-            <motion.div key="er" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div key="er" initial="hidden" animate={erControls} variants={fadeIn} exit={{ opacity: 0 }}>
               <motion.svg
                 viewBox="0 0 800 400"
                 className="w-full h-auto"
-                variants={fadeIn}
-                initial="hidden"
-                animate={erControls}
               >
                 {relationships.map((rel, i) => (
                   <motion.path
                     key={i}
-                    d={`M ${nodes[rel.from].x + 60},${nodes[rel.from].y} C ${nodes[rel.from].x + 120},${nodes[rel.from].y} ${nodes[rel.to].x - 120},${nodes[rel.to].y} ${nodes[rel.to].x - 60},${nodes[rel.to].y}`}
+                    d={rel.d}
                     className={`${rel.classes} stroke-2 fill-transparent`}
                     variants={drawLine}
+                    custom={i}
                   />
                 ))}
                 {nodes.map((entity) => (
@@ -105,7 +118,7 @@ export const AnimatedDiagrams: React.FC = () => {
                     key={entity.label}
                     className="cursor-pointer"
                     whileHover={{ scale: 1.05 }}
-                    variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                    variants={nodeVariant}
                   >
                     <rect x={entity.x - 60} y={entity.y - 30} width={120} height={60} rx={8} className="fill-gray-900 stroke-white/80 stroke-1"/>
                     <text x={entity.x} y={entity.y + 5} textAnchor="middle" className="fill-white font-semibold text-sm">{entity.label}</text>
@@ -116,13 +129,10 @@ export const AnimatedDiagrams: React.FC = () => {
           )}
 
           {tab === 'seq' && (
-             <motion.div key="seq" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+             <motion.div key="seq" initial="hidden" animate={seqControls} variants={fadeIn} exit={{ opacity: 0 }}>
               <motion.svg
                 viewBox="0 0 800 350"
                 className="w-full h-auto"
-                initial="hidden"
-                animate={seqControls}
-                variants={fadeIn}
               >
                 <defs>
                   <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -134,27 +144,29 @@ export const AnimatedDiagrams: React.FC = () => {
                 </defs>
 
                 {seqParticipants.map((p, i) => (
-                  <motion.g key={p} variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}>
+                  <motion.g key={p} variants={nodeVariant}>
                     <line x1={120 + i * 180} y1={20} x2={120 + i * 180} y2={320} className="stroke-white/50 stroke-[1.5]"/>
                     <text x={120 + i * 180} y={40} textAnchor="middle" className="fill-white font-medium">{p}</text>
                   </motion.g>
                 ))}
 
                 {seqMessages.map((msg, i) => (
-                   <motion.g key={i} initial="hidden" animate="visible" variants={{ visible: { transition: { delay: msg.delay } } }}>
+                   <motion.g key={i} >
                     <motion.path
                       d={`M ${120 + msg.from * 180} ${msg.y} H ${120 + msg.to * 180}`}
                       className={msg.dashed ? "stroke-[#2EC4B6] stroke-2" : "stroke-[#FF6B35] stroke-2"}
                       strokeDasharray={msg.dashed ? "5 5" : "0"}
                       markerEnd={msg.dashed ? 'url(#arrow-dashed)' : 'url(#arrow)'}
                       variants={drawLine}
+                      custom={i}
                     />
                     <motion.text
                       x={(120 + msg.from * 180 + 120 + msg.to * 180) / 2}
-                      y={msg.y - 5}
+                      y={msg.y - 8}
                       textAnchor="middle"
                       className="fill-gray-300 text-xs font-medium"
-                      variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: msg.delay + 0.5 } } }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1, transition: { delay: msg.delay + 0.5 } }}
                     >
                       {msg.text}
                     </motion.text>
@@ -171,13 +183,10 @@ export const AnimatedDiagrams: React.FC = () => {
           )}
 
           {tab === 'flow' && (
-            <motion.div key="flow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div key="flow" initial="hidden" animate={flowControls} variants={fadeIn} exit={{ opacity: 0 }}>
               <motion.svg
                 viewBox="0 0 800 400"
                 className="w-full h-auto"
-                variants={fadeIn}
-                initial="hidden"
-                animate={flowControls}
               >
                  <defs>
                   <marker id="flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
@@ -188,8 +197,10 @@ export const AnimatedDiagrams: React.FC = () => {
                 {flowPaths.map((path, i) => {
                   const fromNode = flowNodes[path.from];
                   const toNode = flowNodes[path.to];
-                  const d = `M ${fromNode.x} ${fromNode.y} C ${fromNode.x + 80},${fromNode.y} ${toNode.x - 80},${toNode.y} ${toNode.x},${toNode.y}`;
-                  return <motion.path key={i} d={d} className="stroke-[#0052CC] stroke-2 fill-transparent" markerEnd='url(#flow-arrow)' variants={drawLine} />;
+                  const d = path.isReturn 
+                    ? `M ${fromNode.x} ${fromNode.y - 25} C ${fromNode.x},${fromNode.y - 80} ${toNode.x},${toNode.y - 80} ${toNode.x},${toNode.y + 25}`
+                    : `M ${fromNode.x + 60} ${fromNode.y} C ${fromNode.x + 100},${fromNode.y} ${toNode.x - 100},${toNode.y} ${toNode.x - 60},${toNode.y}`;
+                  return <motion.path key={i} d={d} className="stroke-[#0052CC] stroke-2 fill-transparent" markerEnd='url(#flow-arrow)' variants={drawLine} custom={i} />;
                 })}
 
                 {flowNodes.map((node, i) => (
@@ -197,7 +208,7 @@ export const AnimatedDiagrams: React.FC = () => {
                     key={node.label}
                     className="cursor-pointer"
                     whileHover={{ scale: 1.08 }}
-                    variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+                    variants={nodeVariant}
                   >
                     <rect x={node.x - 60} y={node.y - 25} width={120} height={50} rx={25} className="fill-gray-900 stroke-[#2EC4B6] stroke-2"/>
                     <text x={node.x} y={node.y + 5} textAnchor="middle" className="fill-white text-sm font-medium">{node.label}</text>
