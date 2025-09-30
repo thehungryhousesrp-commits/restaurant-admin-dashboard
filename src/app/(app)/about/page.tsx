@@ -29,7 +29,7 @@ export default function AboutPage() {
     }
     
     // Explicitly set the display name for the greeting
-    const adminName = user.displayName || "Nishant";
+    const adminName = user.displayName || "Dishant";
 
     return (
         <div>
