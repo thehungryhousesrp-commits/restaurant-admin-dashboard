@@ -51,10 +51,10 @@ const prompt = ai.definePrompt({
 The input is: {{{itemInput}}}
 The category context from the previous line is: {{{lastSeenCategory}}}
 
-IMPORTANT: The input might be a category heading (e.g., "Soups", "Starters (Veg)", "Indian Curries (Non-Veg)"). If the input line does NOT contain a price (like '– ₹150' or '- 150'), it is a category heading. In that case, YOU MUST NOT generate an item. Instead, you must return an empty JSON object {} so it can be filtered out later.
+IMPORTANT: The input might be a category heading (e.g., "Soups", "Starters (Veg)", "Indian Curries (Non-Veg)"). If the input line does NOT contain a price (like '– ₹150' or '- 150' or ': 150'), it is a category heading. In that case, YOU MUST NOT generate an item. Instead, you must return an empty JSON object {} so it can be filtered out later.
 
 Follow these steps for lines that ARE menu items (i.e., they contain a price):
-1.  **Parse Input**: The input will be a name with a price (e.g., "Margherita Pizza - 499" or "Fish Fingers – ₹380"). Extract the name and the price. Ignore any currency symbols like '₹', 'Rs.', etc.
+1.  **Parse Input**: The input will be a name with a price (e.g., "Margherita Pizza - 499" or "Fish Fingers – ₹380" or "Cold Coffee: 139"). Extract the name and the price. Ignore any currency symbols like '₹', 'Rs.', etc.
 2.  **Handle Multiple Prices**: Some items might have multiple prices, like "Veg Fried Rice: (Single) 130 | (Full) 180". In this case, you MUST process only the FIRST variant (e.g., "Veg Fried Rice (Single)"). The system will call you again for the second variant. Return a single object for "Veg Fried Rice (Single)" with price 130.
 3.  **Generate Description**: Write a short, appealing, and delicious-sounding description for the menu item. Max 25 words.
 4.  **Determine Category**: Use the '{{lastSeenCategory}}' as the primary context for the category. The category name should be simple, like 'Soups' or 'Starters (Veg)'. Do not use IDs. For example, if the last seen category was "Starters (Veg)", use 'Starters (Veg)'. If '{{lastSeenCategory}}' is not available, determine the most logical category from the item name.
@@ -80,7 +80,7 @@ const generateBulkItemsFlow = ai.defineFlow(
             }
             
             // If the line doesn't contain a price indicator, it's likely a heading.
-            // This regex now supports hyphen, en-dash, and em-dash.
+            // This regex now supports hyphen, en-dash, em-dash, and colon, and also checks for parentheses in prices.
             if (!/[-–—:]\s*₹?\s*(\d|\()/.test(cleanInput)) {
                 console.log(`Skipping heading: ${cleanInput}`);
                 return {} as GeneratedItem;

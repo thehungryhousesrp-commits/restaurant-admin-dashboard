@@ -105,37 +105,49 @@ export default function BulkUploader() {
     // Create a mutable copy of categories to update as we add new ones
     let localCategories = [...categories];
 
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        const currentProgress = Math.round(((i + 1) / lines.length) * 100);
-        setProgress(currentProgress);
-        setProgressText(`Processing item ${i + 1} of ${lines.length}...`);
+    const allVariants: { line: string, category: string }[] = [];
+    let currentItemBaseName = '';
 
+    for (const line of lines) {
         // This is a simple heuristic: if the line does NOT contain a price-like pattern, it's a category.
         // This regex now supports hyphen, en-dash, em-dash, and colon, and also checks for parentheses in prices.
         const isHeading = !/[-–—:]\s*₹?\s*(\d|\()/.test(line);
 
         if (isHeading) {
-            // It's a category heading, store it for context for subsequent items.
             lastSeenCategory = line.replace(/[:(].*/, '').trim(); // Clean up the category name
             continue; 
         }
 
         // Handle lines with multiple prices (e.g., Single/Full)
         const priceVariants = line.split('|').map(v => v.trim());
-        const itemPromises = priceVariants.map(variantLine => 
-            generateBulkItems({ 
-                itemInput: variantLine,
-                lastSeenCategory: lastSeenCategory 
-            })
-        );
-        
-        const results = await Promise.allSettled(itemPromises);
+        const itemNameMatch = priceVariants[0].match(/^([^:-–—]+)/);
+        currentItemBaseName = itemNameMatch ? itemNameMatch[0].trim() : '';
 
-        for (const result of results) {
-            if (result.status === 'fulfilled' && result.value && result.value.name) {
-                 const item = result.value;
+        priceVariants.forEach(variantLine => {
+            let fullLine = variantLine;
+            // If a variant part doesn't contain the base name, prepend it. e.g. `(Full) 220` becomes `Veg Fried Rice (Full) 220`
+            if (!variantLine.toLowerCase().includes(currentItemBaseName.toLowerCase())) {
+                fullLine = `${currentItemBaseName} ${variantLine}`;
+            }
+            allVariants.push({ line: fullLine, category: lastSeenCategory });
+        });
+    }
+
+    for (let i = 0; i < allVariants.length; i++) {
+        const variant = allVariants[i];
+        
+        const currentProgress = Math.round(((i + 1) / allVariants.length) * 100);
+        setProgress(currentProgress);
+        setProgressText(`Processing item ${i + 1} of ${allVariants.length}...`);
+
+        try {
+            const result = await generateBulkItems({ 
+                itemInput: variant.line,
+                lastSeenCategory: variant.category
+            });
+
+            if (result && result.name) {
+                const item = result;
                 const categoryId = await getCategoryId(item.category, localCategories);
                 
                 if (!localCategories.some(c => c.id === categoryId)) {
@@ -146,10 +158,10 @@ export default function BulkUploader() {
                 successfulCount++;
             } else {
                 failedCount++;
-                if(result.status === 'rejected') {
-                    console.error(`Failed to process variant:`, result.reason);
-                }
             }
+        } catch (e) {
+            failedCount++;
+            console.error(`Failed to process variant:`, variant.line, e);
         }
     }
 
@@ -214,9 +226,10 @@ export default function BulkUploader() {
       <CardContent className="space-y-4">
         <div className="grid w-full gap-2">
           <Textarea
-            placeholder="Appetizers (Starters)
-Paneer Tikka – ₹280
-Samosa - 100
+            placeholder="Soups
+Tomato Soup – 150
+...
+Veg Fried Rice: (Single) 130 | (Full) 180
 ...
 "
             value={rawInput}
