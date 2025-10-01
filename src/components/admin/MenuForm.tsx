@@ -344,7 +344,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                             <FormItem className="flex items-center gap-2 space-y-0">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
                             <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
-                            </default_api>
+                            </FormItem>
                         )} />
                     </div>
                 </div>
