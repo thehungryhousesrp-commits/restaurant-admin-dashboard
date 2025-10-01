@@ -112,8 +112,9 @@ export default function BulkUploader() {
         setProgress(currentProgress);
         setProgressText(`Processing item ${i + 1} of ${lines.length}...`);
 
-        // This is a simple heuristic: if the line does NOT contain a price-like pattern (e.g., - 280, – ₹280), it's a category.
-        const isHeading = !/[-–]\s*₹?\s*\d/.test(line);
+        // This is a simple heuristic: if the line does NOT contain a price-like pattern, it's a category.
+        // This regex now supports hyphen, en-dash, em-dash, and colon, and also checks for parentheses in prices.
+        const isHeading = !/[-–—:]\s*₹?\s*(\d|\()/.test(line);
 
         if (isHeading) {
             // It's a category heading, store it for context for subsequent items.
@@ -121,34 +122,39 @@ export default function BulkUploader() {
             continue; 
         }
 
-        try {
-            const result = await generateBulkItems({ 
-                itemInput: line,
+        // Handle lines with multiple prices (e.g., Single/Full)
+        const priceVariants = line.split('|').map(v => v.trim());
+        const itemPromises = priceVariants.map(variantLine => 
+            generateBulkItems({ 
+                itemInput: variantLine,
                 lastSeenCategory: lastSeenCategory 
-            });
-            
-            if (result && result.name) {
-                const categoryId = await getCategoryId(result.category, localCategories);
+            })
+        );
+        
+        const results = await Promise.allSettled(itemPromises);
+
+        for (const result of results) {
+            if (result.status === 'fulfilled' && result.value && result.value.name) {
+                 const item = result.value;
+                const categoryId = await getCategoryId(item.category, localCategories);
                 
-                // If a new category was created, update our local copy to prevent re-creation
                 if (!localCategories.some(c => c.id === categoryId)) {
-                    localCategories.push({id: categoryId, name: result.category});
+                    localCategories.push({id: categoryId, name: item.category});
                 }
                 
-                // Immediately append the successfully generated item to the form array
-                append({ ...result, category: categoryId });
+                append({ ...item, category: categoryId });
                 successfulCount++;
             } else {
                 failedCount++;
+                if(result.status === 'rejected') {
+                    console.error(`Failed to process variant:`, result.reason);
+                }
             }
-        } catch (err: any) {
-            console.error(`Failed to process line "${line}":`, err);
-            failedCount++;
         }
     }
 
     if (failedCount > 0) {
-        setError(`${failedCount} items could not be processed. Please review them in the raw input and add them manually if needed.`);
+        setError(`${failedCount} item variants could not be processed. Please review them in the raw input and add them manually if needed.`);
     }
 
     toast({ 
