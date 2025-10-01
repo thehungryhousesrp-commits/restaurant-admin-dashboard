@@ -314,6 +314,8 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                                 onValueChange={(value) => field.onChange(value === 'true')}
                                 value={String(field.value)}
                                 className="flex gap-4"
+                                name="foodType"
+                                id="foodType"
                                 >
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                     <FormControl><RadioGroupItem value="true" id="isVeg-true" /></FormControl>
@@ -342,7 +344,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                             <FormItem className="flex items-center gap-2 space-y-0">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
                             <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
-                            </FormItem>
+                            </default_api>
                         )} />
                     </div>
                 </div>

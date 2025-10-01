@@ -80,7 +80,8 @@ const generateBulkItemsFlow = ai.defineFlow(
             
             // If the line doesn't contain a price indicator, it's likely a heading.
             // A simple check for a number is a good heuristic.
-            if (!/[-–]\s*₹?\s*\d/.test(cleanInput)) {
+            // This regex now supports hyphen, en-dash, and em-dash.
+            if (!/[-–—]\s*₹?\s*\d/.test(cleanInput)) {
                 console.log(`Skipping heading: ${cleanInput}`);
                 return {} as GeneratedItem;
             }
