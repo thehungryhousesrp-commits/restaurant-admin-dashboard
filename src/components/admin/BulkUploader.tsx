@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Wand2, Loader2, UploadCloud, Trash2, Sparkles } from 'lucide-react';
+import { Wand2, Loader2, UploadCloud, Trash2, Sparkles, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateBulkItems } from '@/ai/flows/generateBulkItems';
 import { useAppContext } from '@/context/AppContext';
@@ -166,7 +166,7 @@ export default function BulkUploader() {
     }
 
     if (failedCount > 0) {
-        setError(`${failedCount} item variants could not be processed. Please review them in the raw input and add them manually if needed.`);
+        setError(`${failedCount} item variants could not be processed. Please check the format and try again.`);
     }
 
     toast({ 
@@ -224,6 +224,13 @@ export default function BulkUploader() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>How to Format Your Menu</AlertTitle>
+          <AlertDescription>
+            For best results, use clear patterns. Put each category on its own line (e.g., `Soups`). Put each item on a new line with its price (e.g., `Tomato Soup - 150`). For items with multiple prices, use a pipe `|` (e.g., `Fried Rice: (Single) 130 | (Full) 180`).
+          </AlertDescription>
+        </Alert>
         <div className="grid w-full gap-2">
           <Textarea
             placeholder="Soups
@@ -287,7 +294,7 @@ Veg Fried Rice: (Single) 130 | (Full) 180
                                             name={`items.${index}.category`}
                                             render={({ field }) => (
                                                 <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                    <FormControl><SelectTrigger><SelectValue /></SelectValue></FormControl>
                                                     <SelectContent>
                                                         {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
                                                     </SelectContent>

@@ -33,7 +33,7 @@ const popupVariants = {
 export const ErrorPopup: React.FC<ErrorPopupProps> = ({ visible, message, onClose }) => {
   useEffect(() => {
     if (!visible) return;
-    const timer = setTimeout(onClose, 4000);
+    const timer = setTimeout(onClose, 4000); // Auto-dismiss after 4 seconds
     return () => clearTimeout(timer);
   }, [visible, onClose]);
 
