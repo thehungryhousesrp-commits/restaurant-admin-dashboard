@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -347,4 +348,5 @@ Veg Fried Rice: (Single) 130 | (Full) 180
     </Card>
   );
 }
+
     
