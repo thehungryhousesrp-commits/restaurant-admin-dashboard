@@ -111,7 +111,6 @@ export default function BulkUploader() {
 
     for (const line of lines) {
         // This is a simple heuristic: if the line does NOT contain a price-like pattern, it's a category.
-        // This regex now supports hyphen, en-dash, em-dash, and colon, and also checks for parentheses in prices.
         const isHeading = !/[-–—:]\s*₹?\s*(\d|\()/.test(line);
 
         if (isHeading) {
