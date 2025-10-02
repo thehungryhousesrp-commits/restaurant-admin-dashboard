@@ -39,7 +39,7 @@ const bulkUploaderSchema = z.object({
 
 type BulkUploaderFormValues = z.infer<typeof bulkUploaderSchema>;
 
-export default function BulkUploader() {
+function BulkUploader() {
   const { toast } = useToast();
   const { categories, addMenuItem, addCategory } = useAppContext();
   const [rawInput, setRawInput] = useState('');
@@ -357,3 +357,5 @@ Veg Fried Rice: (Single) 130 | (Full) 180
     </Card>
   );
 }
+
+export default BulkUploader;
