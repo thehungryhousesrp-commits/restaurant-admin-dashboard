@@ -146,6 +146,7 @@ export default function BulkUploader() {
                 lastSeenCategory: variant.category
             });
 
+            // The flow now returns undefined for skipped lines, so we check for a valid result.
             if (result && result.name) {
                 const item = result;
                 const categoryId = await getCategoryId(item.category, localCategories);
@@ -154,10 +155,18 @@ export default function BulkUploader() {
                     localCategories.push({id: categoryId, name: item.category});
                 }
                 
-                append({ ...item, category: categoryId });
+                // Assign a temporary ID here in the UI layer.
+                const itemWithId = {
+                  ...item,
+                  category: categoryId,
+                  id: `temp-${Date.now()}-${Math.random()}`,
+                };
+                
+                append(itemWithId);
                 successfulCount++;
             } else {
-                failedCount++;
+                // This accounts for lines that were intentionally skipped (e.g., headings)
+                // or failed to generate. No need to increment failedCount here as the flow handles logging.
             }
         } catch (e) {
             failedCount++;
@@ -166,7 +175,7 @@ export default function BulkUploader() {
     }
 
     if (failedCount > 0) {
-        setError(`${failedCount} item variants could not be processed. Please check the format and try again.`);
+        setError(`${failedCount} item variants could not be processed. Please check the logs and your input format, then try again.`);
     }
 
     toast({ 
