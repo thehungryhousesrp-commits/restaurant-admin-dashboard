@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from "react";
 import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -356,5 +357,3 @@ Veg Fried Rice: (Single) 130 | (Full) 180
     </Card>
   );
 }
-
-    
