@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo } from '@/lib/types';
@@ -12,6 +12,7 @@ import {
   doc,
   query,
   writeBatch,
+  getDocs
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged,
@@ -31,11 +32,13 @@ interface AppContextType {
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   updateMenuItem: (id: string, updates: Partial<MenuItem>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
+  deleteMenuItems: (ids: string[]) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<Category | undefined>;
   deleteCategory: (id: string) => Promise<void>;
   placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   deleteOrder: (id: string) => Promise<void>;
+  deleteAllMenuData: () => Promise<void>;
   login: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<any>;
 }
@@ -136,6 +139,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
   
+  const deleteMenuItems = async (ids: string[]) => {
+      const batch = writeBatch(db);
+      ids.forEach(id => {
+          const itemDoc = doc(db, 'menu-items', id);
+          batch.delete(itemDoc);
+      });
+      await batch.commit();
+  }
+  
   const addCategory = async (category: Omit<Category, 'id'>): Promise<Category | undefined> => {
     try {
         const existingCategory = categories.find(c => c.name.toLowerCase() === category.name.toLowerCase());
@@ -179,6 +191,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteAllMenuData = async () => {
+    const batch = writeBatch(db);
+    
+    const menuItemsSnapshot = await getDocs(collection(db, 'menu-items'));
+    menuItemsSnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
+    const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+    categoriesSnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+  }
+
   const placeOrder = async (items: OrderItem[], customerInfo: CustomerInfo): Promise<Order> => {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const cgst = subtotal * 0.025;
@@ -187,12 +215,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const createdAt = Date.now();
 
     const orderData: Omit<Order, 'id'> = {
-        items: items.map(({ id, name, price, quantity, isVeg }) => ({
+        items: items.map(({ id, name, price, quantity }) => ({
             itemId: id,
             name,
             price,
-            quantity,
-            isVeg
+            quantity
         })),
         customerInfo,
         subtotal,
@@ -251,8 +278,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
+    deleteMenuItems,
     addCategory,
     deleteCategory,
+    deleteAllMenuData,
     placeOrder,
     updateOrderStatus,
     deleteOrder,

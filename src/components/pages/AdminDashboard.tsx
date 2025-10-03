@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { type MenuItem, type Order } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Eye, UploadCloud, Image as ImageIconPlaceholder, Wand2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PlusCircle, Edit, Trash2, Eye, Wand2, ShieldAlert, Image as ImageIconPlaceholder } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -32,8 +33,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import MenuForm from "@/components/admin/MenuForm";
@@ -42,9 +43,12 @@ import { InvoicePreview } from "@/components/order/InvoicePreview";
 import BulkUploader from "@/components/admin/BulkUploader";
 
 export default function AdminDashboard() {
-  const { user, menuItems, categories, orders, deleteMenuItem, updateMenuItem, deleteOrder } = useAppContext();
+  const { user, menuItems, categories, orders, deleteMenuItem, deleteMenuItems, updateMenuItem, deleteOrder } = useAppContext();
   const [isFormOpen, setFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<MenuItem | undefined>(undefined);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [isSecondAlertOpen, setSecondAlertOpen] = useState(false);
   const { toast } = useToast();
 
   const handleEditClick = (item: MenuItem) => {
@@ -65,16 +69,9 @@ export default function AdminDashboard() {
   const handleDeleteOrder = async (orderId: string) => {
     try {
       await deleteOrder(orderId);
-      toast({
-        title: "Order Deleted",
-        description: "The order record has been permanently deleted.",
-      });
+      toast({ title: "Order Deleted", description: "The order record has been permanently deleted." });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete the order.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to delete the order.", variant: "destructive" });
     }
   };
 
@@ -82,11 +79,40 @@ export default function AdminDashboard() {
     const category = categories.find(cat => cat.id === categoryId);
     return category ? category.name : 'Uncategorized';
   };
-  
-  const sortedOrders = [...orders].sort((a, b) => b.createdAt - a.createdAt);
-  
-  const displayName = user?.displayName || 'Admin';
 
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedItems(menuItems.map(item => item.id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleRowSelect = (itemId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedItems(prev => [...prev, itemId]);
+    } else {
+      setSelectedItems(prev => prev.filter(id => id !== itemId));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    try {
+      await deleteMenuItems(selectedItems);
+      toast({ title: "Items Deleted", description: `${selectedItems.length} menu items have been permanently deleted.` });
+      setSelectedItems([]);
+      setSecondAlertOpen(false);
+      setDeleteConfirmation('');
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete the selected items.", variant: "destructive" });
+    }
+  };
+
+  const sortedOrders = useMemo(() => [...orders].sort((a, b) => b.createdAt - a.createdAt), [orders]);
+  const displayName = user?.displayName || 'Admin';
+  const isAllSelected = selectedItems.length > 0 && selectedItems.length === menuItems.length;
+  const isPartialSelected = selectedItems.length > 0 && selectedItems.length < menuItems.length;
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -119,16 +145,42 @@ export default function AdminDashboard() {
           <TabsTrigger value="items">Menu Items</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="bulk-upload">
-            <Wand2 className="mr-2 h-4 w-4" />
-            Bulk Uploader
-          </TabsTrigger>
+          <TabsTrigger value="bulk-upload"><Wand2 className="mr-2 h-4 w-4" />Bulk Uploader</TabsTrigger>
         </TabsList>
+
         <TabsContent value="items" className="mt-4">
+            {selectedItems.length > 0 && (
+                 <div className="flex items-center justify-between p-4 mb-4 border rounded-lg bg-secondary/50">
+                     <div className="text-sm font-medium">
+                         {selectedItems.length} item(s) selected
+                     </div>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" />Delete Selected</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>This will permanently delete {selectedItems.length} item(s). This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => setSecondAlertOpen(true)}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
+                    <TableHead className="w-[50px] text-center">
+                        <Checkbox 
+                            onCheckedChange={handleSelectAll}
+                            checked={isAllSelected ? true : (isPartialSelected ? 'indeterminate' : false)}
+                        />
+                    </TableHead>
                   <TableHead className="w-[80px]">Image</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
@@ -139,17 +191,17 @@ export default function AdminDashboard() {
               </TableHeader>
               <TableBody>
                 {menuItems.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} data-state={selectedItems.includes(item.id) ? 'selected' : ''}>
+                    <TableCell className="text-center">
+                        <Checkbox 
+                            onCheckedChange={(checked) => handleRowSelect(item.id, checked === true)}
+                            checked={selectedItems.includes(item.id)}
+                        />
+                    </TableCell>
                     <TableCell>
                       <div className="w-[50px] h-[50px] rounded-md bg-muted flex items-center justify-center">
                         {item.imageUrl ? (
-                           <Image
-                            src={item.imageUrl}
-                            alt={item.name}
-                            width={50}
-                            height={50}
-                            className="rounded-md object-cover w-full h-full"
-                          />
+                           <Image src={item.imageUrl} alt={item.name} width={50} height={50} className="rounded-md object-cover w-full h-full" />
                         ) : (
                           <ImageIconPlaceholder className="h-6 w-6 text-muted-foreground" />
                         )}
@@ -159,37 +211,12 @@ export default function AdminDashboard() {
                     <TableCell>{getCategoryName(item.category)}</TableCell>
                     <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
-                        <Switch
-                            checked={item.isAvailable}
-                            onCheckedChange={(checked) => handleAvailabilityToggle(item, checked)}
-                        />
+                        <Switch checked={item.isAvailable} onCheckedChange={(checked) => handleAvailabilityToggle(item, checked)} />
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the item
-                              <span className="font-semibold"> {item.name}</span>.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMenuItem(item.id)}>
-                              Continue
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
                     </TableCell>                  
                   </TableRow>
                 ))}
@@ -197,23 +224,14 @@ export default function AdminDashboard() {
             </Table>
           </div>
         </TabsContent>
-        <TabsContent value="categories" className="mt-4">
-            <div className="max-w-md mx-auto">
-                <CategoryManager />
-            </div>
-        </TabsContent>
+        
+        {/* Other Tabs Content */}
+        <TabsContent value="categories" className="mt-4"><div className="max-w-md mx-auto"><CategoryManager /></div></TabsContent>
         <TabsContent value="orders" className="mt-4">
+            {/* Orders Table - Remains mostly the same */}
             <div className="border rounded-lg">
                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Invoice #</TableHead>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="text-center">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-center">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {sortedOrders.map((order) => (
                             <TableRow key={order.id}>
@@ -222,35 +240,12 @@ export default function AdminDashboard() {
                                 <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                                 <TableCell className="text-right">₹{order.total.toFixed(2)}</TableCell>
                                 <TableCell className="text-center space-x-2">
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" size="sm">
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                View
-                                            </Button>
-                                        </DialogTrigger>
-                                        <InvoicePreview order={order} />
-                                    </Dialog>
+                                    <Dialog><DialogTrigger asChild><Button variant="outline" size="sm"><Eye className="mr-2 h-4 w-4" />View</Button></DialogTrigger><InvoicePreview order={order} /></Dialog>
                                     <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="text-destructive">
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </AlertDialogTrigger>
+                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                         <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              This action cannot be undone. This will permanently delete the order record for invoice
-                                              <span className="font-semibold"> #{order.id.slice(-6).toUpperCase()}</span>.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteOrder(order.id)}>
-                                              Continue
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
+                                          <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action will permanently delete the order record for invoice <span className="font-semibold">#{order.id.slice(-6).toUpperCase()}</span>.</AlertDialogDescription></AlertDialogHeader>
+                                          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteOrder(order.id)}>Continue</AlertDialogAction></AlertDialogFooter>
                                         </AlertDialogContent>
                                       </AlertDialog>
                                 </TableCell>
@@ -259,17 +254,37 @@ export default function AdminDashboard() {
                     </TableBody>
                 </Table>
             </div>
-             {sortedOrders.length === 0 && (
-                <div className="text-center py-16 text-muted-foreground">
-                    <p className="text-lg font-semibold">No Orders Found</p>
-                    <p>New orders will appear here once they are placed.</p>
-                </div>
-            )}
+             {sortedOrders.length === 0 && <div className="text-center py-16 text-muted-foreground"><p className="text-lg font-semibold">No Orders Found</p><p>New orders will appear here once they are placed.</p></div>}
         </TabsContent>
-        <TabsContent value="bulk-upload" className="mt-4">
-          <BulkUploader />
-        </TabsContent>
+        <TabsContent value="bulk-upload" className="mt-4"><BulkUploader /></TabsContent>
       </Tabs>
+
+       <AlertDialog open={isSecondAlertOpen} onOpenChange={setSecondAlertOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2"><ShieldAlert className="text-destructive"/> Final Confirmation</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This is your final warning. To confirm the deletion of {selectedItems.length} item(s), please type <strong>DELETE</strong> in the box below.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Input 
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder="Type DELETE to confirm"
+                    className="my-2"
+                />
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</AlertDialogCancel>
+                    <Button 
+                        variant="destructive"
+                        onClick={handleDeleteSelected} 
+                        disabled={deleteConfirmation !== 'DELETE'}
+                    >
+                        Delete Permanently
+                    </Button>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
