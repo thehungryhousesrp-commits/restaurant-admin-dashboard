@@ -4,7 +4,7 @@ import { useState } from "react";
 import { type MenuItem, type Order } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Eye, UploadCloud, Image as ImageIconPlaceholder, Sparkles } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Eye, UploadCloud, Image as ImageIconPlaceholder, Wand2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -120,8 +120,8 @@ export default function AdminDashboard() {
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="bulk-upload">
-            <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
-            AI Genesis Uploader
+            <Wand2 className="mr-2 h-4 w-4" />
+            Bulk Uploader
           </TabsTrigger>
         </TabsList>
         <TabsContent value="items" className="mt-4">
@@ -267,7 +267,7 @@ export default function AdminDashboard() {
             )}
         </TabsContent>
         <TabsContent value="bulk-upload" className="mt-4">
-            <BulkUploader />
+          <BulkUploader />
         </TabsContent>
       </Tabs>
     </div>

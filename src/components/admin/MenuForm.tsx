@@ -24,9 +24,7 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, Loader2, Sparkles, UploadCloud, Image as ImageIcon } from "lucide-react";
-import { generateDescription } from "@/ai/flows/generateDescription";
-import { findImageUrl } from "@/ai/flows/findImageUrl";
+import { Loader2, UploadCloud } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { extractDirectImageUrl } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -41,8 +39,6 @@ interface MenuFormProps {
 export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const { categories, addMenuItem, updateMenuItem } = useAppContext();
   const { toast } = useToast();
-  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
-  const [isFindingImage, setIsFindingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditing = !!itemToEdit;
@@ -62,12 +58,14 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     },
   });
 
-  const itemName = form.watch("name");
   const imageUrl = form.watch("imageUrl");
 
   useEffect(() => {
     if (itemToEdit) {
-      form.reset(itemToEdit);
+      form.reset({
+        ...itemToEdit,
+        price: itemToEdit.price || 0,
+      });
     } else {
       form.reset({
         name: "",
@@ -83,60 +81,9 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
   }, [itemToEdit, form]);
 
-  const handleGenerateDescription = async () => {
-    if (!itemName) {
-      toast({
-        title: "Item Name Required",
-        description: "Please enter an item name before generating a description.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsGeneratingDesc(true);
-    try {
-      const result = await generateDescription({ itemName });
-      if (result.description) {
-        form.setValue("description", result.description, { shouldValidate: true });
-        toast({ title: "Description Generated!", description: "The AI has written a new description." });
-      }
-    } catch (error) {
-      console.error("Error generating description:", error);
-      toast({ title: "AI Error", description: "Could not generate description.", variant: "destructive" });
-    } finally {
-      setIsGeneratingDesc(false);
-    }
-  };
-
-  const handleFindImage = async () => {
-    if (!itemName) {
-      toast({
-        title: "Item Name Required",
-        description: "Please enter an item name before finding an image.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsFindingImage(true);
-    try {
-      const result = await findImageUrl({ itemName });
-      if (result.imageUrl) {
-        form.setValue("imageUrl", result.imageUrl, { shouldValidate: true });
-        toast({ title: "Image Found!", description: "An image URL has been found and added." });
-      }
-    } catch (error) {
-      console.error("Error finding image:", error);
-      toast({ title: "AI Error", description: "Could not find an image.", variant: "destructive" });
-    } finally {
-      setIsFindingImage(false);
-    }
-  };
-  
-  const isAiBusy = isGeneratingDesc || isFindingImage;
-
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
     try {
-      // Ensure imageUrl is an empty string if it's undefined or null
       const finalData = {
         ...data,
         imageUrl: data.imageUrl || "",
@@ -193,20 +140,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 <FormItem>
                    <div className="flex items-center justify-between">
                     <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGenerateDescription}
-                      disabled={isAiBusy || !itemName}
-                    >
-                      {isGeneratingDesc ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Wand2 className="mr-2 h-4 w-4" />
-                      )}
-                      Generate
-                    </Button>
                   </div>
                   <FormControl><Textarea placeholder="Classic Italian pizza..." {...field} /></FormControl>
                   <FormMessage />
@@ -320,20 +253,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                   <FormItem>
                     <div className="flex items-center justify-between">
                       <FormLabel>Image URL</FormLabel>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleFindImage}
-                        disabled={isAiBusy || !itemName}
-                      >
-                        {isFindingImage ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <ImageIcon className="mr-2 h-4 w-4" />
-                        )}
-                        Generate Image
-                      </Button>
                     </div>
                     <FormControl>
                       <Input 
@@ -357,14 +276,14 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                   ) : (
                       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                           <UploadCloud className="h-12 w-12" />
-                          <p className="mt-2 text-sm text-center">Generate or paste an image URL to see a preview</p>
+                          <p className="mt-2 text-sm text-center">Paste an image URL to see a preview</p>
                       </div>
                   )}
                 </div>
               </div>
           </div>
         </div>
-        <Button type="submit" disabled={isAiBusy || isSubmitting}>
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isEditing ? 'Save Changes' : 'Add Item'}
         </Button>
