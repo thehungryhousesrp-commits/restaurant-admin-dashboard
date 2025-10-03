@@ -1,48 +1,44 @@
 'use server';
 /**
- * @fileOverview An AI flow for generating menu item descriptions.
- *
- * - generateDescription - A function that generates a description for a menu item.
- * - GenerateDescriptionInput - The input type for the generateDescription function.
- * - GenerateDescriptionOutput - The return type for the generateDescription function.
+ * @fileOverview A simple AI flow to generate a brief, enticing description for a menu item.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 
+// 1. Define Input Schema
 const GenerateDescriptionInputSchema = z.object({
-  itemName: z.string().describe('The name of the menu item.'),
+    itemName: z.string().describe('The name of the menu item to describe.'),
 });
 export type GenerateDescriptionInput = z.infer<typeof GenerateDescriptionInputSchema>;
 
+// 2. Define Output Schema
 const GenerateDescriptionOutputSchema = z.object({
-  description: z.string().describe('The generated description for the menu item.'),
+    description: z.string().describe("A brief, 1-2 sentence enticing description of the item, written in a friendly, slightly informal tone. It should be in English but can include some Hindi words if appropriate for an Indian restaurant setting (e.g., 'masaledar twist')."),
 });
 export type GenerateDescriptionOutput = z.infer<typeof GenerateDescriptionOutputSchema>;
 
-export async function generateDescription(input: GenerateDescriptionInput): Promise<GenerateDescriptionOutput> {
-  return generateDescriptionFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'generateDescriptionPrompt',
-  input: {schema: GenerateDescriptionInputSchema},
-  output: {schema: GenerateDescriptionOutputSchema},
-  prompt: `You are an expert food critic and copywriter for a high-end restaurant. Your task is to write a short, appealing, and delicious-sounding description for a menu item. 
-  
-  The description should be a maximum of 25 words. Do not use flowery or overly complex language. Focus on key ingredients and taste profile.
-
-  Menu Item: {{{itemName}}}`,
+// 3. Define the Prompt
+const generateDescriptionPrompt = ai.definePrompt({
+    name: 'generateDescriptionPrompt',
+    input: { schema: GenerateDescriptionInputSchema },
+    output: { schema: GenerateDescriptionOutputSchema },
+    prompt: `Generate a brief, enticing description for the following menu item for an Indian restaurant menu. Focus on fresh ingredients and authentic flavors. Keep it to 1-2 sentences.\n\n    Item Name: {{{itemName}}}\n    `,
 });
 
-const generateDescriptionFlow = ai.defineFlow(
-  {
-    name: 'generateDescriptionFlow',
-    inputSchema: GenerateDescriptionInputSchema,
-    outputSchema: GenerateDescriptionOutputSchema,
-  },
-  async (input) => {
-    const {output} = await prompt(input);
-    return output!;
-  }
+// 4. Define and Export the Flow
+export const generateDescription = ai.defineFlow(
+    {
+        name: 'generateDescription',
+        inputSchema: GenerateDescriptionInputSchema,
+        outputSchema: GenerateDescriptionOutputSchema,
+    },
+    async (input) => {
+        const { output } = await generateDescriptionPrompt(input);
+        // Handle cases where the model might fail to generate a description
+        if (!output) {
+            return { description: "A delicious menu item. Description will be added soon." };
+        }
+        return output;
+    }
 );

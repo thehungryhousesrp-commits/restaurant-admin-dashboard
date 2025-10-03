@@ -6,6 +6,6 @@ import {googleAI} from '@genkit-ai/googleai';
 // We don't need to use the Secret class here anymore.
 
 export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.5-flash',
+    plugins: [googleAI()],
+    model: 'googleai/gemini-2.5-flash',
 });

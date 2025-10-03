@@ -26,7 +26,6 @@ import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, Loader2, Sparkles, UploadCloud, Image as ImageIcon } from "lucide-react";
 import { generateDescription } from "@/ai/flows/generateDescription";
-import { suggestPrice } from "@/ai/flows/suggestPrice";
 import { findImageUrl } from "@/ai/flows/findImageUrl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { extractDirectImageUrl } from "@/lib/utils";
@@ -43,7 +42,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const { categories, addMenuItem, updateMenuItem } = useAppContext();
   const { toast } = useToast();
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
-  const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
   const [isFindingImage, setIsFindingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -65,7 +63,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   });
 
   const itemName = form.watch("name");
-  const itemDescription = form.watch("description");
   const imageUrl = form.watch("imageUrl");
 
   useEffect(() => {
@@ -110,30 +107,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
   };
 
-  const handleSuggestPrice = async () => {
-    if (!itemName || !itemDescription) {
-      toast({
-        title: "Name and Description Required",
-        description: "Please enter item name and description before suggesting a price.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsSuggestingPrice(true);
-    try {
-      const result = await suggestPrice({ itemName, description: itemDescription });
-      if (result.price) {
-        form.setValue("price", result.price, { shouldValidate: true });
-        toast({ title: "Price Suggested!", description: `The AI suggested a price of ₹${result.price}.` });
-      }
-    } catch (error) {
-      console.error("Error suggesting price:", error);
-      toast({ title: "AI Error", description: "Could not suggest a price.", variant: "destructive" });
-    } finally {
-      setIsSuggestingPrice(false);
-    }
-  };
-
   const handleFindImage = async () => {
     if (!itemName) {
       toast({
@@ -158,7 +131,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     }
   };
   
-  const isAiBusy = isGeneratingDesc || isSuggestingPrice || isFindingImage;
+  const isAiBusy = isGeneratingDesc || isFindingImage;
 
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
@@ -248,20 +221,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                   <FormItem className="flex-grow">
                     <div className="flex items-center justify-between">
                       <FormLabel>Price (INR) <span className="text-destructive">*</span></FormLabel>
-                       <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSuggestPrice}
-                        disabled={isAiBusy || !itemName || !itemDescription}
-                      >
-                        {isSuggestingPrice ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="mr-2 h-4 w-4" />
-                        )}
-                        Suggest
-                      </Button>
                     </div>
                     <FormControl>
                         <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />

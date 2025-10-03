@@ -1,0 +1,75 @@
+{
+  "restaurantInfo": {
+    "name": "Hungry House Hub",
+    "tagline": "Where every bite is a delight!",
+    "description": "Welcome to Hungry House Hub, your destination for delicious and diverse culinary creations. We offer a wide range of dishes to satisfy every craving, from comforting classics to exciting new flavors. Our commitment to quality ingredients and exceptional service ensures an unforgettable experience. Our chefs use the finest ingredients to create dishes that will tantalize your taste buds. We look forward to serving you!",
+    "imageUrl": "https://example.com/hero-image.jpg"
+  },
+  "menu": {
+    "categories": [
+      {
+        "name": "Shakes",
+        "items": [
+          {
+            "name": "Oreo Shake",
+            "description": "A rich and creamy shake made with Oreo cookies, milk, and vanilla ice cream.",
+            "price": 180,
+            "isVeg": true,
+            "isSpicy": false,
+            "isChefsSpecial": false
+          },
+          {
+            "name": "KitKat Shake",
+            "description": "A delightful shake made with KitKat chocolate bars, milk, and chocolate ice cream.",
+            "price": 180,
+            "isVeg": true,
+            "isSpicy": false,
+            "isChefsSpecial": false
+          },
+          {
+            "name": "Snicker Shake",
+            "description": "A satisfying shake made with Snickers candy bars, milk, and caramel ice cream.",
+            "price": 200,
+            "isVeg": true,
+            "isSpicy": false,
+            "isChefsSpecial": false
+          }
+        ]
+      },
+      {
+        "name": "Mocktails",
+        "items": [
+          {
+            "name": "Virgin Mojito",
+            "description": "A refreshing non-alcoholic drink made with mint leaves, lime juice, sugar, and soda water.",
+            "price": 160,
+            "isVeg": true,
+            "isSpicy": false,
+            "isChefsSpecial": false
+          },
+          {
+            "name": "Blue Lagoon",
+            "description": "A vibrant blue mocktail made with blue curaçao syrup, lemonade, and a splash of lime juice.",
+            "price": 160,
+            "isVeg": true,
+            "isSpicy": false,
+            "isChefsSpecial": false
+          }
+        ]
+      },
+      {
+        "name": "Dessert",
+        "items": [
+          {
+            "name": "Sizzling Brownie",
+            "description": "A warm, fudgy brownie served on a sizzling hot plate with a scoop of vanilla ice cream and chocolate sauce.",
+            "price": 220,
+            "isVeg": true,
+            "isSpicy": false,
+            "isChefsSpecial": true
+          }
+        ]
+      }
+    ]
+  }
+}
