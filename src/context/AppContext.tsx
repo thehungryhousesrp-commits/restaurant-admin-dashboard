@@ -12,7 +12,8 @@ import {
   doc,
   query,
   writeBatch,
-  getDocs
+  getDocs,
+  orderBy
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged,
@@ -84,7 +85,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLoadingAuth(false);
       
       if (currentUser) {
-        const ordersQuery = query(collection(db, "orders"));
+        const ordersQuery = query(collection(db, "orders"), orderBy('createdAt', 'desc'));
         ordersUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
             const ords: Order[] = [];
             snapshot.forEach(doc => ords.push({ id: doc.id, ...doc.data() } as Order));

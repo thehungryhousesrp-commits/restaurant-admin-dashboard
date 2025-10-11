@@ -108,7 +108,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const sortedOrders = useMemo(() => [...orders].sort((a, b) => b.createdAt - a.createdAt), [orders]);
   const displayName = user?.displayName || 'Admin';
   const isAllSelected = selectedItems.length > 0 && selectedItems.length === menuItems.length;
   const isPartialSelected = selectedItems.length > 0 && selectedItems.length < menuItems.length;
@@ -233,7 +232,7 @@ export default function AdminDashboard() {
                 <Table>
                     <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-center">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
-                        {sortedOrders.map((order) => (
+                        {orders.map((order) => (
                             <TableRow key={order.id}>
                                 <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
                                 <TableCell>{order.customerInfo.name}</TableCell>
@@ -254,7 +253,7 @@ export default function AdminDashboard() {
                     </TableBody>
                 </Table>
             </div>
-             {sortedOrders.length === 0 && <div className="text-center py-16 text-muted-foreground"><p className="text-lg font-semibold">No Orders Found</p><p>New orders will appear here once they are placed.</p></div>}
+             {orders.length === 0 && <div className="text-center py-16 text-muted-foreground"><p className="text-lg font-semibold">No Orders Found</p><p>New orders will appear here once they are placed.</p></div>}
         </TabsContent>
         <TabsContent value="bulk-upload" className="mt-4"><BulkUploader /></TabsContent>
       </Tabs>
