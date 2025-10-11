@@ -2,22 +2,25 @@
 
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { type MenuItem, type OrderItem } from '@/lib/types';
+import { type MenuItem, type OrderItem, type Table } from '@/lib/types';
 import MenuItemCard from '@/components/menu/MenuItemCard';
 import OrderSummary from '@/components/order/OrderSummary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import Image from 'next/image';
+import SelectTable from '../order/SelectTable';
+import { Button } from '../ui/button';
 
 export default function OrderEntryPoint() {
-  const { menuItems, categories, loading } = useAppContext();
+  const { menuItems, categories, loading, updateTableStatus } = useAppContext();
   const { toast } = useToast();
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
 
   const handleAddToOrder = (item: MenuItem) => {
     setCurrentOrder(prevOrder => {
@@ -54,11 +57,29 @@ export default function OrderEntryPoint() {
     setCurrentOrder([]);
   };
 
+  const handleSelectTable = (table: Table) => {
+    setSelectedTable(table);
+    updateTableStatus(table.id, 'occupied');
+    toast({ title: `Table "${table.name}" selected`, description: "You can now start adding items to the order." });
+  };
+
+  const handleResetTable = () => {
+    if (selectedTable) {
+        updateTableStatus(selectedTable.id, 'available');
+    }
+    setSelectedTable(null);
+    handleClearOrder();
+  };
+
   const filteredMenuItems = useMemo(() => {
     return menuItems
       .filter(item => activeCategory === 'all' || item.category === activeCategory)
       .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [menuItems, activeCategory, searchQuery]);
+  
+  if (!selectedTable) {
+    return <SelectTable onSelectTable={handleSelectTable} />;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -66,9 +87,15 @@ export default function OrderEntryPoint() {
         {/* Left Column: Menu */}
         <div className="lg:w-2/3">
           <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold font-headline tracking-tight">Menu</h1>
-                <p className="text-muted-foreground">Select items to build an order.</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline tracking-tight">Menu</h1>
+                    <p className="text-muted-foreground">Building order for table: <span className="font-bold text-primary">{selectedTable.name}</span></p>
+                </div>
+                <Button variant="outline" onClick={handleResetTable}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Change Table
+                </Button>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4">
@@ -121,9 +148,11 @@ export default function OrderEntryPoint() {
         <div className="lg:w-1/3">
           <OrderSummary 
             currentOrder={currentOrder}
+            selectedTable={selectedTable}
             onUpdateQuantity={handleUpdateQuantity}
             onRemoveItem={handleRemoveItem}
             onClearOrder={handleClearOrder}
+            onOrderPlaced={handleResetTable}
           />
         </div>
       </div>

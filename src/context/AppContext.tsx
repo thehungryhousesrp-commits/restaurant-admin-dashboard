@@ -39,7 +39,8 @@ interface AppContextType {
   deleteCategory: (id: string) => Promise<void>;
   addTable: (table: Omit<Table, 'id' | 'status'>) => Promise<void>;
   deleteTable: (id: string) => Promise<void>;
-  placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Promise<Order>;
+  updateTableStatus: (id: string, status: Table['status']) => Promise<void>;
+  placeOrder: (items: OrderItem[], customerInfo: CustomerInfo, table?: Table) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   deleteOrder: (id: string) => Promise<void>;
   deleteAllMenuData: () => Promise<void>;
@@ -224,6 +225,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateTableStatus = async (id: string, status: Table['status']) => {
+    try {
+      const tableDoc = doc(db, 'tables', id);
+      await updateDoc(tableDoc, { status });
+    } catch (e) {
+      console.error("Error updating table status: ", e);
+      throw e;
+    }
+  };
+
   const deleteAllMenuData = async () => {
     const batch = writeBatch(db);
     
@@ -240,7 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await batch.commit();
   }
 
-  const placeOrder = async (items: OrderItem[], customerInfo: CustomerInfo): Promise<Order> => {
+  const placeOrder = async (items: OrderItem[], customerInfo: CustomerInfo, table?: Table): Promise<Order> => {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const cgst = subtotal * 0.025;
     const sgst = subtotal * 0.025;
@@ -255,6 +266,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             quantity
         })),
         customerInfo,
+        tableId: table?.id,
+        tableName: table?.name,
         subtotal,
         cgst,
         sgst,
@@ -317,6 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteCategory,
     addTable,
     deleteTable,
+    updateTableStatus,
     deleteAllMenuData,
     placeOrder,
     updateOrderStatus,

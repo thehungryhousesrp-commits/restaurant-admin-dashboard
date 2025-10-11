@@ -38,6 +38,8 @@ export interface Order {
   id: string; // Document ID from Firestore
   items: Omit<OrderItem, 'id' | 'description' | 'category' | 'imageUrl' | 'imageHint' | 'isAvailable' | 'isVeg' | 'isSpicy' | 'isChefsSpecial'>[];
   customerInfo: CustomerInfo;
+  tableId?: string;
+  tableName?: string;
   subtotal: number;
   cgst: number;
   sgst: number;
@@ -46,5 +48,3 @@ export interface Order {
   createdAt: number;
   createdBy: string | null;
 }
-
-    

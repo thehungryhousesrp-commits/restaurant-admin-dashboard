@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { type OrderItem, type CustomerInfo, type Order } from "@/lib/types";
+import { type OrderItem, type CustomerInfo, type Order, type Table } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,16 +16,20 @@ import { ErrorPopup } from "@/components/ui/ErrorPopup";
 
 interface OrderSummaryProps {
   currentOrder: OrderItem[];
+  selectedTable: Table;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onRemoveItem: (itemId: string) => void;
   onClearOrder: () => void;
+  onOrderPlaced: () => void;
 }
 
 export default function OrderSummary({
   currentOrder,
+  selectedTable,
   onUpdateQuantity,
   onRemoveItem,
-  onClearOrder
+  onClearOrder,
+  onOrderPlaced,
 }: OrderSummaryProps) {
   const { placeOrder } = useAppContext();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '' });
@@ -85,7 +89,7 @@ export default function OrderSummary({
 
     setIsPlacingOrder(true);
     try {
-      const newOrder = await placeOrder(currentOrder, customerInfo);
+      const newOrder = await placeOrder(currentOrder, customerInfo, selectedTable);
       setPlacedOrder(newOrder);
     } catch (error) {
       setErrorMsg("Failed to place order. Please try again.");
@@ -100,6 +104,7 @@ export default function OrderSummary({
       onClearOrder();
       setCustomerInfo({ name: '', phone: '' });
       setPlacedOrder(null);
+      onOrderPlaced(); // This will reset the table selection
     }
   }
 
@@ -114,7 +119,7 @@ export default function OrderSummary({
         <CardHeader>
           <CardTitle className="font-headline flex items-center gap-2">
             <ShoppingCart />
-            Current Order
+            Current Order for <span className="text-primary">{selectedTable.name}</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-grow overflow-y-auto">
