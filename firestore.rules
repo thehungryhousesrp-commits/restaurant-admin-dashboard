@@ -1,57 +1,52 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions for Role Checking ---
-
-    // The Admin has full control.
-    function isAdmin() {
-      return request.auth.uid == '8kkXdYsoX5MsRlv371w1e6i8qQh2';
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // The Staff can manage orders but cannot delete them or edit the menu.
-    function isStaff() {
-      return request.auth.uid == 'Z4DG5kCaE8agIRGGwT4ML4u3J9K2';
-    }
-
-    // --- Public & Admin/Staff Read Rules ---
-
-    // Menu items can be read by anyone.
-    // Only Admins can create, update, or delete menu items.
-    match /menu-items/{itemId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Categories can be read by anyone.
-    // Only Admins can create, update, or delete categories.
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // --- Order & Invoice Rules ---
-
-    match /orders/{orderId} {
-      // Any authenticated user (Admin or Staff) can create a new order.
-      allow create: if request.auth != null;
-      
-      // Anyone with a direct link can view a single invoice (for public invoice pages).
-      allow get: if true; 
-
-      // Staff can read and update orders (e.g., change status), but cannot delete them.
-      allow list, read, update: if isStaff() || isAdmin();
-      
-      // Only the Admin can delete an order record.
-      allow delete: if isAdmin();
-    }
-
-    // --- User Data Rules (Not currently used, but good for future) ---
-
-    // Users can read their own data. Admins can read/write any user's data.
+    // Rules for User profiles
     match /users/{userId} {
-      allow read, write: if isAdmin() || request.auth.uid == userId;
+      // Only the user themselves can write to their own document.
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Rules for Menu Items
+    match /menu-items/{itemId} {
+      // Anyone can view the menu.
+      allow get, list: if true;
+      // Only authenticated users can create, update, or delete menu items.
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Rules for Categories
+    match /categories/{categoryId} {
+      // Anyone can view categories.
+      allow get, list: if true;
+      // Only authenticated users can create, update, or delete categories.
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Rules for Tables
+    match /tables/{tableId} {
+      // Anyone can view the list of tables and their status.
+      allow get, list: if true;
+      // Anyone can update a table's status (e.g., to 'occupied').
+      allow update: if true;
+      // Only authenticated users can create or delete tables.
+      allow create, delete: if isSignedIn();
+    }
+
+    // Rules for Orders
+    match /orders/{orderId} {
+        // Anyone can create an order (place an order).
+        allow create: if true;
+        // Only authenticated users can view, update or delete orders.
+        allow get, list, update, delete: if isSignedIn();
     }
   }
 }
