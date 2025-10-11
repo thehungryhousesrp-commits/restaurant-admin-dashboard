@@ -8,12 +8,11 @@ import MenuItemCard from '@/components/menu/MenuItemCard';
 import OrderSummary from '@/components/order/OrderSummary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, RotateCcw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import Image from 'next/image';
 import SelectTable from '../order/SelectTable';
 import { Button } from '../ui/button';
+import { cn } from '@/lib/utils';
 
 export default function OrderEntryPoint() {
   const { menuItems, categories, loading, updateTableStatus } = useAppContext();
@@ -83,70 +82,86 @@ export default function OrderEntryPoint() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Column: Menu */}
-        <div className="lg:w-2/3">
-          <div className="space-y-6">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h1 className="text-3xl font-bold font-headline tracking-tight">Menu</h1>
-                    <p className="text-muted-foreground">Building order for table: <span className="font-bold text-primary">{selectedTable.name}</span></p>
-                </div>
-                <Button variant="outline" onClick={handleResetTable}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Change Table
-                </Button>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search for a dish..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full sm:w-auto overflow-x-auto">
-                <TabsList>
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  {categories.map(cat => (
-                    <TabsTrigger key={cat.id} value={cat.id}>{cat.name}</TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-pulse">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-40 w-full" />
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
-                  {filteredMenuItems.map((item) => (
-                    <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} />
-                  ))}
-                </div>
-            )}
-             { !loading && filteredMenuItems.length === 0 && (
-                <div className="text-center py-16 text-muted-foreground">
-                    <p className="text-lg font-semibold">No items found</p>
-                    <p>Try adjusting your search or category filter.</p>
-                </div>
-            )}
-          </div>
+    <div className="flex h-[calc(100vh-5rem)] bg-gray-100 dark:bg-gray-900">
+      {/* Column 1: Categories */}
+      <div className="w-56 bg-card border-r flex flex-col">
+        <h2 className="p-4 text-lg font-semibold border-b">Categories</h2>
+        <div className="flex-grow overflow-y-auto">
+          <nav className="p-2">
+            <button
+                onClick={() => setActiveCategory('all')}
+                className={cn(
+                    "w-full text-left p-3 rounded-md font-medium transition-colors",
+                    activeCategory === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                )}
+            >
+                All Items
+            </button>
+            {categories.map(cat => (
+                <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={cn(
+                        "w-full text-left p-3 rounded-md font-medium transition-colors mt-1",
+                        activeCategory === cat.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                    )}
+                >
+                    {cat.name}
+                </button>
+            ))}
+          </nav>
         </div>
+      </div>
+      
+      {/* Column 2: Menu Items */}
+      <div className="flex-1 flex flex-col p-4 overflow-hidden">
+        <div className="flex justify-between items-start mb-4">
+            <div>
+                <h1 className="text-2xl font-bold font-headline tracking-tight">Select Items</h1>
+                <p className="text-muted-foreground">Building order for table: <span className="font-bold text-primary">{selectedTable.name}</span></p>
+            </div>
+            <Button variant="outline" onClick={handleResetTable}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Change Table
+            </Button>
+        </div>
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search for a dish..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        
+        {loading ? (
+          <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : (
+            <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-4">
+              {filteredMenuItems.map((item) => (
+                <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} />
+              ))}
+               { !loading && filteredMenuItems.length === 0 && (
+                  <div className="col-span-full text-center py-16 text-muted-foreground">
+                      <p className="text-lg font-semibold">No items found</p>
+                      <p>Try adjusting your search or category filter.</p>
+                  </div>
+              )}
+            </div>
+        )}
+      </div>
 
-        {/* Right Column: Order Summary */}
-        <div className="lg:w-1/3">
+      {/* Column 3: Order Summary */}
+      <div className="w-96 border-l bg-card">
           <OrderSummary 
             currentOrder={currentOrder}
             selectedTable={selectedTable}
@@ -155,7 +170,6 @@ export default function OrderEntryPoint() {
             onClearOrder={handleClearOrder}
             onOrderPlaced={handleResetTable}
           />
-        </div>
       </div>
     </div>
   );
