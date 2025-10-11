@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { type MenuItem, type Order } from "@/lib/types";
+import { type MenuItem, type Order, type Table } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Edit, Trash2, Eye, Wand2, ShieldAlert, Image as ImageIconPlaceholder, SquareStack } from "lucide-react";
 import {
-  Table,
+  Table as ShadcnTable,
   TableBody,
   TableCell,
   TableHead,
@@ -44,7 +44,7 @@ import { InvoicePreview } from "@/components/order/InvoicePreview";
 import BulkUploader from "@/components/admin/BulkUploader";
 
 export default function AdminDashboard() {
-  const { user, menuItems, categories, orders, deleteMenuItem, deleteMenuItems, updateMenuItem, deleteOrder } = useAppContext();
+  const { user, menuItems, categories, tables, orders, deleteMenuItem, deleteMenuItems, updateMenuItem, deleteOrder } = useAppContext();
   const [isFormOpen, setFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<MenuItem | undefined>(undefined);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -173,7 +173,7 @@ export default function AdminDashboard() {
                 </div>
             )}
           <div className="border rounded-lg">
-            <Table>
+            <ShadcnTable>
               <TableHeader>
                 <TableRow>
                     <TableHead className="w-[50px] text-center">
@@ -222,17 +222,15 @@ export default function AdminDashboard() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ShadcnTable>
           </div>
         </TabsContent>
         
-        {/* Other Tabs Content */}
         <TabsContent value="categories" className="mt-4"><div className="max-w-md mx-auto"><CategoryManager /></div></TabsContent>
         <TabsContent value="tables" className="mt-4"><div className="max-w-md mx-auto"><TableManager /></div></TabsContent>
         <TabsContent value="orders" className="mt-4">
-            {/* Orders Table - Remains mostly the same */}
             <div className="border rounded-lg">
-                <Table>
+                <ShadcnTable>
                     <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-center">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {orders.map((order) => (
@@ -254,7 +252,7 @@ export default function AdminDashboard() {
                             </TableRow>
                         ))}
                     </TableBody>
-                </Table>
+                </ShadcnTable>
             </div>
              {orders.length === 0 && <div className="text-center py-16 text-muted-foreground"><p className="text-lg font-semibold">No Orders Found</p><p>New orders will appear here once they are placed.</p></div>}
         </TabsContent>
@@ -290,3 +288,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+    
