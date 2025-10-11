@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo } from '@/lib/types';
+import { type MenuItem, type Category, type Order, type OrderItem, type CustomerInfo, type Table } from '@/lib/types';
 import { db, auth } from '@/lib/firebase';
 import { 
   collection, 
@@ -28,6 +28,7 @@ interface AppContextType {
   menuItems: MenuItem[];
   categories: Category[];
   orders: Order[];
+  tables: Table[];
   loading: boolean;
   error: string | null;
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
@@ -36,6 +37,8 @@ interface AppContextType {
   deleteMenuItems: (ids: string[]) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<Category | undefined>;
   deleteCategory: (id: string) => Promise<void>;
+  addTable: (table: Omit<Table, 'id' | 'status'>) => Promise<void>;
+  deleteTable: (id: string) => Promise<void>;
   placeOrder: (items: OrderItem[], customerInfo: CustomerInfo) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   deleteOrder: (id: string) => Promise<void>;
@@ -52,12 +55,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const menuQuery = query(collection(db, "menu-items"));
     const categoryQuery = query(collection(db, "categories"));
+    const tableQuery = query(collection(db, "tables"));
 
     const menuUnsubscribe = onSnapshot(menuQuery, (snapshot) => {
         const items: MenuItem[] = [];
@@ -76,6 +81,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCategories(cats);
     }, (err) => {
         console.error("Error fetching categories:", err);
+    });
+    
+    const tableUnsubscribe = onSnapshot(tableQuery, (snapshot) => {
+        const tbls: Table[] = [];
+        snapshot.forEach(doc => tbls.push({ id: doc.id, ...doc.data() } as Table));
+        setTables(tbls);
+    }, (err) => {
+        console.error("Error fetching tables:", err);
     });
 
     let ordersUnsubscribe: (() => void) | undefined;
@@ -106,6 +119,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       authUnsubscribe();
       menuUnsubscribe();
       categoryUnsubscribe();
+      tableUnsubscribe();
       if (ordersUnsubscribe) {
         ordersUnsubscribe();
       }
@@ -188,6 +202,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await deleteDoc(doc(db, 'categories', id));
     } catch (e) {
       console.error("Error deleting category: ", e);
+      throw e;
+    }
+  };
+  
+  const addTable = async (table: Omit<Table, 'id' | 'status'>) => {
+    try {
+      await addDoc(collection(db, 'tables'), { ...table, status: 'available' });
+    } catch (e) {
+      console.error("Error adding table: ", e);
+      throw e;
+    }
+  };
+
+  const deleteTable = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'tables', id));
+    } catch (e) {
+      console.error("Error deleting table: ", e);
       throw e;
     }
   };
@@ -274,6 +306,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     menuItems,
     categories,
     orders,
+    tables,
     loading,
     error,
     addMenuItem,
@@ -282,6 +315,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteMenuItems,
     addCategory,
     deleteCategory,
+    addTable,
+    deleteTable,
     deleteAllMenuData,
     placeOrder,
     updateOrderStatus,

@@ -3,6 +3,12 @@ export interface Category {
   name: string;
 }
 
+export interface Table {
+  id: string;
+  name: string;
+  status: 'available' | 'occupied' | 'reserved';
+}
+
 export interface MenuItem {
   id: string;
   name:string;

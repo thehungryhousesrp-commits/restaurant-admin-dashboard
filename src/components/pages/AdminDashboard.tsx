@@ -5,7 +5,7 @@ import { type MenuItem, type Order } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Edit, Trash2, Eye, Wand2, ShieldAlert, Image as ImageIconPlaceholder } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Eye, Wand2, ShieldAlert, Image as ImageIconPlaceholder, SquareStack } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -39,6 +39,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import MenuForm from "@/components/admin/MenuForm";
 import CategoryManager from "@/components/admin/CategoryManager";
+import TableManager from "@/components/admin/TableManager";
 import { InvoicePreview } from "@/components/order/InvoicePreview";
 import BulkUploader from "@/components/admin/BulkUploader";
 
@@ -143,6 +144,7 @@ export default function AdminDashboard() {
         <TabsList>
           <TabsTrigger value="items">Menu Items</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="tables">Tables</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="bulk-upload"><Wand2 className="mr-2 h-4 w-4" />Bulk Uploader</TabsTrigger>
         </TabsList>
@@ -226,6 +228,7 @@ export default function AdminDashboard() {
         
         {/* Other Tabs Content */}
         <TabsContent value="categories" className="mt-4"><div className="max-w-md mx-auto"><CategoryManager /></div></TabsContent>
+        <TabsContent value="tables" className="mt-4"><div className="max-w-md mx-auto"><TableManager /></div></TabsContent>
         <TabsContent value="orders" className="mt-4">
             {/* Orders Table - Remains mostly the same */}
             <div className="border rounded-lg">

@@ -17,6 +17,10 @@ export const categorySchema = z.object({
   name: z.string().min(1, 'Category name is required'),
 });
 
+export const tableSchema = z.object({
+  name: z.string().min(1, 'Table name is required'),
+});
+
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
