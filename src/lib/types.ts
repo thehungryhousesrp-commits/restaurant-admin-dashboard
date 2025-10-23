@@ -44,7 +44,7 @@ export interface Order {
   cgst: number;
   sgst: number;
   total: number;
-  status: 'Pending' | 'Preparing' | 'Completed';
+  status: 'Pending' | 'Preparing' | 'Completed' | 'Billed';
   createdAt: number;
   createdBy: string | null;
 }

@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Loader2 } from "lucide-react";
+import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Loader2, Printer, CheckCircle } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { InvoicePreview } from "./InvoicePreview";
+import { useToast } from "@/hooks/use-toast";
 
 interface OrderSummaryProps {
   currentOrder: OrderItem[];
@@ -29,31 +30,60 @@ export default function OrderSummary({
   onClearOrder,
   onOrderPlaced,
 }: OrderSummaryProps) {
-  const { placeOrder } = useAppContext();
+  const { placeOrder, placeKOT } = useAppContext();
+  const { toast } = useToast();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '' });
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [isGeneratingKot, setIsGeneratingKot] = useState(false);
 
   const subtotal = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cgst = subtotal * 0.025;
   const sgst = subtotal * 0.025;
   const total = subtotal + cgst + sgst;
 
-  const handlePlaceOrder = async () => {
+  const validateInput = () => {
     if (currentOrder.length === 0) {
-      alert("Cannot place an empty order.");
-      return;
+      toast({ title: "Empty Order", description: "Cannot proceed with an empty order.", variant: "destructive" });
+      return false;
     }
     if (!customerInfo.name || !customerInfo.phone) {
-        alert("Please enter customer name and phone number.");
-        return;
+      toast({ title: "Missing Customer Info", description: "Please enter customer name and phone number.", variant: "destructive" });
+      return false;
     }
+    return true;
+  };
+
+  const handleGenerateKOT = async () => {
+    if (!validateInput()) return;
+
+    setIsGeneratingKot(true);
+    try {
+      await placeKOT(currentOrder, customerInfo, selectedTable);
+      toast({
+        title: "KOT Generated",
+        description: `Order for ${selectedTable.name} sent to the kitchen.`,
+        action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle className="h-4 w-4" /></div>,
+      });
+      onClearOrder();
+      setCustomerInfo({ name: '', phone: '' });
+    } catch (error) {
+      toast({ title: "KOT Failed", description: "Failed to generate KOT. Please try again.", variant: "destructive" });
+    } finally {
+      setIsGeneratingKot(false);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!validateInput()) return;
+
     setIsPlacingOrder(true);
     try {
       const newOrder = await placeOrder(currentOrder, customerInfo, selectedTable);
       setPlacedOrder(newOrder);
+      // The dialog will open via DialogTrigger, no need to manually open
     } catch (error) {
-      alert("Failed to place order. Please try again.");
+      toast({ title: "Order Failed", description: "Failed to place order. Please try again.", variant: "destructive" });
     } finally {
       setIsPlacingOrder(false);
     }
@@ -151,15 +181,21 @@ export default function OrderSummary({
                 <span>Total</span>
                 <span>₹{Math.round(total).toFixed(2)}</span>
             </div>
-            <Dialog onOpenChange={handleDialogClose}>
-                <DialogTrigger asChild>
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={isPlacingOrder}>
-                        {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Place Order & Generate Invoice
-                    </Button>
-                </DialogTrigger>
-                {placedOrder && <InvoicePreview order={placedOrder} />}
-            </Dialog>
+            <div className="w-full grid grid-cols-2 gap-2">
+                <Button variant="secondary" onClick={handleGenerateKOT} disabled={isGeneratingKot}>
+                    {isGeneratingKot ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                    Generate KOT
+                </Button>
+                <Dialog onOpenChange={handleDialogClose}>
+                    <DialogTrigger asChild>
+                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={isPlacingOrder}>
+                            {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Generate Invoice
+                        </Button>
+                    </DialogTrigger>
+                    {placedOrder && <InvoicePreview order={placedOrder} />}
+                </Dialog>
+            </div>
         </CardFooter>
       )}
     </Card>

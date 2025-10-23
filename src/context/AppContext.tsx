@@ -41,6 +41,7 @@ interface AppContextType {
   deleteTable: (id: string) => Promise<void>;
   updateTableStatus: (id: string, status: Table['status']) => Promise<void>;
   placeOrder: (items: OrderItem[], customerInfo: CustomerInfo, table?: Table) => Promise<Order>;
+  placeKOT: (items: OrderItem[], customerInfo: CustomerInfo, table?: Table) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   deleteOrder: (id: string) => Promise<void>;
   deleteAllMenuData: () => Promise<void>;
@@ -250,15 +251,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     await batch.commit();
   }
-
-  const placeOrder = async (items: OrderItem[], customerInfo: CustomerInfo, table?: Table): Promise<Order> => {
+  
+  const createOrderObject = (items: OrderItem[], customerInfo: CustomerInfo, table?: Table): Omit<Order, 'id'> => {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const cgst = subtotal * 0.025;
     const sgst = subtotal * 0.025;
     const total = Math.round(subtotal + cgst + sgst);
     const createdAt = Date.now();
 
-    const orderData: Omit<Order, 'id'> = {
+    return {
         items: items.map(({ id, name, price, quantity }) => ({
             itemId: id,
             name,
@@ -272,10 +273,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         cgst,
         sgst,
         total,
-        status: 'Pending',
+        status: 'Pending', // Default status
         createdAt,
         createdBy: auth.currentUser ? auth.currentUser.uid : null,
     };
+  }
+
+  const placeOrder = async (items: OrderItem[], customerInfo: CustomerInfo, table?: Table): Promise<Order> => {
+    const orderData = createOrderObject(items, customerInfo, table);
+    orderData.status = 'Billed';
 
     try {
         const docRef = await addDoc(collection(db, 'orders'), orderData);
@@ -285,6 +291,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw new Error("Could not place order.");
     }
   };
+
+  const placeKOT = async (items: OrderItem[], customerInfo: CustomerInfo, table?: Table): Promise<Order> => {
+    const orderData = createOrderObject(items, customerInfo, table);
+    orderData.status = 'Preparing';
+
+    try {
+        const docRef = await addDoc(collection(db, 'orders'), orderData);
+        return { id: docRef.id, ...orderData };
+    } catch (e) {
+        console.error("Error placing KOT: ", e);
+        throw new Error("Could not place KOT.");
+    }
+  };
+
 
   const updateOrderStatus = async (id: string, status: Order['status']) => {
     try {
@@ -333,6 +353,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateTableStatus,
     deleteAllMenuData,
     placeOrder,
+    placeKOT,
     updateOrderStatus,
     deleteOrder,
     login,
