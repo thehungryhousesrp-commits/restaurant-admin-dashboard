@@ -60,7 +60,7 @@ export default function OrderEntryPoint() {
   const handleSelectTable = (table: Table) => {
     if (table.status === 'available') {
       setSelectedTable(table);
-      updateTableStatus(table.id, 'occupied');
+      // Don't mark as occupied until KOT is generated
       toast({ title: `Table "${table.name}" selected`, description: "You can now start adding items to the order." });
     } else {
       // Find the most recent active order for this table
@@ -88,17 +88,18 @@ export default function OrderEntryPoint() {
   };
 
   const handleResetTable = () => {
-    if (selectedTable) {
-        // Only mark as available if no KOT has been generated yet for this session.
-        // A more robust system would check the server, but this is a good client-side guard.
-        const activeOrderForTable = orders.find(o => o.tableId === selectedTable.id && o.status !== 'Billed' && o.status !== 'Completed');
-        if (!activeOrderForTable) {
-            updateTableStatus(selectedTable.id, 'available');
-        }
-    }
+    // Logic for resetting a table selection without changing its status on the backend
     setSelectedTable(null);
     handleClearOrder();
   };
+
+  const handleOrderPlaced = () => {
+    if (selectedTable) {
+        updateTableStatus(selectedTable.id, 'available');
+    }
+    setSelectedTable(null);
+    handleClearOrder();
+  }
 
   const filteredMenuItems = useMemo(() => {
     return menuItems
@@ -197,7 +198,7 @@ export default function OrderEntryPoint() {
             onUpdateQuantity={handleUpdateQuantity}
             onRemoveItem={handleRemoveItem}
             onClearOrder={handleClearOrder}
-            onOrderPlaced={handleResetTable}
+            onOrderPlaced={handleOrderPlaced}
           />
       </div>
     </div>

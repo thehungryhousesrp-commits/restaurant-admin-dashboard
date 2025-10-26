@@ -285,6 +285,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
         const docRef = await addDoc(collection(db, 'orders'), orderData);
+        if (table) await updateTableStatus(table.id, 'available');
         return { id: docRef.id, ...orderData };
     } catch (e) {
         console.error("Error placing order: ", e);
@@ -298,6 +299,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
         const docRef = await addDoc(collection(db, 'orders'), orderData);
+        if (table) await updateTableStatus(table.id, 'occupied');
         return { id: docRef.id, ...orderData };
     } catch (e) {
         console.error("Error placing KOT: ", e);

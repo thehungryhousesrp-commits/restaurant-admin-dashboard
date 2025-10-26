@@ -65,8 +65,9 @@ export default function OrderSummary({
         description: `Order for ${selectedTable.name} sent to the kitchen.`,
         action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle className="h-4 w-4" /></div>,
       });
-      onClearOrder();
-      setCustomerInfo({ name: '', phone: '' });
+      // DO NOT CLEAR THE ORDER. The user wants to see it.
+      // We will build the KOT tracking screen next.
+      // For now, just reset the button.
     } catch (error) {
       toast({ title: "KOT Failed", description: "Failed to generate KOT. Please try again.", variant: "destructive" });
     } finally {

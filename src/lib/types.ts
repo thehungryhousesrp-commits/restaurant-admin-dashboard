@@ -36,7 +36,12 @@ export interface CustomerInfo {
 // Note: `id` is not stored in the document itself, but is the document ID.
 export interface Order {
   id: string; // Document ID from Firestore
-  items: Omit<OrderItem, 'id' | 'description' | 'category' | 'imageUrl' | 'imageHint' | 'isAvailable' | 'isVeg' | 'isSpicy' | 'isChefsSpecial'>[];
+  items: {
+    itemId: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }[];
   customerInfo: CustomerInfo;
   tableId?: string;
   tableName?: string;
