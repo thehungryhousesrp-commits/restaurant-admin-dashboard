@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { ChefHat } from 'lucide-react';
 
 export default function Header() {
   const pathname = usePathname();
@@ -19,6 +20,7 @@ export default function Header() {
   const navItems = [
     { href: '/', label: 'Order Entry', public: true },
     { href: '/admin/menu', label: 'Admin', public: false },
+    { href: '/kitchen', label: 'Kitchen Display', public: false },
     { href: '/about', label: 'About Developer', public: false }
   ];
 
