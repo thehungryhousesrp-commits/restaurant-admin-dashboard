@@ -95,7 +95,8 @@ export default function OrderEntryPoint() {
 
   const handleOrderPlaced = () => {
     if (selectedTable) {
-        updateTableStatus(selectedTable.id, 'available');
+        // The status update to 'available' happens in the placeOrder function now
+        // This is just to reset the UI
     }
     setSelectedTable(null);
     handleClearOrder();
