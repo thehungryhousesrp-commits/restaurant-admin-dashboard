@@ -16,37 +16,39 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
   return (
     <Card className={cn(
       "overflow-hidden flex flex-col transition-all duration-300 hover:shadow-lg hover:border-primary",
-      !item.isAvailable && "bg-muted/50 cursor-not-allowed"
+      !item.isAvailable && "bg-muted/50 cursor-not-allowed opacity-60"
     )}>
       
-      <CardHeader className="pb-2 pt-4 px-4">
-        <div className="flex justify-between items-start gap-2">
-            <CardTitle className="text-base font-headline leading-tight">{item.name}</CardTitle>
-            <div className="flex gap-1.5 items-center flex-shrink-0">
-                {item.isVeg ? <Vegan className="h-5 w-5 text-green-600" title="Vegetarian" /> : <div title="Non-Vegetarian" className="w-5 h-5 flex items-center justify-center"><div className="w-3 h-3 bg-red-600 rounded-sm border border-red-800"></div></div>}
-                {item.isSpicy && <Flame className="h-5 w-5 text-orange-500" title="Spicy" />}
-                {item.isChefsSpecial && <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" title="Chef's Special" />}
-            </div>
-        </div>
+      <CardHeader className="flex-row items-start justify-between pb-2 pt-4 px-4">
+        <CardTitle className="text-base font-headline leading-tight flex-1 pr-2">{item.name}</CardTitle>
+        <p className="text-base font-bold text-right shrink-0">₹{item.price.toFixed(2)}</p>
       </CardHeader>
 
       <CardContent className="px-4 pb-4 flex-grow">
-        {item.description && <CardDescription className="text-xs line-clamp-2">{item.description}</CardDescription>}
-         {!item.isAvailable && (
-            <Badge variant="destructive" className="mt-2 text-xs">Out of Stock</Badge>
+        {item.description && (
+            <CardDescription className="text-xs line-clamp-2">{item.description}</CardDescription>
         )}
       </CardContent>
 
       <CardFooter className="p-4 pt-0 mt-auto flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-        <p className="text-base font-bold">₹{item.price.toFixed(2)}</p>
+        <div className="flex gap-2 items-center">
+            {item.isVeg ? <Badge variant="outline" className="border-green-500 text-green-600">Veg</Badge> : <Badge variant="outline" className="border-red-500 text-red-600">Non-Veg</Badge>}
+            {item.isSpicy && <Badge variant="secondary">Spicy</Badge>}
+            {item.isChefsSpecial && <Badge className="bg-yellow-400 text-black">Special</Badge>}
+        </div>
         <Button
           size="sm"
           onClick={() => onAddToOrder(item)}
           disabled={!item.isAvailable}
           aria-label={`Add ${item.name} to order`}
         >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add
+            {item.isAvailable ? (
+                <>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add
+                </>
+            ) : (
+                "Out of Stock"
+            )}
         </Button>
       </CardFooter>
     </Card>
