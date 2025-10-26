@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from 'react';
@@ -5,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import AdminDashboard from "@/components/pages/AdminDashboard";
 import { Skeleton } from '@/components/ui/skeleton';
+import Header from '@/components/layout/Header';
 
 export default function AdminMenuPage() {
     const { user, loadingAuth } = useAppContext();
@@ -18,15 +20,23 @@ export default function AdminMenuPage() {
 
     if (loadingAuth || !user) {
         return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="space-y-4">
-                    <Skeleton className="h-12 w-1/4" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-64 w-full" />
+            <>
+                <Header />
+                <div className="container mx-auto px-4 py-8">
+                    <div className="space-y-4">
+                        <Skeleton className="h-12 w-1/4" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-64 w-full" />
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
-    return <AdminDashboard />;
+    return (
+        <>
+            <Header />
+            <AdminDashboard />
+        </>
+    );
 }
