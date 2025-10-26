@@ -6,7 +6,7 @@ import { type Table } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "../ui/badge";
 import { Skeleton } from "../ui/skeleton";
-import { Armchair, Users } from "lucide-react";
+import { Armchair, Users, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SelectTableProps {
@@ -23,12 +23,12 @@ export default function SelectTable({ onSelectTable }: SelectTableProps) {
         <div className="container mx-auto px-4 py-8">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Select a Table</h1>
-                <p className="text-muted-foreground">Choose a table to start a new order.</p>
+                <p className="text-muted-foreground">Choose a table to start a new order or edit an existing one.</p>
             </div>
 
             {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {[...Array(8)].map((_, i) => (
+                    {[...Array(12)].map((_, i) => (
                         <Skeleton key={i} className="h-32 rounded-lg" />
                     ))}
                 </div>
@@ -62,12 +62,13 @@ export default function SelectTable({ onSelectTable }: SelectTableProps) {
 
                     {occupiedTables.length > 0 && (
                        <div className="mt-12">
-                            <h2 className="text-xl font-semibold mb-4 border-b pb-2">Occupied Tables</h2>
+                            <h2 className="text-xl font-semibold mb-4 border-b pb-2">Occupied & Active Tables</h2>
                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                 {occupiedTables.map(table => (
                                     <Card 
                                         key={table.id}
-                                        className="bg-muted/50 cursor-not-allowed"
+                                        onClick={() => onSelectTable(table)}
+                                        className="cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-yellow-500 hover:scale-105"
                                     >
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                             <CardTitle className="text-sm font-medium">{table.name}</CardTitle>
@@ -76,12 +77,14 @@ export default function SelectTable({ onSelectTable }: SelectTableProps) {
                                         <CardContent>
                                             <div className={cn(
                                                 "text-2xl font-bold",
-                                                table.status === 'occupied' && 'text-red-500',
-                                                table.status === 'reserved' && 'text-yellow-500'
+                                                table.status === 'occupied' && 'text-yellow-500',
+                                                table.status === 'reserved' && 'text-orange-500'
                                             )}>
                                                 {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
                                             </div>
-                                            <p className="text-xs text-muted-foreground">Busy with an order</p>
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <Edit className="h-3 w-3" /> Click to edit order
+                                            </p>
                                         </CardContent>
                                     </Card>
                                 ))}

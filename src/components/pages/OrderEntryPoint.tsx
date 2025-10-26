@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { type MenuItem, type OrderItem, type Table } from '@/lib/types';
+import { type MenuItem, type OrderItem, type Table, type Order } from '@/lib/types';
 import MenuItemCard from '@/components/menu/MenuItemCard';
 import OrderSummary from '@/components/order/OrderSummary';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,7 +15,7 @@ import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
 
 export default function OrderEntryPoint() {
-  const { menuItems, categories, loading, updateTableStatus } = useAppContext();
+  const { menuItems, categories, loading, updateTableStatus, orders } = useAppContext();
   const { toast } = useToast();
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,14 +58,43 @@ export default function OrderEntryPoint() {
   };
 
   const handleSelectTable = (table: Table) => {
-    setSelectedTable(table);
-    updateTableStatus(table.id, 'occupied');
-    toast({ title: `Table "${table.name}" selected`, description: "You can now start adding items to the order." });
+    if (table.status === 'available') {
+      setSelectedTable(table);
+      updateTableStatus(table.id, 'occupied');
+      toast({ title: `Table "${table.name}" selected`, description: "You can now start adding items to the order." });
+    } else {
+      // Find the most recent active order for this table
+      const activeOrder = orders
+        .filter(o => o.tableId === table.id && o.status !== 'Billed' && o.status !== 'Completed')
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
+
+      if (activeOrder) {
+        const loadedOrderItems: OrderItem[] = activeOrder.items.map(orderItem => {
+          const menuItem = menuItems.find(mi => mi.id === orderItem.itemId);
+          return {
+            ...menuItem!,
+            quantity: orderItem.quantity,
+          };
+        }).filter(item => item.id); // Filter out any items that couldn't be found
+
+        setCurrentOrder(loadedOrderItems);
+        toast({ title: `Editing order for table "${table.name}"`, description: `${loadedOrderItems.length} items loaded.` });
+      } else {
+        toast({ title: `No active order for table "${table.name}"`, description: "Starting a new order.", variant: 'default' });
+        setCurrentOrder([]);
+      }
+       setSelectedTable(table);
+    }
   };
 
   const handleResetTable = () => {
     if (selectedTable) {
-        updateTableStatus(selectedTable.id, 'available');
+        // Only mark as available if no KOT has been generated yet for this session.
+        // A more robust system would check the server, but this is a good client-side guard.
+        const activeOrderForTable = orders.find(o => o.tableId === selectedTable.id && o.status !== 'Billed' && o.status !== 'Completed');
+        if (!activeOrderForTable) {
+            updateTableStatus(selectedTable.id, 'available');
+        }
     }
     setSelectedTable(null);
     handleClearOrder();
