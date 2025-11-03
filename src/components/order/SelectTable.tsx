@@ -1,26 +1,69 @@
 'use client';
 
 import { type Table } from "@/lib/types";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Armchair } from "lucide-react";
+import { Armchair, User, Utensils, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { AppContext } from "@/context/AppContext";
 
-// Props updated to match parent and handle selection state
+// --- Enhanced Data Model with Mock Data ---
+// In a real application, this data would come from your backend (e.g., Firestore).
+type EnrichedTable = Table & {
+    partySize?: number;
+    serverName?: string;
+    status: 'available' | 'occupied' | 'reserved' | 'cleaning';
+};
+
+// Props updated to handle the new enriched table type
 interface SelectTableProps {
-    onTableSelect: (table: Table | null) => void;
-    selectedTable: Table | null;
+    onTableSelect: (table: EnrichedTable | null) => void;
+    selectedTable: EnrichedTable | null;
 }
 
 export default function SelectTable({ onTableSelect, selectedTable }: SelectTableProps) {
-    const { tables, loading } = useContext(AppContext);
+    const { tables: rawTables, loading } = useContext(AppContext);
 
-    const handleTableClick = (table: Table) => {
-        if (table.status !== 'available') return; // Prevent selecting occupied tables
+    // --- Mock Data Enrichment ---
+    // This adds placeholder data for party size, server, and new statuses.
+    // This logic should be replaced with real data from Firestore when available.
+    const enrichedTables: EnrichedTable[] = useMemo(() => {
+        return rawTables.map((table, index) => {
+            const mockData: Partial<EnrichedTable> = {};
+            switch (index % 5) {
+                case 1:
+                    mockData.status = 'occupied';
+                    mockData.partySize = 4;
+                    mockData.serverName = 'Anjali';
+                    break;
+                case 2:
+                     mockData.status = 'occupied';
+                    mockData.partySize = 2;
+                    mockData.serverName = 'Ravi';
+                    break;
+                case 3:
+                    mockData.status = 'reserved';
+                    mockData.partySize = 6;
+                    break;
+                case 4:
+                    mockData.status = 'cleaning';
+                    break;
+                default:
+                    mockData.status = 'available';
+                    break;
+            }
+            // Ensure original status from DB is used if not mocked
+            const finalStatus = mockData.status || table.status;
+            return { ...table, ...mockData, status: finalStatus };
+        });
+    }, [rawTables]);
+    
 
-        // Allow unselecting by clicking the same table again
+    const handleTableClick = (table: EnrichedTable) => {
+        // Only available tables are selectable
+        if (table.status !== 'available') return;
+
         if (selectedTable?.id === table.id) {
             onTableSelect(null);
         } else {
@@ -28,50 +71,73 @@ export default function SelectTable({ onTableSelect, selectedTable }: SelectTabl
         }
     };
 
+    // --- Dynamic Styling based on Status ---
+    const getStatusStyles = (status: EnrichedTable['status']) => {
+        switch (status) {
+            case 'available':
+                return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300', icon: <Utensils className="h-5 w-5 mx-auto text-green-600" /> };
+            case 'occupied':
+                return { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300', icon: <Armchair className="h-5 w-5 mx-auto text-red-600" /> };
+            case 'reserved':
+                return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300', icon: <User className="h-5 w-5 mx-auto text-blue-600" /> };
+            case 'cleaning':
+                 return { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: <Sparkles className="h-5 w-5 mx-auto text-yellow-600" /> };
+            default:
+                return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300', icon: <Armchair className="h-5 w-5 mx-auto text-gray-600" /> };
+        }
+    };
+
     if (loading) {
         return (
-            <div className="grid grid-cols-4 gap-4 mb-4">
-                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {[...Array(12)].map((_, i) => <Skeleton key={i} className="h-36 rounded-lg" />)}
             </div>
         );
     }
 
     return (
-        <div className="mb-6">
-            {tables.length > 0 ? (
-                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {tables.map(table => {
-                        const isAvailable = table.status === 'available';
+        <div>
+            {enrichedTables.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    {enrichedTables.map(table => {
+                        const isSelectable = table.status === 'available';
                         const isSelected = selectedTable?.id === table.id;
+                        const styles = getStatusStyles(table.status);
 
                         return (
-                            <Card 
+                            <Card
                                 key={table.id}
                                 onClick={() => handleTableClick(table)}
                                 className={cn(
-                                    "transition-all duration-200 text-center",
-                                    isAvailable 
-                                      ? "cursor-pointer hover:shadow-lg hover:border-primary-500/80" 
-                                      : "bg-red-50 border-red-200 cursor-not-allowed opacity-80",
-                                    isSelected && isAvailable && "border-2 border-primary shadow-lg ring-2 ring-primary/20"
+                                    "transition-all duration-200 flex flex-col justify-between",
+                                    styles.bg, styles.border,
+                                    isSelectable ? "cursor-pointer hover:shadow-lg hover:ring-2 hover:ring-primary/50" : "cursor-not-allowed opacity-90",
+                                    isSelected && isSelectable && "ring-2 ring-primary shadow-lg"
                                 )}
                             >
-                                <CardHeader className="p-2 pb-1">
-                                    <CardTitle className={cn("text-base font-bold", !isAvailable && "text-red-800")}>{table.name}</CardTitle>
+                                <CardHeader className="p-3 text-center">
+                                    <CardTitle className={cn("text-lg font-bold", styles.text)}>{table.name}</CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-2 pt-0">
-                                    <Armchair className={cn("h-6 w-6 mx-auto", isAvailable ? "text-green-600" : "text-red-500")} />
-                                    <p className={cn("text-xs mt-1 font-semibold", isAvailable ? "text-muted-foreground" : "text-red-700")}>
-                                      {isAvailable ? 'Available' : 'Occupied'}
+                                <CardContent className="p-3 text-center flex-grow flex flex-col items-center justify-center">
+                                    {styles.icon}
+                                    <p className={cn("text-sm font-semibold capitalize mt-2", styles.text)}>
+                                        {table.status.replace('_', ' ')}
                                     </p>
+                                    {table.partySize && (
+                                        <p className="text-xs text-muted-foreground mt-1">{table.partySize} Guests</p>
+                                    )}
                                 </CardContent>
+                                <CardFooter className={cn("p-2 text-center text-xs justify-center", styles.text)}>
+                                    {table.serverName ? `Served by: ${table.serverName}` : ''}
+                                </CardFooter>
                             </Card>
                         );
                     })}
                 </div>
             ) : (
-                <div className="text-center text-muted-foreground py-6 border-2 border-dashed rounded-lg">
-                    <p>No tables found. Please add tables in the admin dashboard.</p>
+                <div className="text-center text-muted-foreground py-10 border-2 border-dashed rounded-lg">
+                    <p>No tables have been configured.</p>
+                    <p className="text-sm">Please go to the Admin Dashboard to add tables.</p>
                 </div>
             )}
         </div>
