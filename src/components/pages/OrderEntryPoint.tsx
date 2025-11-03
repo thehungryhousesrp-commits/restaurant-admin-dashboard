@@ -5,7 +5,7 @@ import { useState, useCallback, useMemo, useContext, useEffect } from 'react';
 import { type OrderItem, type Table, type MenuItem, type Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, User, Phone, ArrowLeft, CheckCircle, Trash2, X } from 'lucide-react';
+import { Loader2, Search, User, Phone, ArrowLeft, CheckCircle, Trash2 } from 'lucide-react';
 import SelectTable from '@/components/order/SelectTable';
 import OrderSummary from '@/components/order/OrderSummary';
 import MenuItemCard from '@/components/menu/MenuItemCard';
@@ -138,7 +138,7 @@ export default function OrderEntryPoint() {
   const activeKey = orderType === 'dine-in' ? selectedTable?.id : (takeawayCustomer ? 'takeaway' : null);
   const currentOrder = activeKey ? inProgressOrders[activeKey]?.items ?? [] : [];
   const currentCustomerInfo = activeKey ? inProgressOrders[activeKey]?.customerInfo ?? { name: '', phone: '' } : { name: '', phone: '' };
-
+  
   const handleSelectTable = (table: Table) => {
     setSelectedTable(table);
     if (!inProgressOrders[table.id]) {
@@ -199,10 +199,11 @@ export default function OrderEntryPoint() {
     });
   }, [activeKey]);
   
-  const resetCurrentOrderState = useCallback((keyToReset: string) => {
+  const resetCurrentOrderState = useCallback(() => {
+     if(!activeKey) return;
      setInProgressOrders(prev => {
          const newOrders = { ...prev };
-         delete newOrders[keyToReset];
+         delete newOrders[activeKey];
          return newOrders;
      });
 
@@ -211,7 +212,7 @@ export default function OrderEntryPoint() {
      } else {
         setTakeawayCustomer(null);
      }
-  }, [orderType]);
+  }, [orderType, activeKey]);
   
   const resetSelection = () => {
     setSelectedTable(null);
@@ -240,8 +241,7 @@ export default function OrderEntryPoint() {
         const newOrderData = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
         
         setLastPlacedOrder(newOrderData.finalOrder);
-        setIsInvoiceOpen(true);
-        resetCurrentOrderState(activeKey);
+        setIsInvoiceOpen(true); // Open the dialog immediately
         
         toast({
             title: "Order Placed Successfully!",
@@ -254,12 +254,22 @@ export default function OrderEntryPoint() {
     } finally {
         setIsSubmitting(false);
     }
-  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, takeawayCustomer, orderType, toast, resetCurrentOrderState]);
+  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, takeawayCustomer, orderType, toast]);
+  
+  // This function will be called when the invoice dialog is closed.
+  const onInvoiceDialogClose = (isOpen: boolean) => {
+    setIsInvoiceOpen(isOpen);
+    if (!isOpen) {
+        // Reset the state only after the dialog has been closed.
+        resetCurrentOrderState(); 
+        setLastPlacedOrder(null);
+    }
+  };
 
   const handleCancelOrder = useCallback(() => {
     if (!activeKey) return;
     if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
-        resetCurrentOrderState(activeKey);
+        resetCurrentOrderState();
         toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
     }
   }, [activeKey, resetCurrentOrderState, toast]);
@@ -288,9 +298,7 @@ export default function OrderEntryPoint() {
                     <TakeawayForm onContinue={(info) => {
                         setTakeawayCustomer(info);
                         // Initialize the order for the 'takeaway' key
-                        if (!inProgressOrders['takeaway']) {
-                            setInProgressOrders(prev => ({...prev, takeaway: {items: [], customerInfo: info}}))
-                        }
+                        setInProgressOrders(prev => ({...prev, takeaway: {items: [], customerInfo: info}}))
                     }} />
                 )}
               </div>
@@ -391,11 +399,6 @@ export default function OrderEntryPoint() {
                     <Trash2 className="mr-2 h-4 w-4" /> Cancel Order
                  </Button>
               </div>
-                <Button onClick={() => activeKey && resetCurrentOrderState(activeKey)} variant="outline" size="lg" className="w-full">
-                    <X className="mr-2 h-4 w-4" /> Clear Selections
-                </Button>
-
-
           </div>
 
           <div className="p-4 flex-grow overflow-y-auto">
@@ -404,7 +407,7 @@ export default function OrderEntryPoint() {
         </aside>
       </div>
 
-      <Dialog open={isInvoiceOpen} onOpenChange={(isOpen) => { if(!isOpen) setLastPlacedOrder(null); setIsInvoiceOpen(isOpen);}}>
+      <Dialog open={isInvoiceOpen} onOpenChange={onInvoiceDialogClose}>
         {lastPlacedOrder && (
           <InvoicePreview order={lastPlacedOrder} />
         )}
@@ -412,3 +415,4 @@ export default function OrderEntryPoint() {
     </div>
   );
 }
+
