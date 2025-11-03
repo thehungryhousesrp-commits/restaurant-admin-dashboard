@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, useContext, useEffect } from 'react';
+import { useState, useCallback, useMemo, useContext, useRef } from 'react';
 import { type OrderItem, type Table, type MenuItem, type Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,56 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardFooter, CardHeader, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { motion, AnimatePresence } from 'framer-motion';
+
+
+// ===============================================================
+// ANIMATION COMPONENT
+// ===============================================================
+interface FlyingItemProps {
+  item: MenuItem;
+  startRect: DOMRect;
+  endRef: React.RefObject<HTMLElement>;
+  onAnimationComplete: () => void;
+}
+
+const FlyingItem = ({ item, startRect, endRef, onAnimationComplete }: FlyingItemProps) => {
+    const endRect = endRef.current?.getBoundingClientRect();
+
+    if (!endRect) return null;
+    
+    // Animate to the top-right corner of the target container for a better visual effect
+    const targetX = endRect.x + endRect.width - startRect.width;
+    const targetY = endRect.y;
+
+    return (
+        <motion.div
+            className="fixed z-50"
+            initial={{
+                left: startRect.x,
+                top: startRect.y,
+                width: startRect.width,
+                height: startRect.height,
+            }}
+            animate={{
+                left: targetX,
+                top: targetY,
+                width: startRect.width / 2,
+                height: startRect.height / 2,
+                opacity: 0,
+                scale: 0.5,
+            }}
+            transition={{
+                duration: 0.7,
+                ease: "easeInOut",
+            }}
+            onAnimationComplete={onAnimationComplete}
+        >
+            <MenuItemCard item={item} onAnimateAndAdd={() => {}} />
+        </motion.div>
+    );
+};
+
 
 // ===============================================================
 // TYPES AND STATE
@@ -26,6 +76,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type OrderType = 'dine-in' | 'takeaway';
 type InProgressOrders = Record<string, { items: OrderItem[]; customerInfo: { name: string; phone: string } }>;
+
+interface AnimatingItem {
+  item: MenuItem;
+  startRect: DOMRect;
+  key: number;
+}
+
 
 const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string, phone: string }, selectedTable: Table | null, orderType: OrderType): Promise<{ finalOrder: Order, docRef: any }> => {
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -128,6 +185,10 @@ export default function OrderEntryPoint() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [animatingItem, setAnimatingItem] = useState<AnimatingItem | null>(null);
+  const orderSummaryRef = useRef<HTMLDivElement>(null);
+
+
   const { toast } = useToast();
 
   const activeKey = orderType === 'dine-in' ? selectedTable?.id : (takeawayCustomer ? 'takeaway' : null);
@@ -173,25 +234,31 @@ export default function OrderEntryPoint() {
     return items;
   }, [menuItems, activeCategory, searchQuery]);
 
-  const handleAddItem = useCallback((item: MenuItem) => {
-    if (!activeKey) return;
+  const handleAnimateAndAdd = useCallback((item: MenuItem, startRect: DOMRect) => {
+      if (!activeKey) return;
 
-    setInProgressOrders(prev => {
-      const existingOrder = prev[activeKey] || { items: [], customerInfo: { name: '', phone: '' } };
-      const existingItem = existingOrder.items.find(o => o.itemId === item.id);
-      
-      let newItems: OrderItem[];
-      if (existingItem) {
-        newItems = existingOrder.items.map(o =>
-          o.itemId === item.id ? { ...o, quantity: o.quantity + 1, total: (o.quantity + 1) * o.price } : o
-        );
-      } else {
-        newItems = [...existingOrder.items, {
-          itemId: item.id, name: item.name, quantity: 1, price: item.price, total: item.price, specialInstructions: '',
-        }];
-      }
-      return { ...prev, [activeKey]: { ...existingOrder, items: newItems } };
-    });
+      // Trigger the animation
+      setAnimatingItem({ item, startRect, key: Date.now() });
+
+      // Defer the actual state update for the order
+      setTimeout(() => {
+          setInProgressOrders(prev => {
+              const existingOrder = prev[activeKey] || { items: [], customerInfo: { name: '', phone: '' } };
+              const existingItem = existingOrder.items.find(o => o.itemId === item.id);
+
+              let newItems: OrderItem[];
+              if (existingItem) {
+                  newItems = existingOrder.items.map(o =>
+                      o.itemId === item.id ? { ...o, quantity: o.quantity + 1, total: (o.quantity + 1) * o.price } : o
+                  );
+              } else {
+                  newItems = [...existingOrder.items, {
+                      itemId: item.id, name: item.name, quantity: 1, price: item.price, total: item.price, specialInstructions: '',
+                  }];
+              }
+              return { ...prev, [activeKey]: { ...existingOrder, items: newItems } };
+          });
+      }, 100); // Small delay to let animation start
   }, [activeKey]);
   
   const resetCurrentOrderState = useCallback(() => {
@@ -301,6 +368,19 @@ export default function OrderEntryPoint() {
   return (
     <div className="h-[calc(100vh-5rem)] flex bg-gray-50 font-sans overflow-hidden">
       
+       <AnimatePresence>
+            {animatingItem && (
+                <FlyingItem
+                    key={animatingItem.key}
+                    item={animatingItem.item}
+                    startRect={animatingItem.startRect}
+                    endRef={orderSummaryRef}
+                    onAnimationComplete={() => setAnimatingItem(null)}
+                />
+            )}
+        </AnimatePresence>
+
+
       {/* Left Panel: Categories */}
       <aside className="w-[240px] flex-shrink-0 bg-white border-r flex flex-col">
         <h2 className="p-4 text-lg font-semibold tracking-tight border-b text-gray-700 shrink-0">Categories</h2>
@@ -342,7 +422,7 @@ export default function OrderEntryPoint() {
               ))
             ) : filteredMenuItems.length > 0 ? (
               filteredMenuItems.map(item => (
-                <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddItem} />
+                <MenuItemCard key={item.id} item={item} onAnimateAndAdd={handleAnimateAndAdd} />
               ))
             ) : (
                 <div className="col-span-full flex flex-col items-center justify-center text-center text-muted-foreground bg-gray-100 rounded-lg py-12">
@@ -355,7 +435,7 @@ export default function OrderEntryPoint() {
       </main>
       
       {/* Right Panel: Current Order */}
-      <aside className="w-[380px] flex-shrink-0 bg-white border-l flex flex-col">
+      <aside ref={orderSummaryRef} className="w-[380px] flex-shrink-0 bg-white border-l flex flex-col">
         <div className="p-4 border-b shrink-0">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold font-headline">Current Order</h2>
@@ -399,7 +479,7 @@ export default function OrderEntryPoint() {
         </div>
 
         <div className="flex-1 p-4 flex flex-col min-h-0">
-            <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
+            <OrderSummary currentOrder={currentOrder} onUpdateOrder={handleUpdateOrder} />
         </div>
       </aside>
 

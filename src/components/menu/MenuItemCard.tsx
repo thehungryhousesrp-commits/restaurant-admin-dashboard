@@ -1,27 +1,30 @@
 
 "use client";
 
+import { useRef } from "react";
 import { type MenuItem } from "@/lib/types";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MenuItemCardProps {
   item: MenuItem;
-  onAddToOrder: (item: MenuItem) => void;
+  onAnimateAndAdd: (item: MenuItem, rect: DOMRect) => void;
 }
 
-export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
+export default function MenuItemCard({ item, onAnimateAndAdd }: MenuItemCardProps) {
   const { isAvailable, isVeg, name, price } = item;
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const handleCardClick = () => {
-    if (isAvailable) {
-      onAddToOrder(item);
+    if (isAvailable && cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect();
+        onAnimateAndAdd(item, rect);
     }
   };
 
   return (
     <Card
+      ref={cardRef}
       onClick={handleCardClick}
       className={cn(
         "overflow-hidden flex flex-col transition-all duration-200 group",
@@ -44,16 +47,17 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
       </CardHeader>
 
       <CardFooter className="p-3 pt-2 mt-auto flex justify-between items-center bg-card-foreground/5 dark:bg-card-foreground/10">
-        <p className="text-sm font-bold text-left shrink-0">₹{(price || 0).toFixed(2)}</p>
-        
         <div className="flex items-center gap-2">
-            {typeof isVeg === 'boolean' && (
+            <p className="text-sm font-bold text-left shrink-0">₹{(price || 0).toFixed(2)}</p>
+             {typeof isVeg === 'boolean' && (
               <span 
                 className={cn("h-3 w-3 rounded-full", isVeg ? "bg-green-600" : "bg-red-600")}
                 title={isVeg ? 'Vegetarian' : 'Non-Vegetarian'}
               ></span>
             )}
-            
+        </div>
+        
+        <div className="flex items-center gap-2">
             {!isAvailable && (
               <span className="text-xs text-muted-foreground font-semibold">Unavailable</span>
             )}
