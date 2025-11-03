@@ -389,11 +389,11 @@ const OrdersView = () => {
 
     const headers = ['Invoice #', 'Customer Name', 'Customer Phone', 'Table', 'Date', 'Total Amount'];
     const rows = ordersToExport.map(order => [
-      order.id.slice(-6).toUpperCase(),
-      order.customerInfo.name,
-      order.customerInfo.phone,
-      order.tableName,
-      new Date(order.createdAt).toLocaleDateString(),
+      `"${order.id.slice(-6).toUpperCase()}"`,
+      `"${order.customerInfo.name}"`,
+      `"${order.customerInfo.phone}"`,
+      `"${order.tableName}"`,
+      `"${new Date(order.createdAt).toLocaleDateString()}"`,
       order.total.toFixed(2),
     ]);
 
