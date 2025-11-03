@@ -1,6 +1,6 @@
 
 import { type Order, type OrderItem, type CustomerInfo, type Table } from "./types";
-import { serverTimestamp, writeBatch, doc, collection } from "firebase/firestore";
+import { serverTimestamp, writeBatch, doc, collection, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 // This function creates a mock order object for invoice preview.
@@ -48,4 +48,14 @@ export const deleteOrders = async (orderIds: string[]) => {
         batch.delete(docRef);
     });
     await batch.commit();
+};
+
+/**
+ * Updates the status of a specific table in Firestore.
+ * @param tableId The ID of the table to update.
+ * @param status The new status for the table.
+ */
+export const updateTableStatus = async (tableId: string, status: Table['status']) => {
+    const tableRef = doc(db, "tables", tableId);
+    await updateDoc(tableRef, { status });
 };

@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardFooter, CardHeader, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
+import { updateTableStatus } from '@/lib/order';
 
 
 // ===============================================================
@@ -327,13 +328,23 @@ export default function OrderEntryPoint() {
     }
   };
 
-  const handleCancelOrder = useCallback(() => {
+  const handleCancelOrder = useCallback(async () => {
     if (!activeKey) return;
-    if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
-        resetCurrentOrderState();
-        toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
+    if (confirm('Are you sure you want to cancel this entire order? All items will be removed and the table status will be reset.')) {
+        try {
+            // If it's a dine-in order for a specific table, update its status
+            if (orderType === 'dine-in' && selectedTable) {
+                await updateTableStatus(selectedTable.id, 'available');
+            }
+            
+            resetCurrentOrderState();
+            toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
+        } catch (error) {
+            console.error("Error cancelling order:", error);
+            toast({ title: 'Error', description: 'Could not update table status. Please try again.', variant: 'destructive' });
+        }
     }
-  }, [activeKey, resetCurrentOrderState, toast]);
+  }, [activeKey, resetCurrentOrderState, toast, selectedTable, orderType]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
 
