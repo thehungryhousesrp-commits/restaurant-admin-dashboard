@@ -327,7 +327,13 @@ export default function OrderEntryPoint() {
     if (!activeKey) return;
     if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
         // Clear the data for the current order
-        resetCurrentOrderState();
+        setInProgressOrders(prev => {
+            const newOrders = { ...prev };
+            if (activeKey) {
+                delete newOrders[activeKey];
+            }
+            return newOrders;
+        });
 
         // Reset the selection, which will force the UI back to the initial view
         setSelectedTable(null);
@@ -335,7 +341,7 @@ export default function OrderEntryPoint() {
 
         toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
     }
-  }, [activeKey, resetCurrentOrderState, toast]);
+  }, [activeKey, toast]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
 
