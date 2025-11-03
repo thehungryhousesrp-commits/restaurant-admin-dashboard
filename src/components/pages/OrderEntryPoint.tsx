@@ -18,6 +18,7 @@ import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardFooter, CardHeader, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // ===============================================================
 // TYPES AND STATE
@@ -58,8 +59,6 @@ const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string,
 
   await batch.commit();
 
-  // The 'as any' is a temporary workaround because the server-side and client-side Order types might differ slightly (e.g., Timestamps).
-  // This is safe here because we've just constructed the object.
   return {
     finalOrder: { id: newOrderRef.id, ...newOrderData } as any,
     docRef: newOrderRef
@@ -116,20 +115,16 @@ const TakeawayForm = ({ onContinue }: { onContinue: (info: { name: string, phone
 export default function OrderEntryPoint() {
   const { menuItems, categories, menuLoading, categoriesLoading } = useContext(AppContext);
   
-  // App State
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [takeawayCustomer, setTakeawayCustomer] = useState<{name: string, phone: string} | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('dine-in');
 
-  // Order Management State
   const [inProgressOrders, setInProgressOrders] = useState<InProgressOrders>({});
   
-  // UI State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   
-  // Menu Filtering State
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -295,7 +290,6 @@ export default function OrderEntryPoint() {
                 ) : (
                     <TakeawayForm onContinue={(info) => {
                         setTakeawayCustomer(info);
-                        // Initialize the order for the 'takeaway' key
                         setInProgressOrders(prev => ({...prev, takeaway: {items: [], customerInfo: info}}))
                     }} />
                 )}
@@ -305,17 +299,18 @@ export default function OrderEntryPoint() {
   }
   
   return (
-    <div className="h-[calc(100vh-5rem)] flex flex-col bg-gray-50 font-sans">
-      <div className="flex-1 grid grid-cols-12 overflow-hidden">
-        
-        <aside className="col-span-2 bg-white border-r flex flex-col">
-          <h2 className="p-3 text-sm font-semibold tracking-tight border-b text-gray-600">Categories</h2>
-          <nav className="p-2 overflow-y-auto">
+    <div className="h-[calc(100vh-5rem)] flex bg-gray-50 font-sans overflow-hidden">
+      
+      {/* Left Panel: Categories */}
+      <aside className="w-[240px] flex-shrink-0 bg-white border-r flex flex-col">
+        <h2 className="p-4 text-lg font-semibold tracking-tight border-b text-gray-700 shrink-0">Categories</h2>
+        <ScrollArea className="flex-1">
+          <nav className="p-2">
             <button onClick={() => setActiveCategory('all')} className={cn("w-full text-left p-3 rounded-md font-medium transition-colors text-sm", activeCategory === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-gray-100')}>
               All Items
             </button>
             {categoriesLoading ? (
-              <div className="space-y-2 p-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 rounded" />)}</div>
+              <div className="space-y-2 p-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 rounded" />)}</div>
             ) : (
               categories.map(cat => (
                 <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={cn("w-full text-left p-3 rounded-md font-medium transition-colors text-sm", activeCategory === cat.id ? 'bg-primary text-primary-foreground' : 'hover:bg-gray-100')}>
@@ -324,21 +319,23 @@ export default function OrderEntryPoint() {
               ))
             )}
           </nav>
-        </aside>
+        </ScrollArea>
+      </aside>
 
-        <main className="col-span-7 flex flex-col p-4 overflow-y-auto">
-          <div className="flex items-center mb-4 gap-4 shrink-0">
-              <h1 className="text-2xl font-bold font-headline tracking-tight">Select Items</h1>
-              <div className="relative flex-grow max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search menu items..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10"/>
-              </div>
-          </div>
-          
-          <div className="flex-grow grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pr-2 pb-4">
+      {/* Center Panel: Menu Items */}
+      <main className="flex-1 flex flex-col p-4">
+        <div className="flex items-center mb-4 gap-4 shrink-0">
+            <h1 className="text-2xl font-bold font-headline tracking-tight">Select Items</h1>
+            <div className="relative flex-grow max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search menu items..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10"/>
+            </div>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pr-4 pb-4">
             {menuLoading ? (
-               [...Array(12)].map((_, i) => (
-                <Card key={i} className="overflow-hidden flex flex-col transition-all duration-300">
+               [...Array(18)].map((_, i) => (
+                <Card key={i} className="overflow-hidden flex flex-col">
                     <CardHeader className="flex-grow p-3 pb-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-3 w-1/2 mt-2" /></CardHeader>
                     <CardFooter className="p-3 pt-2 mt-auto flex justify-between items-center"><Skeleton className="h-5 w-1/4" /><Skeleton className="h-8 w-1/3" /></CardFooter>
                 </Card>
@@ -354,56 +351,57 @@ export default function OrderEntryPoint() {
                 </div>
             )}
           </div>
-        </main>
-        
-        <aside className="col-span-3 bg-white border-l flex flex-col">
-          <div className="p-4 border-b shrink-0">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold font-headline">Current Order</h2>
-                <Button variant="ghost" size="sm" onClick={resetSelection} className="flex items-center gap-1 text-xs">
-                    <ArrowLeft className="h-3 w-3" /> Back
-                </Button>
-              </div>
+        </ScrollArea>
+      </main>
+      
+      {/* Right Panel: Current Order */}
+      <aside className="w-[380px] flex-shrink-0 bg-white border-l flex flex-col">
+        <div className="p-4 border-b shrink-0">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold font-headline">Current Order</h2>
+              <Button variant="ghost" size="sm" onClick={resetSelection} className="flex items-center gap-1 text-xs">
+                  <ArrowLeft className="h-3 w-3" /> Back
+              </Button>
+            </div>
 
-               {orderType === 'dine-in' && selectedTable && (
-                  <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md mb-4">
-                      Dine-In for Table: <span className="font-bold">{selectedTable.name}</span>
-                  </div>
-              )}
+             {orderType === 'dine-in' && selectedTable && (
+                <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md mb-4">
+                    Dine-In for Table: <span className="font-bold">{selectedTable.name}</span>
+                </div>
+            )}
 
-               {orderType === 'takeaway' && takeawayCustomer && (
-                  <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md mb-4">
-                     Takeaway for: <span className="font-bold">{takeawayCustomer.name}</span>
-                  </div>
-              )}
+             {orderType === 'takeaway' && takeawayCustomer && (
+                <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md mb-4">
+                   Takeaway for: <span className="font-bold">{takeawayCustomer.name}</span>
+                </div>
+            )}
 
-              <div className="space-y-3 mb-4">
-                  <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="customer-name" placeholder="Customer Name *" value={currentCustomerInfo.name} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, name: e.target.value })} className="pl-10 h-9 text-sm"/>
-                  </div>
-                  <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="customer-phone" placeholder="Customer Phone *" value={currentCustomerInfo.phone} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, phone: e.target.value })} className="pl-10 h-9 text-sm"/>
-                  </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                 <Button onClick={handlePlaceOrder} disabled={isSubmitting || !canPlaceOrder} className="w-full" size="lg" style={{backgroundColor: '#10B981'}}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                    {isSubmitting ? 'Placing...' : 'Place Order'}
-                 </Button>
-                 <Button onClick={handleCancelOrder} variant="destructive" size="lg" disabled={isSubmitting || currentOrder.length === 0}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Cancel
-                 </Button>
-              </div>
-          </div>
+            <div className="space-y-3 mb-4">
+                <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="customer-name" placeholder="Customer Name *" value={currentCustomerInfo.name} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, name: e.target.value })} className="pl-10 h-9 text-sm"/>
+                </div>
+                <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="customer-phone" placeholder="Customer Phone *" value={currentCustomerInfo.phone} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, phone: e.target.value })} className="pl-10 h-9 text-sm"/>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+               <Button onClick={handlePlaceOrder} disabled={isSubmitting || !canPlaceOrder} className="w-full" size="lg" style={{backgroundColor: '#10B981'}}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                  {isSubmitting ? 'Placing...' : 'Place Order'}
+               </Button>
+               <Button onClick={handleCancelOrder} variant="destructive" size="lg" disabled={isSubmitting || currentOrder.length === 0}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Cancel
+               </Button>
+            </div>
+        </div>
 
-          <div className="flex-grow p-4 flex flex-col overflow-hidden">
-              <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
-          </div>
-        </aside>
-      </div>
+        <div className="flex-1 p-4 flex flex-col min-h-0">
+            <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
+        </div>
+      </aside>
 
       <Dialog open={isInvoiceOpen} onOpenChange={onInvoiceDialogClose}>
         {lastPlacedOrder && (
