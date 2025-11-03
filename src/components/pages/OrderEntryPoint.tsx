@@ -103,10 +103,12 @@ export default function OrderEntryPoint() {
   }
 
   const filteredMenuItems = useMemo(() => {
+    const categoryIds = new Set(categories.map(c => c.id));
     return menuItems
+      .filter(item => item.category && categoryIds.has(item.category)) // Ensure item's category exists
       .filter(item => activeCategory === 'all' || item.category === activeCategory)
       .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [menuItems, activeCategory, searchQuery]);
+  }, [menuItems, categories, activeCategory, searchQuery]);
   
   if (!selectedTable) {
     return <SelectTable onSelectTable={handleSelectTable} />;
