@@ -59,6 +59,7 @@ export default function SelectTable({ onTableSelect, selectedTable, inProgressOr
                         const status = getTableStatus(table);
                         const isSelected = selectedTable?.id === table.id;
                         const styles = getStatusStyles(status);
+                        const customerName = status === 'occupied' ? inProgressOrders[table.id]?.customerInfo?.name : '';
 
                         return (
                             <Card
@@ -78,6 +79,11 @@ export default function SelectTable({ onTableSelect, selectedTable, inProgressOr
                                     <p className={cn("text-sm font-semibold capitalize mt-2", styles.text)}>
                                         {status}
                                     </p>
+                                    {customerName && (
+                                        <p className={cn("text-xs font-medium truncate mt-1", styles.text)}>
+                                            by: {customerName}
+                                        </p>
+                                    )}
                                 </CardContent>
                             </Card>
                         );
