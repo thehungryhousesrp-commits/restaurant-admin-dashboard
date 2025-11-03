@@ -388,26 +388,31 @@ const OrdersView = () => {
     }
 
     const headers = ['Invoice #', 'Customer Name', 'Customer Phone', 'Table', 'Date', 'Total Amount'];
-    const rows = ordersToExport.map(order => [
-      `"${order.id.slice(-6).toUpperCase()}"`,
-      `"${order.customerInfo.name}"`,
-      `"${order.customerInfo.phone}"`,
-      `"${order.tableName}"`,
-      `"${new Date(order.createdAt).toLocaleDateString()}"`,
-      order.total.toFixed(2),
-    ]);
+    
+    const rows = ordersToExport.map(order => {
+        const row = [
+            `"${order.id.slice(-6).toUpperCase()}"`,
+            `"${order.customerInfo.name}"`,
+            `"${order.customerInfo.phone}"`,
+            `"${order.tableName}"`,
+            `"${new Date(order.createdAt).toLocaleDateString()}"`,
+            order.total.toFixed(2),
+        ];
+        return row.join(',');
+    });
 
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + rows.map(e => e.join(",")).join("\n");
+    const csvContent = [headers.join(','), ...rows].join('\n');
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
     link.setAttribute("download", `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
     toast({ title: 'Export Successful', description: `Exported ${ordersToExport.length} orders.` });
 
   }, [filteredOrders, allOrders, selectedOrders, toast]);
