@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useContext } from 'react';
 import { type OrderItem, type Table, type MenuItem, type Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, CheckCircle, User, Phone, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, User, Phone, ArrowLeft, CheckCircle, Trash2, X } from 'lucide-react';
 import SelectTable from '@/components/order/SelectTable';
 import OrderSummary from '@/components/order/OrderSummary';
 import MenuItemCard from '@/components/menu/MenuItemCard';
@@ -155,18 +155,14 @@ export default function OrderEntryPoint() {
     setCurrentOrder([]);
     setSelectedTable(null);
     setCustomerInfo({ name: '', phone: '' });
-    // Keep orderType as is for the next order
   }, []);
-
-  const handleBackToSelection = () => {
-    if (currentOrder.length > 0) {
-      if (confirm('You have items in the current order. Are you sure you want to go back? The current order will be cleared.')) {
+  
+  const handleCancelOrder = useCallback(() => {
+     if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
         resetOrderState();
-      }
-    } else {
-        resetOrderState();
-    }
-  }
+        toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
+     }
+  }, [resetOrderState, toast]);
 
   const handlePlaceOrder = useCallback(async () => {
     if (currentOrder.length === 0) {
@@ -216,7 +212,7 @@ export default function OrderEntryPoint() {
               <div className="flex-1 overflow-y-auto">
                 {orderType === 'dine-in' ? (
                      <div className="p-4 sm:p-6">
-                        <h3 className="text-lg font-semibold mb-3">2. Select an Available Table</h3>
+                        <h3 className="text-lg font-semibold mb-3">2. Select a Table</h3>
                         <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
                      </div>
                 ) : (
@@ -283,7 +279,7 @@ export default function OrderEntryPoint() {
           <div className="p-4 border-b space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold font-headline">Current Order</h2>
-                <Button variant="ghost" size="sm" onClick={handleBackToSelection} className="flex items-center gap-1 text-xs">
+                <Button variant="ghost" size="sm" onClick={resetOrderState} className="flex items-center gap-1 text-xs">
                     <ArrowLeft className="h-3 w-3" /> Back
                 </Button>
               </div>
@@ -310,16 +306,25 @@ export default function OrderEntryPoint() {
                       <Input id="customer-phone" placeholder="Customer Phone (Optional)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="pl-10 h-9 text-sm"/>
                   </div>
               </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                 <Button onClick={handlePlaceOrder} disabled={isSubmitting || currentOrder.length === 0} className="w-full" size="lg" style={{backgroundColor: '#10B981'}}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                    {isSubmitting ? 'Placing...' : 'Place Order'}
+                 </Button>
+                 <Button onClick={handleCancelOrder} variant="destructive" size="lg" disabled={isSubmitting || currentOrder.length === 0}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Cancel Order
+                 </Button>
+              </div>
+                <Button onClick={resetOrderState} variant="outline" size="lg" className="w-full">
+                    <X className="mr-2 h-4 w-4" /> Clear Selections
+                </Button>
 
 
-              <Button onClick={handlePlaceOrder} disabled={isSubmitting || currentOrder.length === 0} className="w-full" size="lg">
-                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                  {isSubmitting ? 'Placing Order...' : 'Place Order & Generate Invoice'}
-              </Button>
           </div>
 
           <div className="flex-1 flex flex-col p-4 overflow-hidden">
-              <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} onClearOrder={resetOrderState} />
+              <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} />
           </div>
         </aside>
       </div>

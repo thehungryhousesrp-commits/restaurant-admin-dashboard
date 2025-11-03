@@ -10,12 +10,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface OrderSummaryProps {
   items: OrderItem[];
   onUpdateItems: (items: OrderItem[]) => void;
-  onClearOrder?: () => void;
 }
 
 const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
 
-export default function OrderSummary({ items, onUpdateItems, onClearOrder }: OrderSummaryProps) {
+export default function OrderSummary({ items, onUpdateItems }: OrderSummaryProps) {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
 
@@ -171,17 +170,6 @@ export default function OrderSummary({ items, onUpdateItems, onClearOrder }: Ord
           <span className="text-primary">₹{total.toFixed(2)}</span>
         </div>
       </div>
-
-      {/* Clear Button */}
-      {onClearOrder && (
-        <Button
-          variant="outline"
-          onClick={onClearOrder}
-          className="w-full mt-2"
-        >
-          Clear Order
-        </Button>
-      )}
     </div>
   );
 }
