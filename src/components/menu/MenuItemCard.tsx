@@ -54,11 +54,7 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
               ></span>
             )}
             
-            {isAvailable ? (
-              <div className="flex items-center text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <PlusCircle className="h-4 w-4" />
-              </div>
-            ) : (
+            {!isAvailable && (
               <span className="text-xs text-muted-foreground font-semibold">Unavailable</span>
             )}
         </div>
