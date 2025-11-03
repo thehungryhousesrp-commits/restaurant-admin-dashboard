@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useContext } from 'react';
@@ -110,9 +111,9 @@ function BulkUploader() {
           name: item.name,
           price: item.price,
           category: categoryId, 
-          description: '', 
-          isAvailable: true, 
-          isVeg: true, // Defaulting to true, user can change later
+          description: '', // Default description, can be edited later
+          isAvailable: true, // Default to available
+          isVeg: !item.name.toLowerCase().includes('chicken'), // Simple logic to default isVeg
         };
         return addMenuItem(payload);
       });
