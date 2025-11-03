@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useAppContext } from '@/context/AppContext';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +15,7 @@ import { ChefHat } from 'lucide-react';
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, logout, loadingAuth } = useAppContext();
+  const [user, loadingAuth] = useAuthState(auth);
   const router = useRouter();
   const { toast } = useToast();
   
@@ -25,7 +27,7 @@ export default function Header() {
   ];
 
   const handleLogout = async () => {
-    await logout();
+    await signOut(auth);
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
     router.push('/');
   };

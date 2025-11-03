@@ -1,3 +1,4 @@
+
 export interface Category {
   id: string;
   name: string;
@@ -19,33 +20,33 @@ export interface MenuItem {
   isVeg: boolean;
 }
 
-export interface OrderItem extends MenuItem {
-  quantity: number;
-}
-
 export interface CustomerInfo {
   name: string;
   phone: string;
 }
 
-// This defines the structure of an order AS IT IS STORED IN FIRESTORE
-// Note: `id` is not stored in the document itself, but is the document ID.
+export interface OrderItem {
+  itemId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  total: number;
+  specialInstructions?: string;
+}
+
 export interface Order {
-  id: string; // Document ID from Firestore
-  items: {
-    itemId: string;
-    name: string;
-    price: number;
-    quantity: number;
-  }[];
+  id: string;
+  items: OrderItem[];
   customerInfo: CustomerInfo;
-  tableId?: string;
-  tableName?: string;
+  tableId: string;
+  tableName: string;
   subtotal: number;
   cgst: number;
   sgst: number;
   total: number;
-  status: 'Pending' | 'Preparing' | 'Completed' | 'Billed';
-  createdAt: number;
-  createdBy: string | null;
+  status: 'Preparing' | 'Completed' | 'Cancelled' | 'Billed';
+  createdAt: any; 
+  updatedAt: any;
+  restaurantId: string;
+  userId: string;
 }

@@ -1,204 +1,184 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { type OrderItem, type CustomerInfo, type Order, type Table } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Loader2, Printer, CheckCircle } from "lucide-react";
-import { useAppContext } from "@/context/AppContext";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { InvoicePreview } from "./InvoicePreview";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback } from 'react';
+import { type OrderItem } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Trash2, Plus, Minus } from 'lucide-react';
 
 interface OrderSummaryProps {
-  currentOrder: OrderItem[];
-  selectedTable: Table;
-  onUpdateQuantity: (itemId: string, quantity: number) => void;
-  onRemoveItem: (itemId: string) => void;
-  onClearOrder: () => void;
-  onOrderPlaced: () => void;
+  items: OrderItem[];
+  onUpdateItems: (items: OrderItem[]) => void;
+  onClearOrder?: () => void;
 }
 
-export default function OrderSummary({
-  currentOrder,
-  selectedTable,
-  onUpdateQuantity,
-  onRemoveItem,
-  onClearOrder,
-  onOrderPlaced,
-}: OrderSummaryProps) {
-  const { placeOrder, placeKOT } = useAppContext();
-  const { toast } = useToast();
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '' });
-  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [isGeneratingKot, setIsGeneratingKot] = useState(false);
+const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
 
-  const subtotal = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const cgst = subtotal * 0.025;
-  const sgst = subtotal * 0.025;
-  const total = subtotal + cgst + sgst;
+export default function OrderSummary({ items, onUpdateItems, onClearOrder }: OrderSummaryProps) {
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
 
-  const validateInput = () => {
-    if (currentOrder.length === 0) {
-      toast({ title: "Empty Order", description: "Cannot proceed with an empty order.", variant: "destructive" });
-      return false;
-    }
-    if (!customerInfo.name || !customerInfo.phone) {
-      toast({ title: "Missing Customer Info", description: "Please enter customer name and phone number.", variant: "destructive" });
-      return false;
-    }
-    return true;
-  };
+  // Update quantity
+  const handleUpdateQuantity = useCallback(
+    (itemId: string, quantity: number) => {
+      if (quantity <= 0) {
+        handleRemoveItem(itemId);
+        return;
+      }
+      const updated = items.map(item =>
+        item.itemId === itemId ? { ...item, quantity } : item
+      );
+      onUpdateItems(updated);
+    },
+    [items, onUpdateItems]
+  );
 
-  const handleGenerateKOT = async () => {
-    if (!validateInput()) return;
+  // Remove item from order
+  const handleRemoveItem = useCallback(
+    (itemId: string) => {
+      const updated = items.filter(item => item.itemId !== itemId);
+      onUpdateItems(updated);
+    },
+    [items, onUpdateItems]
+  );
 
-    setIsGeneratingKot(true);
-    try {
-      await placeKOT(currentOrder, customerInfo, selectedTable);
-      toast({
-        title: "KOT Generated",
-        description: `Order for ${selectedTable.name} sent to the kitchen.`,
-        action: <div className="p-2 bg-green-500 text-white rounded-full"><CheckCircle className="h-4 w-4" /></div>,
-      });
-      // DO NOT CLEAR THE ORDER. The user wants to see it.
-      // We will build the KOT tracking screen next.
-      // For now, just reset the button.
-    } catch (error) {
-      toast({ title: "KOT Failed", description: "Failed to generate KOT. Please try again.", variant: "destructive" });
-    } finally {
-      setIsGeneratingKot(false);
-    }
-  };
+  // Save special instructions for an item
+  const handleSaveNote = useCallback(
+    (itemId: string) => {
+      const updated = items.map(item =>
+        item.itemId === itemId ? { ...item, specialInstructions: noteText } : item
+      );
+      onUpdateItems(updated);
+      setEditingNoteId(null);
+      setNoteText('');
+    },
+    [items, onUpdateItems, noteText]
+  );
 
-  const handlePlaceOrder = async () => {
-    if (!validateInput()) return;
+  // Calculate totals
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cgst = subtotal * (GST_RATE / 2);
+  const sgst = subtotal * (GST_RATE / 2);
+  const total = Math.round(subtotal + cgst + sgst);
 
-    setIsPlacingOrder(true);
-    try {
-      const newOrder = await placeOrder(currentOrder, customerInfo, selectedTable);
-      setPlacedOrder(newOrder);
-      // The dialog will open via DialogTrigger, no need to manually open
-    } catch (error) {
-      toast({ title: "Order Failed", description: "Failed to place order. Please try again.", variant: "destructive" });
-    } finally {
-      setIsPlacingOrder(false);
-    }
-  };
-  
-  const handleDialogClose = (open: boolean) => {
-    if(!open) {
-      onClearOrder();
-      setCustomerInfo({ name: '', phone: '' });
-      setPlacedOrder(null);
-      onOrderPlaced(); // This will reset the table selection
-    }
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-gray-50/50 rounded-lg">
+        <p className="font-medium text-lg">Your order is empty</p>
+        <p className="text-sm">Please add items from the menu to get started.</p>
+      </div>
+    );
   }
 
   return (
-    <Card className="sticky top-20 h-[calc(100vh-6rem)] flex flex-col">
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2">
-          <ShoppingCart />
-          Current Order for <span className="text-primary">{selectedTable.name}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-grow overflow-y-auto">
-        {currentOrder.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <ShoppingCart className="h-16 w-16 mb-4" />
-            <p>Your order is empty</p>
-            <p className="text-sm">Add items from the menu to get started</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="customerName">Customer Name</Label>
-              <Input
-                id="customerName"
-                placeholder="e.g. John Doe"
-                value={customerInfo.name}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-              />
+    <div className="space-y-4 h-full flex flex-col">
+      {/* Items List */}
+      <div className="space-y-3 flex-grow overflow-y-auto pr-2 -mr-2">
+        {items.map(item => (
+          <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-white shadow-sm">
+            {/* Item Header */}
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <p className="font-semibold text-sm">{item.name}</p>
+                <p className="text-xs text-muted-foreground">₹{item.price.toFixed(2)}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => handleRemoveItem(item.itemId)}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
-             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                placeholder="e.g. 9876543210"
-                value={customerInfo.phone}
-                maxLength={10}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value.replace(/[^\d]/g, '') })}
-              />
+
+            {/* Quantity Controls */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => handleUpdateQuantity(item.itemId, item.quantity - 1)}
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </Button>
+              <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => handleUpdateQuantity(item.itemId, item.quantity + 1)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+              <span className="ml-auto font-bold text-sm">
+                ₹{(item.price * item.quantity).toFixed(2)}
+              </span>
             </div>
-            <Separator />
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-              {currentOrder.map((item) => (
-                <div key={item.id} className="flex items-center gap-2">
-                  <div className="flex-grow">
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}>
-                      <MinusCircle className="h-4 w-4" />
-                    </Button>
-                    <span className="w-6 text-center">{item.quantity}</span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}>
-                      <PlusCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onRemoveItem(item.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-      {currentOrder.length > 0 && (
-        <CardFooter className="flex-col !p-4 border-t">
-            <div className="w-full space-y-1 text-sm mb-4">
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">CGST (2.5%)</span>
-                    <span>₹{cgst.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">SGST (2.5%)</span>
-                    <span>₹{sgst.toFixed(2)}</span>
-                </div>
-            </div>
-            <div className="w-full flex justify-between font-bold text-lg mb-4">
-                <span>Total</span>
-                <span>₹{Math.round(total).toFixed(2)}</span>
-            </div>
-            <div className="w-full grid grid-cols-2 gap-2">
-                <Button variant="secondary" onClick={handleGenerateKOT} disabled={isGeneratingKot}>
-                    {isGeneratingKot ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
-                    Generate KOT
+
+            {/* Special Instructions */}
+            {editingNoteId === item.itemId ? (
+              <div className="flex gap-2 pt-1">
+                <Input
+                  placeholder="Add cooking instructions..."
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  autoFocus
+                  className="text-xs h-8"
+                />
+                <Button
+                  size="sm"
+                  className="h-8"
+                  onClick={() => handleSaveNote(item.itemId)}
+                >
+                  Save
                 </Button>
-                <Dialog onOpenChange={handleDialogClose}>
-                    <DialogTrigger asChild>
-                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder} disabled={isPlacingOrder}>
-                            {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Generate Invoice
-                        </Button>
-                    </DialogTrigger>
-                    {placedOrder && <InvoicePreview order={placedOrder} />}
-                </Dialog>
-            </div>
-        </CardFooter>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setEditingNoteId(item.itemId);
+                  setNoteText(item.specialInstructions || '');
+                }}
+                className="text-xs text-primary hover:underline text-left w-full pt-1"
+              >
+                {item.specialInstructions ? `Note: "${item.specialInstructions}"` : '+ Add Instructions'}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Totals */}
+      <div className="border-t pt-3 space-y-2 mt-auto">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Subtotal:</span>
+          <span>₹{subtotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>CGST (2.5%):</span>
+          <span>₹{cgst.toFixed(2)}</span>
+        </div>
+         <div className="flex justify-between text-xs text-muted-foreground">
+          <span>SGST (2.5%):</span>
+          <span>₹{sgst.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-lg border-t pt-2">
+          <span>Total:</span>
+          <span className="text-primary">₹{total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* Clear Button */}
+      {onClearOrder && (
+        <Button
+          variant="outline"
+          onClick={onClearOrder}
+          className="w-full mt-2"
+        >
+          Clear Order
+        </Button>
       )}
-    </Card>
+    </div>
   );
 }

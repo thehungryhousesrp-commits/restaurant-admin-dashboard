@@ -1,0 +1,24 @@
+
+> nextn@0.1.0 build
+> next build
+
+   ▲ Next.js 15.3.3
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 18.0s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/components/pages/OrderEntryPoint.tsx:120:35
+Type error: Type '{ orderItems: OrderItem[]; onUpdateOrder: (updatedOrder: OrderItem[]) => void; }' is not assignable to type 'IntrinsicAttributes & OrderSummaryProps'.
+  Property 'orderItems' does not exist on type 'IntrinsicAttributes & OrderSummaryProps'.
+
+[0m [90m 118 |[39m                 [33m<[39m[33mdiv[39m className[33m=[39m[32m"p-4 flex-grow"[39m[33m>[39m[0m
+[0m [90m 119 |[39m                     [33m<[39m[33mSelectTable[39m onTableSelect[33m=[39m{setSelectedTable} selectedTable[33m=[39m{selectedTable} [33m/[39m[33m>[39m[0m
+[0m[31m[1m>[22m[39m[90m 120 |[39m                     [33m<[39m[33mOrderSummary[39m orderItems[33m=[39m{currentOrder} onUpdateOrder[33m=[39m{handleUpdateOrder} [33m/[39m[33m>[39m[0m
+[0m [90m     |[39m                                   [31m[1m^[22m[39m[0m
+[0m [90m 121 |[39m                 [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m[0m
+[0m [90m 122 |[39m                 [33m<[39m[33mdiv[39m className[33m=[39m[32m"p-4 border-t bg-card"[39m[33m>[39m[0m
+[0m [90m 123 |[39m                     [33m<[39m[33mButton[39m [0m
+Next.js build worker exited with code: 1 and signal: null

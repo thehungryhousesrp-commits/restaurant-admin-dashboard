@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/input';
 import { loginSchema } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useAppContext } from '@/context/AppContext';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -25,7 +26,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAppContext();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -39,7 +39,7 @@ export default function LoginForm() {
   const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     try {
-      await login(data.email, data.password);
+      await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: "Login Successful",
         description: "Redirecting to dashboard...",

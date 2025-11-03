@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAppContext } from '@/context/AppContext';
 import { type Order } from '@/lib/types';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { CheckCircle, ChefHat, Clock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { ChefHat, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-const KitchenOrderCard = ({ order, onUpdateStatus }: { order: Order; onUpdateStatus: (id: string, status: Order['status']) => void; }) => {
+const KitchenOrderCard = ({ order }: { order: Order; }) => {
     const [timeAgo, setTimeAgo] = useState(() => formatDistanceToNow(new Date(order.createdAt), { addSuffix: true }));
 
     useEffect(() => {
@@ -36,29 +36,19 @@ const KitchenOrderCard = ({ order, onUpdateStatus }: { order: Order; onUpdateSta
                     </div>
                 ))}
             </CardContent>
-            <CardFooter className="p-4 border-t">
-                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => onUpdateStatus(order.id, 'Completed')}>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark as Ready
-                </Button>
-            </CardFooter>
         </Card>
     );
 };
 
 export default function KitchenDisplay() {
-    const { orders, updateOrderStatus } = useAppContext();
-    const { toast } = useToast();
+    const [ordersSnapshot, loadingOrders] = useCollection(collection(db, 'orders'));
+    const orders = ordersSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)) || [];
 
     const activeOrders = orders.filter(order => order.status === 'Preparing');
-    
-    const handleUpdateStatus = (id: string, status: Order['status']) => {
-        updateOrderStatus(id, status);
-        toast({
-            title: "Order Status Updated",
-            description: `The order has been marked as ${status}.`
-        });
-    };
+
+    if (loadingOrders) {
+        return <p>Loading...</p>
+    }
 
     if (activeOrders.length === 0) {
         return (
@@ -75,7 +65,7 @@ export default function KitchenDisplay() {
             <h1 className="text-3xl font-bold font-headline tracking-tight mb-6">Active Kitchen Orders</h1>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {activeOrders.map(order => (
-                    <KitchenOrderCard key={order.id} order={order} onUpdateStatus={handleUpdateStatus} />
+                    <KitchenOrderCard key={order.id} order={order} />
                 ))}
             </div>
         </div>

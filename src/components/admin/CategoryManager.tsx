@@ -3,7 +3,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,11 +10,17 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { categorySchema } from "@/lib/schemas";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { addCategory, deleteCategory } from '@/lib/menu';
+import { type Category } from "@/lib/types";
 
 type CategoryFormValues = z.infer<typeof categorySchema>;
 
 export default function CategoryManager() {
-  const { categories, addCategory, deleteCategory } = useAppContext();
+  const [categoriesSnapshot, loading, error] = useCollection(collection(db, 'categories'));
+  const categories = categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)) || [];
   const { toast } = useToast();
 
   const form = useForm<CategoryFormValues>({
@@ -55,7 +60,7 @@ export default function CategoryManager() {
         <div className="space-y-2">
           <h4 className="font-medium">Existing Categories</h4>
           <div className="border rounded-md p-2 space-y-2 max-h-60 overflow-y-auto">
-            {categories.length > 0 ? (
+            {loading ? <p>Loading...</p> : categories.length > 0 ? (
               categories.map((cat) => (
                 <div key={cat.id} className="flex items-center justify-between p-2 bg-secondary rounded-md">
                   <span>{cat.name}</span>

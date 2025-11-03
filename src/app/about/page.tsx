@@ -3,13 +3,14 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppContext } from '@/context/AppContext';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import AboutPageContent from '@/components/pages/AboutPage';
 import Header from '@/components/layout/Header';
 
 export default function AboutPage() {
-    const { user, loadingAuth } = useAppContext();
+    const [user, loadingAuth] = useAuthState(auth);
     const router = useRouter();
 
     useEffect(() => {

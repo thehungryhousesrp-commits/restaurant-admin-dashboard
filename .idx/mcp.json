@@ -1,0 +1,342 @@
+{
+  "projectName": "Restaurant KOT System",
+  "projectDescription": "Multi-tenant restaurant Kitchen Order Ticket (KOT) management system with real-time updates",
+  "techStack": {
+    "frontend": "Next.js 15+ (App Router)",
+    "framework": "React 18+",
+    "language": "TypeScript",
+    "styling": "TailwindCSS",
+    "components": "Shadcn/UI",
+    "backend": "Firebase Firestore",
+    "storage": "Firebase Storage",
+    "auth": "Firebase Authentication",
+    "realtime": "Firestore onSnapshot listeners",
+    "pdf": "jsPDF + html2canvas"
+  },
+  "codeStandards": {
+    "naming": {
+      "components": "PascalCase (e.g., OrderSummary.tsx)",
+      "functions": "camelCase (e.g., fetchOrders, handleSubmit)",
+      "constants": "UPPER_SNAKE_CASE (e.g., FIRESTORE_TIMEOUT_MS)",
+      "types": "PascalCase (e.g., Order, MenuItem)"
+    },
+    "fileStructure": {
+      "components": "src/components/[feature]/Component.tsx",
+      "pages": "src/app/[route]/page.tsx",
+      "hooks": "src/hooks/useFeature.ts",
+      "lib": "src/lib/[utility].ts",
+      "types": "src/lib/types.ts",
+      "constants": "src/lib/constants.ts"
+    },
+    "typescript": {
+      "strict": true,
+      "noImplicitAny": true,
+      "useInterfaces": "for data structures",
+      "useTypes": "for unions and intersections"
+    },
+    "documentation": {
+      "functions": "JSDoc comments required",
+      "components": "Props interface required",
+      "complexLogic": "Inline comments explaining why, not what"
+    }
+  },
+  "projectStructure": {
+    "src": {
+      "app": {
+        "description": "Next.js app router pages",
+        "subdirs": [
+          "(public) - Public routes (invoice, login)",
+          "(admin) - Admin dashboard and management",
+          "(kitchen) - Kitchen display system",
+          "(order) - Order entry and management",
+          "page.tsx - Home/landing page"
+        ]
+      },
+      "components": {
+        "description": "Reusable React components",
+        "subdirs": [
+          "admin/ - Admin panel components (CategoryManager, MenuForm, TableManager)",
+          "order/ - Order entry components (SelectTable, OrderSummary)",
+          "menu/ - Menu display components (MenuItemCard)",
+          "kitchen/ - Kitchen display components (KitchenDisplay, OrderCard)",
+          "pages/ - Full page layout components",
+          "ui/ - Base UI components (from Shadcn)"
+        ]
+      },
+      "hooks": {
+        "description": "Custom React hooks",
+        "examples": [
+          "useRealtimeData - Firebase real-time listeners",
+          "useCreateOrder - Order creation logic",
+          "useToast - Toast notifications"
+        ]
+      },
+      "lib": {
+        "description": "Utilities and configuration",
+        "files": [
+          "firebase.ts - Firebase config and initialization",
+          "types.ts - TypeScript type definitions",
+          "constants.ts - App-wide constants",
+          "order.ts - Order-related database functions",
+          "firestore-rules.ts - Security rules (reference)"
+        ]
+      }
+    }
+  },
+  "coreFeatures": {
+    "AdminPanel": {
+      "components": [
+        "CategoryManager - Add/Edit/Delete menu categories",
+        "MenuForm - Add/Edit menu items with image upload",
+        "TableManager - Manage restaurant tables",
+        "OrderManagement - View and update orders"
+      ],
+      "requirements": [
+        "Real-time Firestore listeners",
+        "Duplicate prevention (categories, table names)",
+        "Cascade delete protection (can't delete category with items)",
+        "Image upload to Firebase Storage",
+        "Role-based access control"
+      ],
+      "keyFunctions": [
+        "checkDuplicateName - Prevent duplicates",
+        "uploadImage - Firebase Storage",
+        "handleDelete - With validation",
+        "handleSubmit - With error handling"
+      ]
+    },
+    "OrderEntry": {
+      "components": [
+        "SelectTable - Table selection with transaction handling",
+        "MenuItemCard - Menu items by category",
+        "OrderSummary - Items, quantities, totals with GST",
+        "InvoiceDisplay - Order receipt/invoice"
+      ],
+      "requirements": [
+        "Real-time table availability",
+        "Transaction-based selection (prevent race conditions)",
+        "Category-filtered menu fetching",
+        "GST calculation (18% configurable)",
+        "Special instructions per item"
+      ],
+      "keyFunctions": [
+        "handleSelectTable - Transaction with race condition handling",
+        "fetchMenuItems - By category with real-time listener",
+        "createOrder - Batch write with table update",
+        "calculateTotal - With taxes"
+      ]
+    },
+    "RealTimeSync": {
+      "implementation": "Firebase Firestore onSnapshot",
+      "synced": [
+        "Tables (availability, status)",
+        "Menu items (availability, details)",
+        "Orders (status, updates)",
+        "Categories (changes)"
+      ],
+      "optimization": [
+        "Filter queries to specific collections",
+        "Clean up listeners on component unmount",
+        "Avoid fetching all data at once",
+        "Use where clauses for filtering"
+      ]
+    }
+  },
+  "commonPatterns": {
+    "RealTimeListener": {
+      "usage": "For live updates",
+      "template": "useEffect(() => { const unsub = onSnapshot(...); return () => unsub(); }, [dependency])"
+    },
+    "Transaction": {
+      "usage": "For atomic operations (order creation + table update)",
+      "template": "runTransaction(db, async (transaction) => { ... })"
+    },
+    "BatchWrite": {
+      "usage": "For multiple writes",
+      "template": "writeBatch() { batch.set(...); batch.update(...); batch.commit(); }"
+    },
+    "ErrorHandling": {
+      "pattern": "Try/catch with specific error classification",
+      "types": [
+        "Permission",
+        "Timeout",
+        "NotFound",
+        "ValidationError"
+      ]
+    }
+  },
+  "firebaseStructure": {
+    "collections": {
+      "categories": {
+        "fields": [
+          "name",
+          "name_lowercase",
+          "order",
+          "createdAt",
+          "updatedAt"
+        ],
+        "purposes": "Menu categories (Starters, Main Course, etc)"
+      },
+      "menu_items": {
+        "fields": [
+          "name",
+          "price",
+          "description",
+          "categoryId",
+          "imageUrl",
+          "isVeg",
+          "isAvailable",
+          "isArchived"
+        ],
+        "purposes": "Menu items with details and images"
+      },
+      "tables": {
+        "fields": [
+          "name",
+          "capacity",
+          "zone",
+          "status",
+          "currentOrderId"
+        ],
+        "purposes": "Restaurant tables with real-time status"
+      },
+      "orders": {
+        "fields": [
+          "tableId",
+          "items",
+          "total",
+          "status",
+          "createdAt",
+          "createdBy"
+        ],
+        "purposes": "Customer orders with line items and status"
+      },
+      "users": {
+        "fields": [
+          "email",
+          "role",
+          "name",
+          "restaurantId"
+        ],
+        "purposes": "Staff users with role-based access"
+      }
+    }
+  },
+  "performanceGuidelines": {
+    "realTimeListeners": [
+      "Only listen to specific collections, not all data",
+      "Use where clauses to filter",
+      "Clean up listeners immediately on unmount",
+      "Don't create duplicate listeners"
+    ],
+    "queries": [
+      "Use indexed fields for where clauses",
+      "Paginate large result sets",
+      "Avoid fetching all documents at once",
+      "Cache non-real-time data client-side"
+    ],
+    "components": [
+      "Memoize callbacks with useCallback",
+      "Use lazy loading for images",
+      "Virtual scroll for long lists",
+      "Debounce search/filter inputs"
+    ]
+  },
+  "securityGuidelines": {
+    "firestore": [
+      "Implement role-based access control (admin, manager, waiter, kitchen)",
+      "Use custom claims for roles",
+      "Validate all writes server-side",
+      "Never expose sensitive data in error messages"
+    ],
+    "authentication": [
+      "Use Firebase Authentication",
+      "Implement session persistence",
+      "Logout on role/permission changes",
+      "Verify user role on sensitive operations"
+    ],
+    "storage": [
+      "Only allow authenticated uploads",
+      "Validate file types (images only)",
+      "Set expiration for signed URLs",
+      "Organize files by restaurantId"
+    ]
+  },
+  "testingStrategy": {
+    "unit": "Test utility functions and calculations",
+    "integration": "Test component interactions",
+    "e2e": "Test complete user flows (table selection → order → payment)",
+    "manual": [
+      "Real-time sync (multiple tabs/devices)",
+      "Race conditions (two users selecting same table)",
+      "Image upload",
+      "Error scenarios"
+    ]
+  },
+  "deploymentChecklist": {
+    "preDeployment": [
+      "All TypeScript errors resolved",
+      "All console warnings cleaned",
+      "Environment variables configured",
+      "Firestore rules deployed",
+      "Firebase Storage rules set"
+    ],
+    "staging": [
+      "Full feature testing",
+      "Performance testing",
+      "Multi-user testing",
+      "Error handling verification"
+    ],
+    "production": [
+      "Database backups enabled",
+      "Error monitoring (Sentry) configured",
+      "Analytics setup",
+      "CDN configured for images"
+    ]
+  },
+  "developmentWorkflow": {
+    "localDevelopment": "npm run dev",
+    "building": "npm run build",
+    "typeChecking": "npm run type-check",
+    "linting": "npm run lint",
+    "codeQuality": "Maintain TypeScript strict mode"
+  },
+  "geminiInstructions": {
+    "codeGeneration": [
+      "Always generate TypeScript with strict typing",
+      "Include error handling and try/catch blocks",
+      "Add comments for complex logic",
+      "Follow the naming conventions exactly",
+      "Include proper JSDoc for functions",
+      "Return complete, production-ready code"
+    ],
+    "responses": [
+      "Provide working code, not just explanations",
+      "Include error handling in all solutions",
+      "Explain 'why', not just 'what'",
+      "Suggest performance improvements",
+      "Include security considerations",
+      "Provide testing strategies when relevant"
+    ],
+    "codeQuality": [
+      "No console.logs except for debugging",
+      "Proper type definitions for all data",
+      "Clean, readable, maintainable code",
+      "Follow React best practices",
+      "Proper resource cleanup (listeners, timers)",
+      "Production-ready without modifications"
+    ]
+  },
+  "mcpServers": {
+    "firebase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firebase-tools@latest",
+        "experimental:mcp",
+        "--only",
+        "auth,firestore"
+      ]
+    }
+  }
+}

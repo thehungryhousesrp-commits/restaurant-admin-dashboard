@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -19,11 +20,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { menuItemSchema } from "@/lib/schemas";
-import { useAppContext } from "@/context/AppContext";
-import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import useRealtimeData from "@/hooks/useRealtimeData"; // Import the new hook
+import { collection, addDoc, updateDoc, doc } from "firebase/firestore"; // Import firestore functions
+import { db } from "@/lib/firebase"; // Import db instance
+import { type MenuItem, type Category } from "@/lib/types";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
 
@@ -33,7 +36,7 @@ interface MenuFormProps {
 }
 
 export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
-  const { categories, addMenuItem, updateMenuItem } = useAppContext();
+  const { data: categories, loading: categoriesLoading, error: categoriesError } = useRealtimeData<Category>('categories');
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,7 +61,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         description: itemToEdit.description || "",
         price: itemToEdit.price || 0,
         category: itemToEdit.category || "",
-        // Ensure booleans are always booleans, not undefined
         isAvailable: typeof itemToEdit.isAvailable === 'boolean' ? itemToEdit.isAvailable : true,
         isVeg: typeof itemToEdit.isVeg === 'boolean' ? itemToEdit.isVeg : false,
       });
@@ -77,8 +79,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
     try {
-      // **Robust Data Handling**: Ensure boolean values are explicitly set.
-      // This prevents 'undefined' from being saved to Firestore.
       const finalData: Omit<MenuItem, 'id'> = {
         ...data,
         isAvailable: data.isAvailable ?? true,
@@ -86,10 +86,11 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       };
 
       if (isEditing && itemToEdit) {
-        await updateMenuItem(itemToEdit.id, finalData);
+        const docRef = doc(db, "menuItems", itemToEdit.id);
+        await updateDoc(docRef, finalData);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        await addMenuItem(finalData);
+        await addDoc(collection(db, "menuItems"), finalData);
         toast({ title: "Success", description: "New menu item added." });
       }
       onFormSubmit();
@@ -100,6 +101,14 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         setIsSubmitting(false);
     }
   };
+  
+  if (categoriesLoading) {
+    return <p>Loading categories...</p>;
+  }
+
+  if (categoriesError) {
+    return <p>Error loading categories: {categoriesError.message}</p>;
+  }
 
   return (
     <Form {...form}>

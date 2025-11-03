@@ -1,209 +1,296 @@
+'use client';
 
-"use client";
-
-import { useState, useMemo } from 'react';
-import { useAppContext } from '@/context/AppContext';
-import { type MenuItem, type OrderItem, type Table, type Order } from '@/lib/types';
-import MenuItemCard from '@/components/menu/MenuItemCard';
-import OrderSummary from '@/components/order/OrderSummary';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { type OrderItem, type Table, type MenuItem, type Category } from '@/lib/types';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, RotateCcw } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import SelectTable from '../order/SelectTable';
-import { Button } from '../ui/button';
+import { Loader2, Search, CheckCircle, XCircle } from 'lucide-react';
+import SelectTable from '@/components/order/SelectTable';
+import OrderSummary from '@/components/order/OrderSummary';
+import MenuItemCard from '@/components/menu/MenuItemCard';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { InvoicePreview } from '@/components/order/InvoicePreview';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
+import { placeOrder } from '@/lib/order';
 
 export default function OrderEntryPoint() {
-  const { menuItems, categories, loading, updateTableStatus, orders } = useAppContext();
-  const { toast } = useToast();
-  const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
+  // ===========================================================================
+  // State Management
+  // ===========================================================================
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-
-  const handleAddToOrder = (item: MenuItem) => {
-    setCurrentOrder(prevOrder => {
-      const existingItem = prevOrder.find(orderItem => orderItem.id === item.id);
-      if (existingItem) {
-        return prevOrder.map(orderItem =>
-          orderItem.id === item.id
-            ? { ...orderItem, quantity: orderItem.quantity + 1 }
-            : orderItem
-        );
-      }
-      return [...prevOrder, { ...item, quantity: 1 }];
-    });
-    toast({ title: `Added ${item.name} to order.` });
-  };
-
-  const handleUpdateQuantity = (itemId: string, quantity: number) => {
-    if (quantity === 0) {
-      handleRemoveItem(itemId);
-      return;
-    }
-    setCurrentOrder(prevOrder =>
-      prevOrder.map(item =>
-        item.id === itemId ? { ...item, quantity } : item
-      )
-    );
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    setCurrentOrder(prevOrder => prevOrder.filter(item => item.id !== itemId));
-  };
+  const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
+  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
   
-  const handleClearOrder = () => {
-    setCurrentOrder([]);
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastPlacedOrder, setLastPlacedOrder] = useState<any>(null); // Using 'any' as the final order type from placeOrder might differ
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSelectTable = (table: Table) => {
-    if (table.status === 'available') {
-      setSelectedTable(table);
-      // Don't mark as occupied until KOT is generated
-      toast({ title: `Table "${table.name}" selected`, description: "You can now start adding items to the order." });
-    } else {
-      // Find the most recent active order for this table
-      const activeOrder = orders
-        .filter(o => o.tableId === table.id && o.status !== 'Billed' && o.status !== 'Completed')
-        .sort((a, b) => b.createdAt - a.createdAt)[0];
+  const { toast } = useToast();
 
-      if (activeOrder) {
-        const loadedOrderItems: OrderItem[] = activeOrder.items.map(orderItem => {
-          const menuItem = menuItems.find(mi => mi.id === orderItem.itemId);
-          return {
-            ...menuItem!,
-            quantity: orderItem.quantity,
-          };
-        }).filter(item => item.id); // Filter out any items that couldn't be found
+  // ===========================================================================
+  // Data Fetching
+  // ===========================================================================
+  const [menuItemsSnapshot, menuLoading] = useCollection(collection(db, 'menuItems'));
+  const [categoriesSnapshot, categoriesLoading] = useCollection(collection(db, 'categories'));
 
-        setCurrentOrder(loadedOrderItems);
-        toast({ title: `Editing order for table "${table.name}"`, description: `${loadedOrderItems.length} items loaded.` });
-      } else {
-        toast({ title: `No active order for table "${table.name}"`, description: "Starting a new order.", variant: 'default' });
-        setCurrentOrder([]);
-      }
-       setSelectedTable(table);
-    }
-  };
+  // Sanitize and memoize data to prevent re-renders
+  const { menuItems, categories } = useMemo(() => {
+    const categoriesData = (categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Category[];
+    const categoryIds = new Set(categoriesData.map(c => c.id));
+    
+    const menuItemsData = (menuItemsSnapshot?.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name || 'Unnamed Item',
+        price: data.price || 0,
+        category: data.category || 'uncategorized',
+        description: data.description || '',
+        isAvailable: typeof data.isAvailable === 'boolean' ? data.isAvailable : true,
+        isVeg: typeof data.isVeg === 'boolean' ? data.isVeg : false,
+      } as MenuItem;
+    }) || []).filter(item => categoryIds.has(item.category)); // Only show items with a valid category
 
-  const handleResetTable = () => {
-    // Logic for resetting a table selection without changing its status on the backend
-    setSelectedTable(null);
-    handleClearOrder();
-  };
+    return { menuItems: menuItemsData, categories: categoriesData };
+  }, [menuItemsSnapshot, categoriesSnapshot]);
 
-  const handleOrderPlaced = () => {
-    if (selectedTable) {
-        // The status update to 'available' happens in the placeOrder function now
-        // This is just to reset the UI
-    }
-    setSelectedTable(null);
-    handleClearOrder();
-  }
-
+  // ===========================================================================
+  // Memoized Filtering
+  // ===========================================================================
   const filteredMenuItems = useMemo(() => {
-    const categoryIds = new Set(categories.map(c => c.id));
     return menuItems
-      .filter(item => item.category && categoryIds.has(item.category)) // Ensure item's category exists
       .filter(item => activeCategory === 'all' || item.category === activeCategory)
       .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [menuItems, categories, activeCategory, searchQuery]);
-  
-  if (!selectedTable) {
-    return <SelectTable onSelectTable={handleSelectTable} />;
-  }
+  }, [menuItems, activeCategory, searchQuery]);
 
+  // =https://6000-firebase-studio-1758348122060.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev/==========================================================================
+  // Callbacks
+  // ===========================================================================
+  const handleAddItem = useCallback((item: MenuItem) => {
+    setCurrentOrder(prev => {
+      const existing = prev.find(o => o.itemId === item.id);
+      if (existing) {
+        return prev.map(o =>
+          o.itemId === item.id ? { ...o, quantity: o.quantity + 1, total: (o.quantity + 1) * o.price } : o
+        );
+      }
+      return [...prev, {
+        itemId: item.id,
+        name: item.name,
+        quantity: 1,
+        price: item.price,
+        total: item.price,
+        specialInstructions: '',
+      }];
+    });
+  }, []);
+
+  const handleUpdateOrder = useCallback((updatedItems: OrderItem[]) => {
+    setCurrentOrder(updatedItems);
+  }, []);
+
+  const handleClearOrder = useCallback(() => {
+    setCurrentOrder([]);
+    setSelectedTable(null);
+    setCustomerInfo({ name: '', phone: '' });
+  }, []);
+
+  const handlePlaceOrder = useCallback(async () => {
+    if (orderType === 'dine-in' && !selectedTable) {
+        toast({ title: "Select a Table", description: "Please select a table for the dine-in order.", variant: "destructive" });
+        return;
+    }
+    if (currentOrder.length === 0) {
+        toast({ title: "Empty Order", description: "Please add items to the order before placing it.", variant: "destructive" });
+        return;
+    }
+
+    setIsSubmitting(true);
+    
+    const orderData = await placeOrder(currentOrder, customerInfo, selectedTable!); // Using non-null assertion as it's checked
+    
+    // In a real app, you would now save orderData to Firestore.
+    // For this example, we'll simulate it and show the invoice.
+    try {
+        const docRef = await addDoc(collection(db, 'orders'), orderData);
+
+        // If it's a dine-in order, update the table status
+        if (orderType === 'dine-in' && selectedTable) {
+            const tableRef = doc(db, 'tables', selectedTable.id);
+            const batch = writeBatch(db);
+            batch.update(tableRef, { status: 'occupied' });
+            await batch.commit();
+        }
+
+        const finalOrder = { ...orderData, id: docRef.id };
+        setLastPlacedOrder(finalOrder);
+        setIsInvoiceOpen(true);
+        handleClearOrder();
+        toast({
+            title: "Order Placed Successfully!",
+            description: `Order ID: ${docRef.id.slice(-6).toUpperCase()}`,
+            className: "bg-green-100 border-green-300 text-green-800",
+        });
+    } catch (error) {
+        console.error("Error placing order: ", error);
+        toast({ title: "Failed to place order", description: "An error occurred while saving the order.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }, [selectedTable, currentOrder, customerInfo, toast, handleClearOrder, orderType]);
+  
+  useEffect(() => {
+    if (orderType === 'takeaway') {
+      setSelectedTable(null);
+    }
+  }, [orderType]);
+
+
+  // ===========================================================================
+  // Render Logic
+  // ===========================================================================
   return (
-    <div className="flex h-[calc(100vh-5rem)] bg-gray-100 dark:bg-gray-900">
-      {/* Column 1: Categories */}
-      <div className="w-56 bg-card border-r flex flex-col">
-        <h2 className="p-4 text-lg font-semibold border-b">Categories</h2>
-        <div className="flex-grow overflow-y-auto">
+    <div className="h-[calc(100vh-5rem)] flex flex-col bg-gray-50 font-sans">
+      
+      {/* Main Content Grid */}
+      <div className="flex-1 grid grid-cols-12 overflow-hidden">
+        
+        {/* Left: Category Sidebar (Col 1-2) */}
+        <aside className="col-span-2 bg-white border-r flex flex-col">
+          <h2 className="p-3 text-sm font-semibold tracking-tight border-b text-gray-600">Categories</h2>
           <nav className="p-2">
             <button
-                onClick={() => setActiveCategory('all')}
-                className={cn(
-                    "w-full text-left p-3 rounded-md font-medium transition-colors",
-                    activeCategory === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                )}
+              onClick={() => setActiveCategory('all')}
+              className={cn(
+                "w-full text-left p-3 rounded-md font-medium transition-colors text-sm",
+                activeCategory === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-gray-100'
+              )}
             >
-                All Items
+              All Items
             </button>
-            {categories.map(cat => (
-                <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    className={cn(
-                        "w-full text-left p-3 rounded-md font-medium transition-colors mt-1",
-                        activeCategory === cat.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                    )}
-                >
-                    {cat.name}
-                </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-      
-      {/* Column 2: Menu Items */}
-      <div className="flex-1 flex flex-col p-4 overflow-hidden">
-        <div className="flex justify-between items-start mb-4">
-            <div>
-                <h1 className="text-2xl font-bold font-headline tracking-tight">Select Items</h1>
-                <p className="text-muted-foreground">Building order for table: <span className="font-bold text-primary">{selectedTable.name}</span></p>
-            </div>
-            <Button variant="outline" onClick={handleResetTable}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Change Table
-            </Button>
-        </div>
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search for a dish..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        
-        {loading ? (
-          <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+            {categoriesLoading ? (
+              <div className="space-y-2 p-2">
+                  {[...Array(5)].map((_, i) => <div key={i} className="h-8 bg-gray-200 rounded animate-pulse" />)}
               </div>
-            ))}
+            ) : (
+              categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={cn(
+                    "w-full text-left p-3 rounded-md font-medium transition-colors text-sm",
+                    activeCategory === cat.id ? 'bg-primary text-primary-foreground' : 'hover:bg-gray-100'
+                  )}
+                >
+                  {cat.name}
+                </button>
+              ))
+            )}
+          </nav>
+        </aside>
+
+        {/* Middle: Menu Items (Col 3-8) */}
+        <main className="col-span-7 flex flex-col p-4 overflow-hidden">
+          <div className="flex items-center mb-4 gap-4">
+              <h1 className="text-2xl font-bold font-headline tracking-tight">Select Items</h1>
+              <div className="relative flex-grow max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      placeholder="Search menu items..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                  />
+              </div>
           </div>
-        ) : (
-            <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-4">
-              {filteredMenuItems.map((item) => (
-                <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} />
-              ))}
-               { !loading && filteredMenuItems.length === 0 && (
-                  <div className="col-span-full text-center py-16 text-muted-foreground">
-                      <p className="text-lg font-semibold">No items found</p>
-                      <p>Try adjusting your search or category filter.</p>
+          
+          <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-4">
+            {menuLoading ? (
+              [...Array(8)].map((_, i) => (
+                  <div key={i} className="h-32 bg-gray-200 rounded-lg animate-pulse" />
+              ))
+            ) : filteredMenuItems.length > 0 ? (
+              filteredMenuItems.map(item => (
+                <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddItem} />
+              ))
+            ) : (
+                <div className="col-span-full flex flex-col items-center justify-center text-center text-muted-foreground bg-gray-100 rounded-lg py-12">
+                    <p className="font-medium">No items found.</p>
+                    <p className="text-sm">Try clearing your search or selecting another category.</p>
+                </div>
+            )}
+          </div>
+        </main>
+        
+        {/* Right: Order Panel (Col 9-12) */}
+        <aside className="col-span-3 bg-white border-l flex flex-col">
+            <div className="p-4 border-b">
+                 <h2 className="text-xl font-bold font-headline">Current Order</h2>
+                 {orderType === 'dine-in' && selectedTable && (
+                     <div className="text-sm text-muted-foreground flex items-center justify-between">
+                         <span>Building order for table: <span className="font-bold text-primary">{selectedTable.name}</span></span>
+                         <button onClick={() => setSelectedTable(null)} className="text-xs text-red-500 hover:underline">Change Table</button>
+                     </div>
+                 )}
+                 {orderType === 'takeaway' && (
+                      <div className="text-sm text-muted-foreground">
+                         Building order for <span className="font-bold text-primary">Takeaway</span>
+                     </div>
+                 )}
+            </div>
+
+            <div className="flex-1 flex flex-col p-4 overflow-hidden">
+                {!selectedTable && orderType === 'dine-in' ? (
+                    <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
+                ) : (
+                    <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} onClearOrder={handleClearOrder} />
+                )}
+            </div>
+
+            <div className="p-4 border-t bg-gray-50 space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={() => setOrderType('dine-in')} variant={orderType === 'dine-in' ? 'default' : 'outline'}>Dine-In</Button>
+                  <Button onClick={() => setOrderType('takeaway')} variant={orderType === 'takeaway' ? 'default' : 'outline'}>Takeaway</Button>
+              </div>
+
+              {orderType === 'takeaway' && (
+                  <div className="space-y-2">
+                      <Input placeholder="Customer Name" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
+                      <Input placeholder="Customer Phone (optional)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} />
                   </div>
               )}
+
+              <Button
+                onClick={handlePlaceOrder}
+                disabled={isSubmitting || (orderType === 'dine-in' && !selectedTable) || currentOrder.length === 0}
+                className="w-full"
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                )}
+                {isSubmitting ? 'Placing Order...' : 'Place Order & Generate Invoice'}
+              </Button>
             </div>
-        )}
+        </aside>
       </div>
 
-      {/* Column 3: Order Summary */}
-      <div className="w-96 border-l bg-card">
-          <OrderSummary 
-            currentOrder={currentOrder}
-            selectedTable={selectedTable}
-            onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
-            onClearOrder={handleClearOrder}
-            onOrderPlaced={handleOrderPlaced}
-          />
-      </div>
+      {/* Invoice Dialog */}
+      <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+        {lastPlacedOrder && (
+          <InvoicePreview order={lastPlacedOrder} />
+        )}
+      </Dialog>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -10,25 +11,31 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { type Order } from "@/lib/types";
-import { Share2, Copy, Download, Loader2, MessageCircle } from "lucide-react";
+import { type Order } from "@/lib/types"; // The Order type here should be the old one. We need to check if this preview is still used.
+import { Share2, Copy, MessageCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import Image from "next/image";
 
 interface InvoicePreviewProps {
   order: Order;
 }
 
+/**
+ * A component to display a preview of the invoice inside a dialog.
+ * The PDF generation logic has been REMOVED from this component to avoid redundancy.
+ * The primary invoice generation is now handled by the main [orderId]/page.tsx.
+ * This component now focuses on displaying the preview and sharing via WhatsApp.
+ */
 export function InvoicePreview({ order }: InvoicePreviewProps) {
-  const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
   const { toast } = useToast();
   const [shareableLink, setShareableLink] = useState('');
-  const [isDownloading, setIsDownloading] = useState(false);
-  const invoiceRef = useRef<HTMLDivElement>(null);
+  const invoiceRef = useRef<HTMLDivElement>(null); // Still needed for the display
+
+  // Note: The `order` prop for this component might be using the OLD data structure.
+  // This needs to be verified. Assuming it uses the old structure with `customerInfo` and detailed tax.
+  const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -42,7 +49,6 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
   };
 
   const validatePhoneNumber = (phone: string) => {
-    // This regex validates a 10-digit number, allowing for optional country code (+91) and spaces
     const phoneRegex = /^(?:\+91)?[ -]?\d{10}$/;
     return phoneRegex.test(phone.trim());
   };
@@ -65,9 +71,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
 
     const message = `Dear ${customerName},\n\nThank you for your recent order at The Hungry House! Your invoice is now available.\n\nAmount : ₹${totalAmount}\nDate : ${orderDate}\n\nView Invoice : ${shareableLink}\n\n---\n\nHow was your experience? We'd love your feedback!\n⭐ Rate us on Google:\n${googleReviewLink}\n\nWe appreciate your support! 🙏`;
     
-    // Clean the phone number to get just the digits
     let phoneNumber = rawPhoneNumber.replace(/[\s+()-]/g, '');
-    // Ensure it has the Indian country code if it's 10 digits long
     if (phoneNumber.length === 10) {
       phoneNumber = `91${phoneNumber}`;
     }
@@ -76,37 +80,6 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     
     window.open(whatsappUrl, '_blank');
   };
-  
-  const handleDownloadPdf = async () => {
-    if (!invoiceRef.current) return;
-    setIsDownloading(true);
-
-    try {
-      const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2, // Improve resolution
-        backgroundColor: '#ffffff', // Ensure background is white
-        allowTaint: true,
-        useCORS: true, 
-      });
-      const imgData = canvas.toDataURL('image/png');
-      
-      // Calculate PDF dimensions to maintain aspect ratio
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`invoice-${order.id.slice(-6).toUpperCase()}.pdf`);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast({ title: "PDF Error", description: "Could not generate PDF.", variant: "destructive" });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
 
   return (
     <DialogContent className="sm:max-w-md p-0 flex flex-col max-h-[90vh]">
@@ -115,6 +88,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
       </DialogHeader>
       
       <ScrollArea className="flex-1">
+        {/* This `ref` is kept for potential future use, e.g., printing this specific view */}
         <div ref={invoiceRef} className="p-6 bg-white">
           <div className="flex flex-col items-center gap-4 text-center mb-6">
               <div className="relative h-24 w-24">
@@ -221,14 +195,6 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
             </Button>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-             <Button className="w-full" onClick={handleDownloadPdf} disabled={isDownloading}>
-                {isDownloading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                )}
-                Download PDF
-              </Button>
               <Button className="w-full" onClick={handleShareOnWhatsApp} style={{ backgroundColor: '#25D366', color: 'white' }}>
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Share on WhatsApp

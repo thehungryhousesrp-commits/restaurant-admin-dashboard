@@ -6,11 +6,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Info, Wand2, Loader2, UploadCloud, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useAppContext } from '@/context/AppContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { type Category } from '@/lib/types';
+import { type Category, type MenuItem } from '@/lib/types';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { addCategory, addMenuItem } from '@/lib/menu';
 
 interface ParsedMenuItem {
   id: string;
@@ -29,7 +32,8 @@ BBQ Chicken Wings: 200
 `;
 
 function BulkUploader() {
-  const { categories, addCategory, addMenuItem } = useAppContext();
+  const [categoriesSnapshot, loadingCategories] = useCollection(collection(db, 'categories'));
+  const categories = categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)) || [];
   const { toast } = useToast();
   const [rawInput, setRawInput] = useState(defaultMenuText);
   const [parsedItems, setParsedItems] = useState<ParsedMenuItem[]>([]);
@@ -105,7 +109,15 @@ function BulkUploader() {
           console.warn(`Could not find category ID for ${item.categoryName}. Skipping item ${item.name}`);
           return Promise.resolve(); // Skip this item
         }
-        const payload = { name: item.name, price: item.price, category: categoryId };
+
+        const payload: Omit<MenuItem, 'id'> = {
+          name: item.name,
+          price: item.price,
+          category: categoryId, 
+          description: '', 
+          isAvailable: true, 
+          isVeg: true, 
+        };
         return addMenuItem(payload);
       });
 
@@ -113,7 +125,7 @@ function BulkUploader() {
 
       toast({ title: "Upload Complete!", description: `Successfully added ${parsedItems.length} items to your menu.`, duration: 5000 });
       setParsedItems([]);
-      setRawInput(defaultMenuText); // Reset for next use
+      setRawInput(defaultMenuText);
 
     } catch (error) {
       console.error("Upload failed", error);
@@ -145,7 +157,7 @@ function BulkUploader() {
             rows={15}
             disabled={isParsing || isUploading}
           />
-          <Button onClick={handleParse} disabled={isParsing || isUploading || !rawInput.trim()}>
+          <Button onClick={handleParse} disabled={isParsing || isUploading || !rawInput.trim() || loadingCategories}>
             {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />} {isParsing ? 'Parsing...' : 'Parse & Review'}
           </Button>
         </CardContent>
@@ -186,7 +198,7 @@ function BulkUploader() {
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button onClick={handleInitiateUpload} disabled={isUploading || parsedItems.length === 0}>
+            <Button onClick={handleInitiateUpload} disabled={isUploading || parsedItems.length === 0 || loadingCategories}>
               {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
               {isUploading ? 'Uploading...' : `Upload ${parsedItems.length} Items`}
             </Button>

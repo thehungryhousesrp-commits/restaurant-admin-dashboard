@@ -1,97 +1,78 @@
+'use client';
 
-"use client";
-
-import { useAppContext } from "@/context/AppContext";
 import { type Table } from "@/lib/types";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "../ui/badge";
-import { Skeleton } from "../ui/skeleton";
-import { Armchair, Users, Edit } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Armchair } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
+// Props updated to match parent and handle selection state
 interface SelectTableProps {
-    onSelectTable: (table: Table) => void;
+    onTableSelect: (table: Table | null) => void;
+    selectedTable: Table | null;
 }
 
-export default function SelectTable({ onSelectTable }: SelectTableProps) {
-    const { tables, loading } = useAppContext();
+export default function SelectTable({ onTableSelect, selectedTable }: SelectTableProps) {
+    const [tablesSnapshot, loading, error] = useCollection(collection(db, 'tables'));
+    const tables = tablesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table)) || [];
 
     const availableTables = tables.filter(t => t.status === 'available');
-    const occupiedTables = tables.filter(t => t.status !== 'available');
+
+    const handleTableClick = (table: Table) => {
+        // Allow unselecting by clicking the same table again
+        if (selectedTable?.id === table.id) {
+            onTableSelect(null);
+        } else {
+            onTableSelect(table);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="grid grid-cols-4 gap-4 mb-4">
+                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+            </div>
+        );
+    }
+
+    if (error) {
+        return <p className="text-destructive mb-4">Error loading tables.</p>;
+    }
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold font-headline tracking-tight">Select a Table</h1>
-                <p className="text-muted-foreground">Choose a table to start a new order or edit an existing one.</p>
-            </div>
-
-            {loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {[...Array(12)].map((_, i) => (
-                        <Skeleton key={i} className="h-32 rounded-lg" />
+        <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">1. Select an Available Table</h3>
+            {availableTables.length > 0 ? (
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {availableTables.map(table => (
+                        <Card 
+                            key={table.id}
+                            onClick={() => handleTableClick(table)}
+                            className={cn(
+                                "cursor-pointer transition-all duration-200 text-center",
+                                "hover:shadow-lg hover:border-primary-500/80",
+                                selectedTable?.id === table.id 
+                                    ? "border-2 border-primary shadow-lg ring-2 ring-primary/20"
+                                    : "border"
+                            )}
+                        >
+                            <CardHeader className="p-2 pb-1">
+                                <CardTitle className="text-base font-bold">{table.name}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-2 pt-0">
+                                <Armchair className="h-6 w-6 mx-auto text-green-600" />
+                                <p className="text-xs text-muted-foreground mt-1">Available</p>
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
             ) : (
-                <>
-                    <h2 className="text-xl font-semibold mb-4 border-b pb-2">Available Tables</h2>
-                    {availableTables.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {availableTables.map(table => (
-                                <Card 
-                                    key={table.id}
-                                    onClick={() => onSelectTable(table)}
-                                    className="cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-primary hover:scale-105"
-                                >
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">{table.name}</CardTitle>
-                                        <Armchair className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-green-500">Available</div>
-                                        <p className="text-xs text-muted-foreground">Click to start order</p>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                            <p className="text-muted-foreground">No tables are currently available.</p>
-                        </div>
-                    )}
-
-                    {occupiedTables.length > 0 && (
-                       <div className="mt-12">
-                            <h2 className="text-xl font-semibold mb-4 border-b pb-2">Occupied & Active Tables</h2>
-                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                                {occupiedTables.map(table => (
-                                    <Card 
-                                        key={table.id}
-                                        onClick={() => onSelectTable(table)}
-                                        className="cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-yellow-500 hover:scale-105"
-                                    >
-                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                            <CardTitle className="text-sm font-medium">{table.name}</CardTitle>
-                                            <Users className="h-4 w-4 text-muted-foreground" />
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className={cn(
-                                                "text-2xl font-bold",
-                                                table.status === 'occupied' && 'text-yellow-500',
-                                                table.status === 'reserved' && 'text-orange-500'
-                                            )}>
-                                                {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
-                                            </div>
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                <Edit className="h-3 w-3" /> Click to edit order
-                                            </p>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                       </div>
-                    )}
-                </>
+                <div className="text-center text-muted-foreground py-6 border-2 border-dashed rounded-lg">
+                    <p>No tables are currently available.</p>
+                </div>
             )}
         </div>
     );
