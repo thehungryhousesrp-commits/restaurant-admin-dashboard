@@ -67,3 +67,27 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print-specific styles */
+@media print {
+  body, .printable-invoice {
+    background-color: white !important;
+    font-size: 10pt; /* Smaller font for receipts */
+    -webkit-print-color-adjust: exact; /* Ensures colors and images print */
+    color-adjust: exact;
+  }
+  .printable-invoice-dialog, .no-print {
+    display: none !important;
+  }
+  .printable-invoice {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  @page {
+    size: 80mm auto; /* Standard thermal printer width */
+    margin: 2mm; 
+  }
+}
