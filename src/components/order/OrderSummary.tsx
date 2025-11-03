@@ -5,6 +5,7 @@ import { type OrderItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Plus, Minus } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface OrderSummaryProps {
   items: OrderItem[];
@@ -73,81 +74,83 @@ export default function OrderSummary({ items, onUpdateItems, onClearOrder }: Ord
   return (
     <div className="space-y-4 h-full flex flex-col">
       {/* Items List */}
-      <div className="space-y-3 flex-grow overflow-y-auto pr-2 -mr-2">
-        {items.map(item => (
-          <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-white shadow-sm">
-            {/* Item Header */}
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <p className="font-semibold text-sm">{item.name}</p>
-                <p className="text-xs text-muted-foreground">₹{item.price.toFixed(2)}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleRemoveItem(item.itemId)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-
-            {/* Quantity Controls */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleUpdateQuantity(item.itemId, item.quantity - 1)}
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </Button>
-              <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleUpdateQuantity(item.itemId, item.quantity + 1)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-              <span className="ml-auto font-bold text-sm">
-                ₹{(item.price * item.quantity).toFixed(2)}
-              </span>
-            </div>
-
-            {/* Special Instructions */}
-            {editingNoteId === item.itemId ? (
-              <div className="flex gap-2 pt-1">
-                <Input
-                  placeholder="Add cooking instructions..."
-                  value={noteText}
-                  onChange={e => setNoteText(e.target.value)}
-                  autoFocus
-                  className="text-xs h-8"
-                />
+      <ScrollArea className="flex-grow pr-4 -mr-4">
+        <div className="space-y-3">
+            {items.map(item => (
+            <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-white shadow-sm">
+                {/* Item Header */}
+                <div className="flex justify-between items-start">
+                <div className="flex-1">
+                    <p className="font-semibold text-sm">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">₹{item.price.toFixed(2)}</p>
+                </div>
                 <Button
-                  size="sm"
-                  className="h-8"
-                  onClick={() => handleSaveNote(item.itemId)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleRemoveItem(item.itemId)}
                 >
-                  Save
+                    <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setEditingNoteId(item.itemId);
-                  setNoteText(item.specialInstructions || '');
-                }}
-                className="text-xs text-primary hover:underline text-left w-full pt-1"
-              >
-                {item.specialInstructions ? `Note: "${item.specialInstructions}"` : '+ Add Instructions'}
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+                </div>
+
+                {/* Quantity Controls */}
+                <div className="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleUpdateQuantity(item.itemId, item.quantity - 1)}
+                >
+                    <Minus className="h-3.5 w-3.5" />
+                </Button>
+                <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleUpdateQuantity(item.itemId, item.quantity + 1)}
+                >
+                    <Plus className="h-3.5 w-3.5" />
+                </Button>
+                <span className="ml-auto font-bold text-sm">
+                    ₹{(item.price * item.quantity).toFixed(2)}
+                </span>
+                </div>
+
+                {/* Special Instructions */}
+                {editingNoteId === item.itemId ? (
+                <div className="flex gap-2 pt-1">
+                    <Input
+                    placeholder="Add cooking instructions..."
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                    autoFocus
+                    className="text-xs h-8"
+                    />
+                    <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={() => handleSaveNote(item.itemId)}
+                    >
+                    Save
+                    </Button>
+                </div>
+                ) : (
+                <button
+                    onClick={() => {
+                    setEditingNoteId(item.itemId);
+                    setNoteText(item.specialInstructions || '');
+                    }}
+                    className="text-xs text-primary hover:underline text-left w-full pt-1"
+                >
+                    {item.specialInstructions ? `Note: "${item.specialInstructions}"` : '+ Add Instructions'}
+                </button>
+                )}
+            </div>
+            ))}
+        </div>
+      </ScrollArea>
 
       {/* Totals */}
       <div className="border-t pt-3 space-y-2 mt-auto">
