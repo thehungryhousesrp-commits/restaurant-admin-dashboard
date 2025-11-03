@@ -7,8 +7,6 @@ export const menuItemSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   isAvailable: z.boolean(),
   isVeg: z.boolean(),
-  isSpicy: z.boolean(),
-  isChefsSpecial: z.boolean(),
 });
 
 export const categorySchema = z.object({

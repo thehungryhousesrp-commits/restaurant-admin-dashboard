@@ -134,8 +134,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...item,
         isAvailable: item.isAvailable ?? true,
         isVeg: item.isVeg ?? true,
-        isSpicy: item.isSpicy ?? false,
-        isChefsSpecial: item.isChefsSpecial ?? false,
       };
       await addDoc(collection(db, 'menu-items'), payload);
     } catch (e) {

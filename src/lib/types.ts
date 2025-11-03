@@ -17,8 +17,6 @@ export interface MenuItem {
   category: string;
   isAvailable: boolean;
   isVeg: boolean;
-  isSpicy: boolean;
-  isChefsSpecial: boolean;
 }
 
 export interface OrderItem extends MenuItem {

@@ -16,8 +16,6 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
   // Defensive defaults for boolean properties
   const isAvailable = item.isAvailable ?? true;
   const isVeg = item.isVeg ?? true;
-  const isSpicy = item.isSpicy ?? false;
-  const isChefsSpecial = item.isChefsSpecial ?? false;
 
   return (
     <Card className={cn(
@@ -39,8 +37,6 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
       <CardFooter className="p-4 pt-0 mt-auto flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
         <div className="flex gap-2 items-center">
             {isVeg ? <Badge variant="outline" className="border-green-500 text-green-600">Veg</Badge> : <Badge variant="outline" className="border-red-500 text-red-600">Non-Veg</Badge>}
-            {isSpicy && <Badge variant="secondary">Spicy</Badge>}
-            {isChefsSpecial && <Badge className="bg-yellow-400 text-black">Special</Badge>}
         </div>
         <Button
           size="sm"

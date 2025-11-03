@@ -15,7 +15,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,7 +23,6 @@ import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
@@ -50,8 +48,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       category: itemToEdit?.category || "",
       isAvailable: itemToEdit?.isAvailable ?? true,
       isVeg: itemToEdit?.isVeg ?? true,
-      isSpicy: itemToEdit?.isSpicy ?? false,
-      isChefsSpecial: itemToEdit?.isChefsSpecial ?? false,
     },
   });
 
@@ -62,8 +58,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         price: itemToEdit.price || 0,
         isAvailable: itemToEdit.isAvailable ?? true,
         isVeg: itemToEdit.isVeg ?? true,
-        isSpicy: itemToEdit.isSpicy ?? false,
-        isChefsSpecial: itemToEdit.isChefsSpecial ?? false,
       });
     } else {
       form.reset({
@@ -73,8 +67,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         category: "",
         isAvailable: true,
         isVeg: true,
-        isSpicy: false,
-        isChefsSpecial: false,
       });
     }
   }, [itemToEdit, form]);
@@ -87,8 +79,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         // Ensure boolean values are always present
         isAvailable: data.isAvailable ?? true,
         isVeg: data.isVeg ?? true,
-        isSpicy: data.isSpicy ?? false,
-        isChefsSpecial: data.isChefsSpecial ?? false,
       };
 
       if (isEditing && itemToEdit) {
@@ -183,7 +173,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4 rounded-lg border p-3 shadow-sm">
+            <div className="rounded-lg border p-3 shadow-sm">
                <FormField
                   control={form.control}
                   name="isVeg"
@@ -212,23 +202,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
                       </FormItem>
                   )}
                   />
-              <div className="space-y-2">
-                  <Label>Other Flags</Label>
-                  <div className="flex flex-col gap-3 pt-1">
-                      <FormField control={form.control} name="isSpicy" render={({ field }) => (
-                          <FormItem className="flex items-center gap-2 space-y-0">
-                          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
-                          <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
-                          </FormItem>
-                      )} />
-                      <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
-                          <FormItem className="flex items-center gap-2 space-y-0">
-                          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
-                          <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
-                          </FormItem>
-                      )} />
-                  </div>
-              </div>
             </div>
           </div>
         </div>
