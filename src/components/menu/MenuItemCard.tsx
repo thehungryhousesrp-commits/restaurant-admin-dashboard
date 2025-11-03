@@ -14,9 +14,10 @@ interface MenuItemCardProps {
 }
 
 export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
-  // Defensive defaults for boolean properties
+  // Defensive defaults for boolean properties.
+  // This ensures the card renders correctly even if data is missing from Firestore.
   const isAvailable = item.isAvailable ?? true;
-  const isVeg = item.isVeg; // No default here, rely on AppContext to provide it
+  const isVeg = item.isVeg; // Rely on AppContext to provide a safe default (false)
 
   return (
     <Card className={cn(
@@ -37,6 +38,7 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
 
       <CardFooter className="p-4 pt-0 mt-auto flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
         <div className="flex gap-2 items-center">
+            {/* Only render the badge if isVeg is explicitly a boolean */}
             {typeof isVeg === 'boolean' && (
               isVeg ? (
                 <Badge variant="outline" className="border-green-500 text-green-600">Veg</Badge>

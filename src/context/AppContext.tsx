@@ -71,12 +71,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const items: MenuItem[] = [];
         snapshot.forEach(doc => {
             const data = doc.data();
+            // **Critical Data Sanitization**
+            // Ensures that all items in the app state have the necessary boolean fields.
+            // This prevents UI components from breaking on old or incomplete data.
             items.push({
                 id: doc.id,
                 ...data,
-                // Data integrity check: Ensure boolean values have a default
-                isAvailable: data.isAvailable ?? true,
-                isVeg: data.isVeg ?? false, 
+                isAvailable: data.isAvailable ?? true, // Default to available
+                isVeg: data.isVeg ?? false, // Default to non-veg for safety
             } as MenuItem);
         });
         setMenuItems(items);
@@ -140,10 +142,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
     try {
+      // Ensure boolean values are explicitly set on creation
       const payload = {
         ...item,
         isAvailable: item.isAvailable ?? true,
-        isVeg: item.isVeg ?? false, // Ensure isVeg is always a boolean on creation
+        isVeg: item.isVeg ?? false,
       };
       await addDoc(collection(db, 'menu-items'), payload);
     } catch (e) {
