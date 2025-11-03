@@ -39,7 +39,7 @@ import CategoryManager from '@/components/admin/CategoryManager';
 import TableManager from '@/components/admin/TableManager';
 import BulkUploader from '@/components/admin/BulkUploader';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { updateMenuItem, deleteMenuItems } from '@/lib/menu';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -348,7 +348,7 @@ const MenuItemsView = () => {
  * Displays orders in a table with view functionality
  */
 const OrdersView = () => {
-  const [ordersSnapshot, loadingOrders] = useCollection(collection(db, 'orders'));
+  const [ordersSnapshot, loadingOrders] = useCollection(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
 
   const orders = (ordersSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Order[];
 
@@ -361,10 +361,10 @@ const OrdersView = () => {
           <TableHeader>
             <TableRow className="bg-muted">
               <TableHead>Invoice #</TableHead>
-              <TableHead>Customer</TableHead>
+              <TableHead>Customer / Table</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="text-right w-16">View</TableHead>
+              <TableHead className="text-center">View</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -384,27 +384,15 @@ const OrdersView = () => {
               orders.map(order => (
                 <TableRow key={order.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
-                  <TableCell>{order.customerInfo?.name ?? 'N/A'}</TableCell>
+                  <TableCell>{order.tableName}</TableCell>
                   <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">₹{order.total.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>Order Details</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <p><strong>Invoice:</strong> {order.id}</p>
-                          <p><strong>Total:</strong> ₹{order.total.toFixed(2)}</p>
-                          <p><strong>Date:</strong> {new Date(order.createdAt).toLocaleString()}</p>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                  <TableCell className="text-center">
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={`/invoice/${order.id}`} target="_blank" rel="noopener noreferrer">
+                        <Eye className="h-4 w-4" />
+                      </a>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
