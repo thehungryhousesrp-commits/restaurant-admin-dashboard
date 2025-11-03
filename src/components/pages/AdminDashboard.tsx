@@ -5,7 +5,7 @@ import { useState, useCallback, useContext } from 'react';
 import { type MenuItem, type Order, type Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download, Calendar as CalendarIcon, X } from 'lucide-react';
 import {
   Table as ShadcnTable,
   TableHead,
@@ -46,6 +46,11 @@ import { updateMenuItem, deleteMenuItems } from '@/lib/menu';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { AppContext } from '@/context/AppContext';
+import { DateRange } from 'react-day-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -346,22 +351,38 @@ const MenuItemsView = () => {
 // ============================================================================
 
 /**
- * Displays orders in a table with view functionality
+ * Displays orders in a table with view and filtering functionality
  */
 const OrdersView = () => {
   const [ordersSnapshot, loadingOrders] = useCollection(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { toast } = useToast();
 
-  const orders = (ordersSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Order[];
+  const allOrders = (ordersSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Order[];
+
+  const filteredOrders = allOrders.filter(order => {
+    if (!dateRange || (!dateRange.from && !dateRange.to)) {
+      return true;
+    }
+    const orderDate = new Date(order.createdAt);
+    const from = dateRange.from ? startOfDay(dateRange.from) : null;
+    const to = dateRange.to ? endOfDay(dateRange.to) : null;
+
+    if (from && !to) return orderDate >= from;
+    if (!from && to) return orderDate <= to;
+    if (from && to) return orderDate >= from && orderDate <= to;
+
+    return false;
+  });
 
   const downloadCSV = useCallback(() => {
-    if (orders.length === 0) {
-      toast({ title: 'No Orders to Export', description: 'There are currently no orders to export.', variant: 'destructive' });
+    if (filteredOrders.length === 0) {
+      toast({ title: 'No Orders to Export', description: 'There are currently no orders in the selected date range.', variant: 'destructive' });
       return;
     }
 
     const headers = ['Invoice #', 'Customer Name', 'Customer Phone', 'Table', 'Date', 'Total Amount'];
-    const rows = orders.map(order => [
+    const rows = filteredOrders.map(order => [
       order.id.slice(-6).toUpperCase(),
       order.customerInfo.name,
       order.customerInfo.phone,
@@ -383,17 +404,75 @@ const OrdersView = () => {
     document.body.removeChild(link);
     toast({ title: 'Export Successful', description: 'Your orders have been downloaded as a CSV file.' });
 
-  }, [orders, toast]);
+  }, [filteredOrders, toast]);
 
+  const clearFilters = () => {
+    setDateRange(undefined);
+    toast({ title: 'Filter Cleared', description: 'Displaying all orders.'});
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Orders</h2>
-        <Button onClick={downloadCSV} variant="outline" disabled={loadingOrders || orders.length === 0}>
-          <Download className="mr-2 h-4 w-4" />
-          Export as CSV
-        </Button>
+      <div className="flex justify-between items-start">
+        <div>
+            <h2 className="text-2xl font-bold">Orders</h2>
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredOrders.length} of {allOrders.length} total orders.
+            </p>
+        </div>
+        <div className="flex gap-2">
+            <Button onClick={downloadCSV} variant="outline" disabled={loadingOrders || filteredOrders.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Export as CSV
+            </Button>
+        </div>
+      </div>
+      
+      {/* Filtering Section */}
+      <div className="p-4 border rounded-lg bg-secondary/50 flex items-center gap-4">
+        <span className="text-sm font-medium">Filter by Date:</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant={"outline"}
+              className={cn(
+                "w-[260px] justify-start text-left font-normal",
+                !dateRange && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateRange?.from ? (
+                dateRange.to ? (
+                  <>
+                    {format(dateRange.from, "LLL dd, y")} -{" "}
+                    {format(dateRange.to, "LLL dd, y")}
+                  </>
+                ) : (
+                  format(dateRange.from, "LLL dd, y")
+                )
+              ) : (
+                <span>Pick a date range</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={dateRange?.from}
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
+        {dateRange && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="mr-2 h-4 w-4"/>
+            Clear
+          </Button>
+        )}
       </div>
 
       <div className="border rounded-lg overflow-hidden">
@@ -414,14 +493,14 @@ const OrdersView = () => {
                   Loading...
                 </TableCell>
               </TableRow>
-            ) : orders.length === 0 ? (
+            ) : filteredOrders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No orders found
+                  No orders found for the selected date range.
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map(order => (
+              filteredOrders.map(order => (
                 <TableRow key={order.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
                   <TableCell>{order.tableName}</TableCell>
@@ -506,3 +585,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+    
