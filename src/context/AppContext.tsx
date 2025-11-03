@@ -36,15 +36,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribeMenuItems = onSnapshot(collection(db, 'menu-items'), (snapshot) => {
       const items = snapshot.docs.map(doc => {
         const data = doc.data();
-        // **Data Sanitization**
+        // **Data Sanitization and Pass-through**
         return {
           id: doc.id,
           name: data.name || 'Unnamed Item',
           description: data.description || '',
           price: data.price || 0,
           category: data.category || 'uncategorized',
-          isAvailable: typeof data.isAvailable === 'boolean' ? data.isAvailable : true,
-          isVeg: typeof data.isVeg === 'boolean' ? data.isVeg : false,
+          // Directly pass the value from DB. The UI will handle 'undefined'.
+          isAvailable: data.isAvailable, 
+          isVeg: data.isVeg,
         } as MenuItem;
       });
       setMenuItems(items);

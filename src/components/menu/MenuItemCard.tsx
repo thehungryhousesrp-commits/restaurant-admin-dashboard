@@ -1,3 +1,4 @@
+
 "use client";
 
 import { type MenuItem } from "@/lib/types";
@@ -13,13 +14,15 @@ interface MenuItemCardProps {
 }
 
 export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
-  // These properties are guaranteed to be booleans by the AppContext data sanitization.
   const { isAvailable, isVeg, name, price, description } = item;
+
+  // Set default availability to true if it's undefined
+  const available = typeof isAvailable === 'boolean' ? isAvailable : true;
 
   return (
     <Card className={cn(
       "overflow-hidden flex flex-col transition-all duration-300 hover:shadow-lg hover:border-primary",
-      !isAvailable && "bg-muted/50 cursor-not-allowed opacity-60"
+      !available && "bg-muted/50 cursor-not-allowed opacity-60"
     )}>
       
       <CardHeader className="flex-grow p-4 pb-2">
@@ -46,10 +49,10 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
         <Button
           size="sm"
           onClick={() => onAddToOrder(item)}
-          disabled={!isAvailable}
+          disabled={!available}
           aria-label={`Add ${name} to order`}
         >
-            {isAvailable ? (
+            {available ? (
                 <>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add
                 </>
