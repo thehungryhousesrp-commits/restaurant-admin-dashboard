@@ -323,30 +323,19 @@ export default function OrderEntryPoint() {
     }
   };
 
-  const handleCancelOrder = useCallback(async () => {
+  const handleCancelOrder = useCallback(() => {
     if (!activeKey) return;
-    if (confirm('Are you sure you want to cancel this entire order? All items will be removed and the table status will be reset.')) {
-        try {
-            // If it's a dine-in order for a specific table, update its status
-            if (orderType === 'dine-in' && selectedTable) {
-                await updateTableStatus(selectedTable.id, 'available');
-            }
-            
-            resetCurrentOrderState();
-            // This is the key: reset the selection state to force a re-render to the initial view
-            if (orderType === 'dine-in') {
-                setSelectedTable(null);
-            } else {
-                setTakeawayCustomer(null);
-            }
+    if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
+        // Clear the data for the current order
+        resetCurrentOrderState();
 
-            toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
-        } catch (error) {
-            console.error("Error cancelling order:", error);
-            toast({ title: 'Error', description: 'Could not update table status. Please try again.', variant: 'destructive' });
-        }
+        // Reset the selection, which will force the UI back to the initial view
+        setSelectedTable(null);
+        setTakeawayCustomer(null);
+
+        toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
     }
-  }, [activeKey, orderType, selectedTable, resetCurrentOrderState, toast]);
+  }, [activeKey, resetCurrentOrderState, toast]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
 
