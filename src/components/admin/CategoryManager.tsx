@@ -10,17 +10,14 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { categorySchema } from "@/lib/schemas";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useContext } from "react";
+import { AppContext } from "@/context/AppContext";
 import { addCategory, deleteCategory } from '@/lib/menu';
-import { type Category } from "@/lib/types";
 
 type CategoryFormValues = z.infer<typeof categorySchema>;
 
 export default function CategoryManager() {
-  const [categoriesSnapshot, loading, error] = useCollection(collection(db, 'categories'));
-  const categories = categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)) || [];
+  const { categories, loading } = useContext(AppContext);
   const { toast } = useToast();
 
   const form = useForm<CategoryFormValues>({
@@ -28,11 +25,24 @@ export default function CategoryManager() {
     defaultValues: { name: "" },
   });
 
-  const onSubmit = (data: CategoryFormValues) => {
-    addCategory({ name: data.name });
-    toast({ title: "Category Added", description: `"${data.name}" has been added.` });
-    form.reset();
+  const onSubmit = async (data: CategoryFormValues) => {
+    try {
+      await addCategory({ name: data.name });
+      toast({ title: "Category Added", description: `"${data.name}" has been added.` });
+      form.reset();
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to add category", variant: "destructive" });
+    }
   };
+  
+  const handleDelete = async (categoryId: string) => {
+    try {
+      await deleteCategory(categoryId);
+      toast({ title: "Category Deleted" });
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to delete category", variant: "destructive" });
+    }
+  }
 
   return (
     <Card>
@@ -68,7 +78,7 @@ export default function CategoryManager() {
                     variant="ghost"
                     size="icon"
                     className="text-destructive h-8 w-8"
-                    onClick={() => deleteCategory(cat.id)}
+                    onClick={() => handleDelete(cat.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

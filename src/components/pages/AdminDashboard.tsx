@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useContext } from 'react';
 import { type MenuItem, type Order, type Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,7 @@ import { db } from '@/lib/firebase';
 import { updateMenuItem, deleteMenuItems } from '@/lib/menu';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
+import { AppContext } from '@/context/AppContext';
 
 // ============================================================================
 // TYPES
@@ -110,12 +111,8 @@ const AdminSidebar = ({
  * Displays menu items in a table with edit and delete functionality
  */
 const MenuItemsView = () => {
-  const [menuItemsSnapshot, loadingMenuItems] = useCollection(collection(db, 'menuItems'));
-  const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
+  const { menuItems, categories, menuLoading } = useContext(AppContext);
   const { toast } = useToast();
-
-  const menuItems = (menuItemsSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as MenuItem[];
-  const categories = (categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Category[];
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -257,7 +254,7 @@ const MenuItemsView = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loadingMenuItems ? (
+            {menuLoading ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Loading...

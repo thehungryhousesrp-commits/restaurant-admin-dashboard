@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { type Category, type MenuItem } from '@/lib/types';
-import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { AppContext } from '@/context/AppContext';
 import { addCategory, addMenuItem } from '@/lib/menu';
 
 interface ParsedMenuItem {
@@ -32,8 +30,7 @@ BBQ Chicken Wings: 200
 `;
 
 function BulkUploader() {
-  const [categoriesSnapshot, loadingCategories] = useCollection(collection(db, 'categories'));
-  const categories = categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)) || [];
+  const { categories, loading: loadingCategories } = useContext(AppContext);
   const { toast } = useToast();
   const [rawInput, setRawInput] = useState(defaultMenuText);
   const [parsedItems, setParsedItems] = useState<ParsedMenuItem[]>([]);
@@ -90,11 +87,10 @@ function BulkUploader() {
       const newCategories: Category[] = [];
       if (newCategoryNames.length > 0) {
         toast({ title: "Creating New Categories", description: `Found ${newCategoryNames.length} new categories.` });
-        const newCategoryPromises = newCategoryNames.map(name => addCategory({ name }));
-        const settledCategories = await Promise.all(newCategoryPromises);
-        settledCategories.forEach(cat => {
-            if(cat) newCategories.push(cat)
-        });
+        for (const name of newCategoryNames) {
+          const newCat = await addCategory({ name });
+          if(newCat) newCategories.push(newCat);
+        }
       }
 
       // Step 2: Create a definitive map of all categories (old and new)
@@ -116,7 +112,7 @@ function BulkUploader() {
           category: categoryId, 
           description: '', 
           isAvailable: true, 
-          isVeg: true, 
+          isVeg: true, // Defaulting to true, user can change later
         };
         return addMenuItem(payload);
       });

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -12,22 +11,15 @@ import { tableSchema } from "@/lib/schemas";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import useRealtimeData from "@/hooks/useRealtimeData"; // Import the new hook
-import { collection, addDoc, deleteDoc, doc } from "firebase/firestore"; // Import firestore functions
-import { db } from "@/lib/firebase"; // Import db instance
+import { useContext } from "react";
+import { AppContext } from "@/context/AppContext";
+import { addDoc, collection, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type TableFormValues = z.infer<typeof tableSchema>;
 
-// Define the shape of a table document
-interface Table {
-  id: string;
-  name: string;
-  status: 'available' | 'occupied' | 'reserved';
-}
-
 export default function TableManager() {
-  // Use the real-time hook to get tables
-  const { data: tables, loading, error } = useRealtimeData<Table>('tables');
+  const { tables, loading } = useContext(AppContext);
   const { toast } = useToast();
 
   const form = useForm<TableFormValues>({
@@ -37,7 +29,6 @@ export default function TableManager() {
 
   const onSubmit = async (data: TableFormValues) => {
     try {
-      // Add a new document to the "tables" collection
       await addDoc(collection(db, "tables"), { name: data.name, status: 'available' });
       toast({ title: "Table Added", description: `"${data.name}" has been added.` });
       form.reset();
@@ -49,21 +40,12 @@ export default function TableManager() {
   
   const handleDelete = async (id: string) => {
     try {
-        // Delete the document from the "tables" collection
         await deleteDoc(doc(db, "tables", id));
         toast({ title: "Table Deleted", description: "The table has been removed." });
     } catch (error) {
         console.error("Error deleting table: ", error);
         toast({ title: "Error", description: "Failed to delete table.", variant: "destructive" });
     }
-  }
-
-  if (loading) {
-    return <p>Loading tables...</p>;
-  }
-
-  if (error) {
-    return <p>Error loading tables: {error.message}</p>;
   }
 
   return (
@@ -93,7 +75,7 @@ export default function TableManager() {
         <div className="space-y-2">
           <h4 className="font-medium">Existing Tables</h4>
           <div className="border rounded-md p-2 space-y-2 max-h-60 overflow-y-auto">
-            {tables.length > 0 ? (
+            {loading ? <p>Loading...</p> : tables.length > 0 ? (
               tables.map((table) => (
                 <div key={table.id} className="flex items-center justify-between p-2 bg-secondary rounded-md">
                   <div className="flex items-center gap-3">

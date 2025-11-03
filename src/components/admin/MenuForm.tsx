@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,10 +22,9 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import useRealtimeData from "@/hooks/useRealtimeData"; // Import the new hook
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore"; // Import firestore functions
-import { db } from "@/lib/firebase"; // Import db instance
-import { type MenuItem, type Category } from "@/lib/types";
+import { AppContext } from "@/context/AppContext";
+import { addMenuItem, updateMenuItem } from "@/lib/menu";
+import { type MenuItem } from "@/lib/types";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
 
@@ -36,7 +34,7 @@ interface MenuFormProps {
 }
 
 export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
-  const { data: categories, loading: categoriesLoading, error: categoriesError } = useRealtimeData<Category>('categories');
+  const { categories, loading: categoriesLoading } = useContext(AppContext);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -86,11 +84,10 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       };
 
       if (isEditing && itemToEdit) {
-        const docRef = doc(db, "menuItems", itemToEdit.id);
-        await updateDoc(docRef, finalData);
+        await updateMenuItem(itemToEdit.id, finalData);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        await addDoc(collection(db, "menuItems"), finalData);
+        await addMenuItem(finalData);
         toast({ title: "Success", description: "New menu item added." });
       }
       onFormSubmit();
@@ -104,10 +101,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   
   if (categoriesLoading) {
     return <p>Loading categories...</p>;
-  }
-
-  if (categoriesError) {
-    return <p>Error loading categories: {categoriesError.message}</p>;
   }
 
   return (

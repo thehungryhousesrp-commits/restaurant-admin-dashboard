@@ -5,9 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Armchair } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useContext } from "react";
+import { AppContext } from "@/context/AppContext";
 
 // Props updated to match parent and handle selection state
 interface SelectTableProps {
@@ -16,8 +15,7 @@ interface SelectTableProps {
 }
 
 export default function SelectTable({ onTableSelect, selectedTable }: SelectTableProps) {
-    const [tablesSnapshot, loading, error] = useCollection(collection(db, 'tables'));
-    const tables = tablesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table)) || [];
+    const { tables, loading } = useContext(AppContext);
 
     const availableTables = tables.filter(t => t.status === 'available');
 
@@ -36,10 +34,6 @@ export default function SelectTable({ onTableSelect, selectedTable }: SelectTabl
                 {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
             </div>
         );
-    }
-
-    if (error) {
-        return <p className="text-destructive mb-4">Error loading tables.</p>;
     }
 
     return (

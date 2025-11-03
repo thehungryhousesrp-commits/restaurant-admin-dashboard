@@ -1,26 +1,30 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useContext } from 'react';
 import { type OrderItem, type Table, type MenuItem, type Category, type Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Search, CheckCircle } from 'lucide-react';
 import SelectTable from '@/components/order/SelectTable';
 import OrderSummary from '@/components/order/OrderSummary';
 import MenuItemCard from '@/components/menu/MenuItemCard';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { InvoicePreview } from '@/components/order/InvoicePreview';
-import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
+import { AppContext } from '@/context/AppContext';
+import { addDoc, collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { cn } from '@/lib/utils';
 import { placeOrder } from '@/lib/order';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardFooter, CardHeader } from '@/components/ui/card';
 
 export default function OrderEntryPoint() {
   // ===========================================================================
-  // State Management
+  // State and Context
   // ===========================================================================
+  const { menuItems, categories, menuLoading, categoriesLoading } = useContext(AppContext);
+  
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
@@ -36,40 +40,16 @@ export default function OrderEntryPoint() {
   const { toast } = useToast();
 
   // ===========================================================================
-  // Data Fetching
-  // ===========================================================================
-  const [menuItemsSnapshot, menuLoading] = useCollection(collection(db, 'menuItems'));
-  const [categoriesSnapshot, categoriesLoading] = useCollection(collection(db, 'categories'));
-
-  // Sanitize and memoize data to prevent re-renders
-  const { menuItems, categories } = useMemo(() => {
-    const categoriesData = (categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Category[];
-    const categoryIds = new Set(categoriesData.map(c => c.id));
-    
-    const menuItemsData = (menuItemsSnapshot?.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name || 'Unnamed Item',
-        price: data.price || 0,
-        category: data.category || 'uncategorized',
-        description: data.description || '',
-        isAvailable: typeof data.isAvailable === 'boolean' ? data.isAvailable : true,
-        isVeg: typeof data.isVeg === 'boolean' ? data.isVeg : false,
-      } as MenuItem;
-    }) || []).filter(item => categoryIds.has(item.category)); // Only show items with a valid category
-
-    return { menuItems: menuItemsData, categories: categoriesData };
-  }, [menuItemsSnapshot, categoriesSnapshot]);
-
-  // ===========================================================================
   // Memoized Filtering
   // ===========================================================================
+  const categoryMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
+  
   const filteredMenuItems = useMemo(() => {
     return menuItems
+      .filter(item => categoryMap.has(item.category)) // Only show items with a valid category
       .filter(item => activeCategory === 'all' || item.category === activeCategory)
       .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [menuItems, activeCategory, searchQuery]);
+  }, [menuItems, activeCategory, searchQuery, categoryMap]);
 
   // ===========================================================================
   // Callbacks
@@ -143,13 +123,6 @@ export default function OrderEntryPoint() {
     }
   }, [selectedTable, currentOrder, customerInfo, toast, handleClearOrder, orderType]);
   
-  useEffect(() => {
-    if (orderType === 'takeaway') {
-      setSelectedTable(null);
-    }
-  }, [orderType]);
-
-
   // ===========================================================================
   // Render Logic
   // ===========================================================================
@@ -159,7 +132,7 @@ export default function OrderEntryPoint() {
       {/* Main Content Grid */}
       <div className="flex-1 grid grid-cols-12 overflow-hidden">
         
-        {/* Left: Category Sidebar (Col 1-2) */}
+        {/* Left: Category Sidebar */}
         <aside className="col-span-2 bg-white border-r flex flex-col">
           <h2 className="p-3 text-sm font-semibold tracking-tight border-b text-gray-600">Categories</h2>
           <nav className="p-2">
@@ -174,7 +147,7 @@ export default function OrderEntryPoint() {
             </button>
             {categoriesLoading ? (
               <div className="space-y-2 p-2">
-                  {[...Array(5)].map((_, i) => <div key={i} className="h-8 bg-gray-200 rounded animate-pulse" />)}
+                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 rounded" />)}
               </div>
             ) : (
               categories.map(cat => (
@@ -193,7 +166,7 @@ export default function OrderEntryPoint() {
           </nav>
         </aside>
 
-        {/* Middle: Menu Items (Col 3-8) */}
+        {/* Middle: Menu Items */}
         <main className="col-span-7 flex flex-col p-4 overflow-hidden">
           <div className="flex items-center mb-4 gap-4">
               <h1 className="text-2xl font-bold font-headline tracking-tight">Select Items</h1>
@@ -210,8 +183,17 @@ export default function OrderEntryPoint() {
           
           <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-4">
             {menuLoading ? (
-              [...Array(8)].map((_, i) => (
-                  <div key={i} className="h-32 bg-gray-200 rounded-lg animate-pulse" />
+               [...Array(8)].map((_, i) => (
+                <Card key={i} className="overflow-hidden flex flex-col transition-all duration-300">
+                    <CardHeader className="flex-grow p-4 pb-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2 mt-2" />
+                    </CardHeader>
+                    <CardFooter className="p-4 pt-2 mt-auto flex justify-between items-center">
+                        <Skeleton className="h-6 w-1/4" />
+                        <Skeleton className="h-8 w-1/3" />
+                    </CardFooter>
+                </Card>
               ))
             ) : filteredMenuItems.length > 0 ? (
               filteredMenuItems.map(item => (
@@ -226,7 +208,7 @@ export default function OrderEntryPoint() {
           </div>
         </main>
         
-        {/* Right: Order Panel (Col 9-12) */}
+        {/* Right: Order Panel */}
         <aside className="col-span-3 bg-white border-l flex flex-col">
             <div className="p-4 border-b">
                  <h2 className="text-xl font-bold font-headline">Current Order</h2>

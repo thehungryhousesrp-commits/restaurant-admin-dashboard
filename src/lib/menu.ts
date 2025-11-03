@@ -8,7 +8,7 @@ export const addCategory = async (category: Omit<Category, 'id'>): Promise<Categ
 };
 
 export const addMenuItem = async (menuItem: Omit<MenuItem, 'id'>) => {
-  await addDoc(collection(db, "menuItems"), menuItem);
+  await addDoc(collection(db, "menu-items"), menuItem);
 };
 
 export const deleteCategory = async (categoryId: string) => {
@@ -16,14 +16,14 @@ export const deleteCategory = async (categoryId: string) => {
 };
 
 export const updateMenuItem = async (itemId: string, updates: Partial<MenuItem>) => {
-    const itemRef = doc(db, "menuItems", itemId);
+    const itemRef = doc(db, "menu-items", itemId);
     await updateDoc(itemRef, updates);
 };
 
 export const deleteMenuItems = async (itemIds: string[]) => {
     const batch = writeBatch(db);
     itemIds.forEach(id => {
-        const docRef = doc(db, "menuItems", id);
+        const docRef = doc(db, "menu-items", id);
         batch.delete(docRef);
     });
     await batch.commit();
