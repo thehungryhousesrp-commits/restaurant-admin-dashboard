@@ -270,13 +270,7 @@ export default function OrderEntryPoint() {
          delete newOrders[activeKey];
          return newOrders;
      });
-
-     if (orderType === 'dine-in') {
-        setSelectedTable(null);
-     } else {
-        setTakeawayCustomer(null);
-     }
-  }, [orderType, activeKey]);
+  }, [activeKey]);
   
   const resetSelection = () => {
     setSelectedTable(null);
@@ -325,6 +319,7 @@ export default function OrderEntryPoint() {
     if (!isOpen) {
         resetCurrentOrderState(); 
         setLastPlacedOrder(null);
+        resetSelection();
     }
   };
 
@@ -338,13 +333,20 @@ export default function OrderEntryPoint() {
             }
             
             resetCurrentOrderState();
+            // This is the key: reset the selection state to force a re-render to the initial view
+            if (orderType === 'dine-in') {
+                setSelectedTable(null);
+            } else {
+                setTakeawayCustomer(null);
+            }
+
             toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
         } catch (error) {
             console.error("Error cancelling order:", error);
             toast({ title: 'Error', description: 'Could not update table status. Please try again.', variant: 'destructive' });
         }
     }
-  }, [activeKey, resetCurrentOrderState, toast, selectedTable, orderType]);
+  }, [activeKey, orderType, selectedTable, resetCurrentOrderState, toast]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
 
