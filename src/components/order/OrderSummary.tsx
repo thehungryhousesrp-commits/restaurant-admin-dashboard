@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface OrderSummaryProps {
   orderItems: OrderItem[];
-  onUpdateOrder: (items: OrderItem[]) => void;
+  onUpdateOrder: (updatedOrder: OrderItem[]) => void;
 }
 
 const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
@@ -21,12 +21,11 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
   // Update quantity
   const handleUpdateQuantity = useCallback(
     (itemId: string, quantity: number) => {
-      const items = orderItems || [];
       if (quantity <= 0) {
         handleRemoveItem(itemId);
         return;
       }
-      const updated = items.map(item =>
+      const updated = orderItems.map(item =>
         item.itemId === itemId ? { ...item, quantity } : item
       );
       onUpdateOrder(updated);
@@ -37,8 +36,7 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
   // Remove item from order
   const handleRemoveItem = useCallback(
     (itemId: string) => {
-      const items = orderItems || [];
-      const updated = items.filter(item => item.itemId !== itemId);
+      const updated = orderItems.filter(item => item.itemId !== itemId);
       onUpdateOrder(updated);
     },
     [orderItems, onUpdateOrder]
@@ -47,8 +45,7 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
   // Save special instructions for an item
   const handleSaveNote = useCallback(
     (itemId: string) => {
-      const items = orderItems || [];
-      const updated = items.map(item =>
+      const updated = orderItems.map(item =>
         item.itemId === itemId ? { ...item, specialInstructions: noteText } : item
       );
       onUpdateOrder(updated);
@@ -58,14 +55,13 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
     [orderItems, onUpdateOrder, noteText]
   );
 
-  const items = orderItems || [];
   // Calculate totals
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cgst = subtotal * (GST_RATE / 2);
   const sgst = subtotal * (GST_RATE / 2);
   const total = Math.round(subtotal + cgst + sgst);
 
-  if (items.length === 0) {
+  if (orderItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-gray-50/50 rounded-lg">
         <p className="font-medium text-lg">Your order is empty</p>
@@ -79,7 +75,7 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
       {/* Items List */}
       <ScrollArea className="flex-grow pr-4 -mr-4">
         <div className="space-y-3">
-            {items.map(item => (
+            {orderItems.map(item => (
             <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-white shadow-sm">
                 {/* Item Header */}
                 <div className="flex justify-between items-start">
