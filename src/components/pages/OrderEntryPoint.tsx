@@ -269,18 +269,7 @@ export default function OrderEntryPoint() {
                       <Input placeholder="Customer Phone (optional)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} />
                   </div>
               )}
-          </div>
-
-          <div className="flex-1 flex flex-col p-4 overflow-hidden">
-              {!selectedTable && orderType === 'dine-in' ? (
-                  <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
-              ) : (
-                  <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} onClearOrder={handleClearOrder} />
-              )}
-          </div>
-
-          <div className="p-4 border-t bg-gray-50">
-              <Button
+                 <Button
                   onClick={handlePlaceOrder}
                   disabled={isSubmitting || (orderType === 'dine-in' && !selectedTable) || currentOrder.length === 0}
                   className="w-full"
@@ -293,6 +282,14 @@ export default function OrderEntryPoint() {
                   )}
                   {isSubmitting ? 'Placing Order...' : 'Place Order & Generate Invoice'}
               </Button>
+          </div>
+
+          <div className="flex-1 flex flex-col p-4 overflow-hidden">
+              {!selectedTable && orderType === 'dine-in' ? (
+                  <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
+              ) : (
+                  <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} onClearOrder={handleClearOrder} />
+              )}
           </div>
         </aside>
       </div>
