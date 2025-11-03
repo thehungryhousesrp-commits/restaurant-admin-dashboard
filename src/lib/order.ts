@@ -1,6 +1,7 @@
 
 import { type Order, type OrderItem, type CustomerInfo, type Table } from "./types";
-import { serverTimestamp } from "firebase/firestore";
+import { serverTimestamp, writeBatch, doc, collection } from "firebase/firestore";
+import { db } from "./firebase";
 
 // This function creates a mock order object for invoice preview.
 // It does not interact with a database.
@@ -36,4 +37,15 @@ export const placeOrder = (
     // In a real app, you would save this to the database.
     // For this demo, we just return the object.
     return newOrder;
+};
+
+
+export const deleteOrders = async (orderIds: string[]) => {
+    if (orderIds.length === 0) return;
+    const batch = writeBatch(db);
+    orderIds.forEach(id => {
+        const docRef = doc(db, "orders", id);
+        batch.delete(docRef);
+    });
+    await batch.commit();
 };

@@ -43,6 +43,7 @@ import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { updateMenuItem, deleteMenuItems } from '@/lib/menu';
+import { deleteOrders } from '@/lib/order';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { AppContext } from '@/context/AppContext';
@@ -356,6 +357,9 @@ const MenuItemsView = () => {
 const OrdersView = () => {
   const [ordersSnapshot, loadingOrders] = useCollection(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const allOrders = (ordersSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Order[];
@@ -375,14 +379,16 @@ const OrdersView = () => {
     return false;
   });
 
-  const downloadCSV = useCallback(() => {
-    if (filteredOrders.length === 0) {
-      toast({ title: 'No Orders to Export', description: 'There are currently no orders in the selected date range.', variant: 'destructive' });
+  const downloadCSV = useCallback((isSelection: boolean = false) => {
+    const ordersToExport = isSelection ? allOrders.filter(o => selectedOrders.includes(o.id)) : filteredOrders;
+    
+    if (ordersToExport.length === 0) {
+      toast({ title: 'No Orders to Export', description: 'There are no orders matching your criteria.', variant: 'destructive' });
       return;
     }
 
     const headers = ['Invoice #', 'Customer Name', 'Customer Phone', 'Table', 'Date', 'Total Amount'];
-    const rows = filteredOrders.map(order => [
+    const rows = ordersToExport.map(order => [
       order.id.slice(-6).toUpperCase(),
       order.customerInfo.name,
       order.customerInfo.phone,
@@ -402,14 +408,50 @@ const OrdersView = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast({ title: 'Export Successful', description: 'Your orders have been downloaded as a CSV file.' });
+    toast({ title: 'Export Successful', description: `Exported ${ordersToExport.length} orders.` });
 
-  }, [filteredOrders, toast]);
+  }, [filteredOrders, allOrders, selectedOrders, toast]);
 
   const clearFilters = () => {
     setDateRange(undefined);
     toast({ title: 'Filter Cleared', description: 'Displaying all orders.'});
   }
+
+  // Selection handlers
+  const handleSelectAllOrders = useCallback(
+    (checked: boolean | 'indeterminate') => {
+      setSelectedOrders(checked === true ? filteredOrders.map(o => o.id) : []);
+    },
+    [filteredOrders]
+  );
+  
+  const handleToggleOrderSelection = useCallback((orderId: string) => {
+    setSelectedOrders(prev =>
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+    );
+  }, []);
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (deleteConfirmation !== 'DELETE') return;
+
+    try {
+      await deleteOrders(selectedOrders);
+      toast({
+        title: 'Success',
+        description: `${selectedOrders.length} order(s) deleted permanently.`,
+      });
+      setSelectedOrders([]);
+      setDeleteConfirmation('');
+      setIsConfirmDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting orders:', error);
+      toast({ title: 'Error', description: 'Failed to delete orders.', variant: 'destructive' });
+    }
+  }, [deleteConfirmation, selectedOrders, toast]);
+
+  const isAllOrdersSelected = filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length;
+  const isOrdersIndeterminate = selectedOrders.length > 0 && selectedOrders.length < filteredOrders.length;
+
 
   return (
     <div className="space-y-6">
@@ -421,7 +463,7 @@ const OrdersView = () => {
             </p>
         </div>
         <div className="flex gap-2">
-            <Button onClick={downloadCSV} variant="outline" disabled={loadingOrders || filteredOrders.length === 0}>
+            <Button onClick={() => downloadCSV(false)} variant="outline" disabled={loadingOrders || filteredOrders.length === 0}>
                 <Download className="mr-2 h-4 w-4" />
                 Export as CSV
             </Button>
@@ -470,15 +512,56 @@ const OrdersView = () => {
         {dateRange && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
             <X className="mr-2 h-4 w-4"/>
-            Clear
+            Clear Filter
           </Button>
         )}
       </div>
+
+      {/* Selection Toolbar */}
+      {selectedOrders.length > 0 && (
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/50">
+          <span className="text-sm font-medium">{selectedOrders.length} order(s) selected</span>
+          <div className='flex gap-2'>
+            <Button variant="outline" size="sm" onClick={() => downloadCSV(true)}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Selected
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete {selectedOrders.length} order(s). This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => setIsConfirmDialogOpen(true)}>
+                    Continue
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      )}
 
       <div className="border rounded-lg overflow-hidden">
         <ShadcnTable>
           <TableHeader>
             <TableRow className="bg-muted">
+              <TableHead className="w-12">
+                  <Checkbox
+                    checked={isAllOrdersSelected || isOrdersIndeterminate}
+                    onCheckedChange={handleSelectAllOrders}
+                  />
+              </TableHead>
               <TableHead>Invoice #</TableHead>
               <TableHead>Customer / Table</TableHead>
               <TableHead>Date</TableHead>
@@ -489,19 +572,25 @@ const OrdersView = () => {
           <TableBody>
             {loadingOrders ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredOrders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No orders found for the selected date range.
                 </TableCell>
               </TableRow>
             ) : (
               filteredOrders.map(order => (
                 <TableRow key={order.id} className="hover:bg-muted/50">
+                  <TableCell>
+                    <Checkbox
+                        checked={selectedOrders.includes(order.id)}
+                        onCheckedChange={() => handleToggleOrderSelection(order.id)}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
                   <TableCell>{order.tableName}</TableCell>
                   <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
@@ -519,6 +608,34 @@ const OrdersView = () => {
           </TableBody>
         </ShadcnTable>
       </div>
+
+       {/* Final Deletion Confirmation Dialog */}
+       <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Final Confirmation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Type <strong>DELETE</strong> to permanently delete {selectedOrders.length} order(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmation}
+            onChange={e => setDeleteConfirmation(e.target.value)}
+            placeholder="Type DELETE"
+            className="my-4"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteSelected}
+              disabled={deleteConfirmation !== 'DELETE'}
+            >
+              Delete Permanently
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
@@ -585,5 +702,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    
