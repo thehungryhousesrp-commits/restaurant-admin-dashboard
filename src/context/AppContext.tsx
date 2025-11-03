@@ -130,7 +130,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
     try {
-      await addDoc(collection(db, 'menu-items'), item);
+      const payload = {
+        ...item,
+        isAvailable: item.isAvailable ?? true,
+        isVeg: item.isVeg ?? true,
+        isSpicy: item.isSpicy ?? false,
+        isChefsSpecial: item.isChefsSpecial ?? false,
+      };
+      await addDoc(collection(db, 'menu-items'), payload);
     } catch (e) {
       console.error("Error adding document: ", e);
       throw e;

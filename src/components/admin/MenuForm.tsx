@@ -52,7 +52,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       category: itemToEdit?.category || "",
       imageUrl: itemToEdit?.imageUrl || "",
       isAvailable: itemToEdit?.isAvailable ?? true,
-      isVeg: itemToEdit?.isVeg ?? true, // Default to Veg
+      isVeg: itemToEdit?.isVeg ?? true,
       isSpicy: itemToEdit?.isSpicy ?? false,
       isChefsSpecial: itemToEdit?.isChefsSpecial ?? false,
     },
@@ -65,6 +65,10 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       form.reset({
         ...itemToEdit,
         price: itemToEdit.price || 0,
+        isAvailable: itemToEdit.isAvailable ?? true,
+        isVeg: itemToEdit.isVeg ?? true,
+        isSpicy: itemToEdit.isSpicy ?? false,
+        isChefsSpecial: itemToEdit.isChefsSpecial ?? false,
       });
     } else {
       form.reset({
@@ -84,21 +88,22 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
     try {
-      const finalData = {
+      const finalData: Omit<MenuItem, 'id'> = {
         ...data,
         imageUrl: data.imageUrl || "",
-      };
-
-      const payload: Omit<MenuItem, 'id'> & { id?: string } = {
-        ...finalData,
         imageHint: data.name.toLowerCase().split(' ').slice(0, 2).join(' '),
+        // Ensure boolean values are always present
+        isAvailable: data.isAvailable ?? true,
+        isVeg: data.isVeg ?? true,
+        isSpicy: data.isSpicy ?? false,
+        isChefsSpecial: data.isChefsSpecial ?? false,
       };
 
       if (isEditing && itemToEdit) {
-        await updateMenuItem(itemToEdit.id, payload);
+        await updateMenuItem(itemToEdit.id, finalData);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        await addMenuItem(payload);
+        await addMenuItem(finalData);
         toast({ title: "Success", description: "New menu item added." });
       }
       onFormSubmit();
