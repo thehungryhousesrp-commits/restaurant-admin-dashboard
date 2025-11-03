@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { type OrderItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
 interface OrderSummaryProps {
-  currentOrder: OrderItem[];
+  orderItems: OrderItem[];
   onUpdateOrder: (updatedOrder: OrderItem[]) => void;
 }
 
 const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
 
-export default function OrderSummary({ currentOrder, onUpdateOrder }: OrderSummaryProps) {
+const OrderSummary = React.forwardRef<HTMLDivElement, OrderSummaryProps>(({ orderItems, onUpdateOrder }, ref) => {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
 
@@ -27,45 +27,45 @@ export default function OrderSummary({ currentOrder, onUpdateOrder }: OrderSumma
         handleRemoveItem(itemId);
         return;
       }
-      const updated = currentOrder.map(item =>
+      const updated = orderItems.map(item =>
         item.itemId === itemId ? { ...item, quantity } : item
       );
       onUpdateOrder(updated);
     },
-    [currentOrder, onUpdateOrder]
+    [orderItems, onUpdateOrder]
   );
 
   // Remove item from order
   const handleRemoveItem = useCallback(
     (itemId: string) => {
-      const updated = currentOrder.filter(item => item.itemId !== itemId);
+      const updated = orderItems.filter(item => item.itemId !== itemId);
       onUpdateOrder(updated);
     },
-    [currentOrder, onUpdateOrder]
+    [orderItems, onUpdateOrder]
   );
 
   // Save special instructions for an item
   const handleSaveNote = useCallback(
     (itemId: string) => {
-      const updated = currentOrder.map(item =>
+      const updated = orderItems.map(item =>
         item.itemId === itemId ? { ...item, specialInstructions: noteText } : item
       );
       onUpdateOrder(updated);
       setEditingNoteId(null);
       setNoteText('');
     },
-    [currentOrder, onUpdateOrder, noteText]
+    [orderItems, onUpdateOrder, noteText]
   );
 
   // Calculate totals
-  const subtotal = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cgst = subtotal * (GST_RATE / 2);
   const sgst = subtotal * (GST_RATE / 2);
   const total = Math.round(subtotal + cgst + sgst);
 
-  if (currentOrder.length === 0) {
+  if (orderItems.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-gray-100 dark:bg-gray-800/30 rounded-lg border-2 border-dashed">
+      <div  ref={ref} className="flex flex-col items-center justify-center h-full text-muted-foreground bg-gray-100 dark:bg-gray-800/30 rounded-lg border-2 border-dashed">
         <ShoppingCart className="h-16 w-16 mb-4 text-gray-400" />
         <p className="font-medium text-lg">Your order is empty</p>
         <p className="text-sm text-center">Please add items from the menu to get started.</p>
@@ -76,9 +76,9 @@ export default function OrderSummary({ currentOrder, onUpdateOrder }: OrderSumma
   return (
     <div className="bg-white dark:bg-card border rounded-lg h-full flex flex-col shadow-sm flex-1">
       {/* Items List */}
-      <ScrollArea className="flex-grow p-3">
+      <ScrollArea ref={ref} className="flex-grow p-3">
         <div className="space-y-3">
-            {currentOrder.map(item => (
+            {orderItems.map(item => (
             <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-gray-50 dark:bg-background/50">
                 {/* Item Header */}
                 <div className="flex justify-between items-start">
@@ -176,4 +176,8 @@ export default function OrderSummary({ currentOrder, onUpdateOrder }: OrderSumma
       </div>
     </div>
   );
-}
+});
+
+OrderSummary.displayName = 'OrderSummary';
+
+export default OrderSummary;

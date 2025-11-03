@@ -37,8 +37,8 @@ const FlyingItem = ({ item, startRect, endRef, onAnimationComplete }: FlyingItem
 
     if (!endRect) return null;
     
-    // Animate to the top-right corner of the target container for a better visual effect
-    const targetX = endRect.x + endRect.width - startRect.width;
+    // Animate to the top-center of the target container for a "falling in" effect
+    const targetX = endRect.x + (endRect.width / 2) - (startRect.width / 2);
     const targetY = endRect.y;
 
     return (
@@ -49,6 +49,7 @@ const FlyingItem = ({ item, startRect, endRef, onAnimationComplete }: FlyingItem
                 top: startRect.y,
                 width: startRect.width,
                 height: startRect.height,
+                opacity: 0.7,
             }}
             animate={{
                 left: targetX,
@@ -186,7 +187,7 @@ export default function OrderEntryPoint() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [animatingItem, setAnimatingItem] = useState<AnimatingItem | null>(null);
-  const orderSummaryRef = useRef<HTMLDivElement>(null);
+  const orderSummaryListRef = useRef<HTMLDivElement>(null);
 
 
   const { toast } = useToast();
@@ -374,7 +375,7 @@ export default function OrderEntryPoint() {
                     key={animatingItem.key}
                     item={animatingItem.item}
                     startRect={animatingItem.startRect}
-                    endRef={orderSummaryRef}
+                    endRef={orderSummaryListRef}
                     onAnimationComplete={() => setAnimatingItem(null)}
                 />
             )}
@@ -435,7 +436,7 @@ export default function OrderEntryPoint() {
       </main>
       
       {/* Right Panel: Current Order */}
-      <aside ref={orderSummaryRef} className="w-[380px] flex-shrink-0 bg-white border-l flex flex-col">
+      <aside className="w-[380px] flex-shrink-0 bg-white border-l flex flex-col">
         <div className="p-4 border-b shrink-0">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold font-headline">Current Order</h2>
@@ -479,7 +480,7 @@ export default function OrderEntryPoint() {
         </div>
 
         <div className="flex-1 p-4 flex flex-col min-h-0">
-            <OrderSummary currentOrder={currentOrder} onUpdateOrder={handleUpdateOrder} />
+            <OrderSummary ref={orderSummaryListRef} orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
         </div>
       </aside>
 
