@@ -34,7 +34,7 @@ Oreo Shake: 149
 
 Biryani
 Chicken Biryani: 250
-Chicken Biryani: 150
+Chicken Biryani (Half): 150
 Veg Biryani: 220
 
 Continental Starter
@@ -212,9 +212,20 @@ function BulkUploader() {
         <CardContent className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>Formatting Guide</AlertTitle>
+            <AlertTitle>How to Use the Bulk Uploader</AlertTitle>
             <AlertDescription>
-              Place categories on their own line. For items, use the format: `Name: Price`. Items listed under a category heading will be assigned to it.
+              <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                  <li>Place each category on its own line (e.g., `Biryani`).</li>
+                  <li>Place each menu item on a new line using the format: `Name: Price`.</li>
+                  <li>
+                    **Handling Duplicates & Variants:** If you have items with the same name but different prices (e.g., half/full plates), make sure their names are unique in the text you paste.
+                    <br />
+                    For example, use `Chicken Biryani (Full): 250` and `Chicken Biryani (Half): 150`.
+                  </li>
+                  <li>
+                    If the system finds a duplicate name, it will be flagged. Use the **Rename** button in the review step to give it a unique name before uploading.
+                  </li>
+              </ul>
             </AlertDescription>
           </Alert>
           <Textarea
