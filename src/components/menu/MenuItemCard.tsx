@@ -44,7 +44,7 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
           onClick={() => onAddToOrder(item)}
           disabled={!isAvailable}
           aria-label={`Add ${name} to order`}
-          className="h-8"
+          className="h-8 shrink-0"
         >
             {isAvailable ? (
                 <>
