@@ -76,9 +76,8 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     try {
       const finalData: Omit<MenuItem, 'id'> = {
         ...data,
-        // Ensure boolean values are always present
         isAvailable: data.isAvailable ?? true,
-        isVeg: data.isVeg ?? true,
+        isVeg: data.isVeg ?? false,
       };
 
       if (isEditing && itemToEdit) {

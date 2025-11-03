@@ -133,7 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const payload = {
         ...item,
         isAvailable: item.isAvailable ?? true,
-        isVeg: item.isVeg ?? true,
+        isVeg: item.isVeg ?? false, // Ensure isVeg is always a boolean
       };
       await addDoc(collection(db, 'menu-items'), payload);
     } catch (e) {
