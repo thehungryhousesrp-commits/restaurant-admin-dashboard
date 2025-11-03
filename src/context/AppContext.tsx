@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -68,7 +69,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const menuUnsubscribe = onSnapshot(menuQuery, (snapshot) => {
         const items: MenuItem[] = [];
-        snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() } as MenuItem));
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            items.push({
+                id: doc.id,
+                ...data,
+                // Data integrity check: Ensure boolean values have a default
+                isAvailable: data.isAvailable ?? true,
+                isVeg: data.isVeg ?? false, 
+            } as MenuItem);
+        });
         setMenuItems(items);
         setLoading(false);
     }, (err) => {
@@ -133,7 +143,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const payload = {
         ...item,
         isAvailable: item.isAvailable ?? true,
-        isVeg: item.isVeg ?? false, // Ensure isVeg is always a boolean
+        isVeg: item.isVeg ?? false, // Ensure isVeg is always a boolean on creation
       };
       await addDoc(collection(db, 'menu-items'), payload);
     } catch (e) {
