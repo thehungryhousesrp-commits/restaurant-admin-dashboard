@@ -147,8 +147,8 @@ export default function OrderEntryPoint() {
     });
   }, []);
 
-  const handleUpdateOrder = useCallback((updatedItems: OrderItem[]) => {
-    setCurrentOrder(updatedItems);
+  const handleUpdateOrder = useCallback((updatedOrder: OrderItem[]) => {
+    setCurrentOrder(updatedOrder);
   }, []);
 
   const resetOrderState = useCallback(() => {
@@ -323,8 +323,8 @@ export default function OrderEntryPoint() {
 
           </div>
 
-          <div className="flex-1 flex flex-col p-4 overflow-hidden">
-              <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} />
+          <div className="p-4 flex-grow">
+              <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
           </div>
         </aside>
       </div>
