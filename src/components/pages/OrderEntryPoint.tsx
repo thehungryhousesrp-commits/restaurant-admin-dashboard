@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { type OrderItem, type Table, type MenuItem, type Category } from '@/lib/types';
+import { type OrderItem, type Table, type MenuItem, type Category, type Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, CheckCircle, XCircle } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function OrderEntryPoint() {
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastPlacedOrder, setLastPlacedOrder] = useState<any>(null); // Using 'any' as the final order type from placeOrder might differ
+  const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -71,7 +71,7 @@ export default function OrderEntryPoint() {
       .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [menuItems, activeCategory, searchQuery]);
 
-  // =https://6000-firebase-studio-1758348122060.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev/==========================================================================
+  // ===========================================================================
   // Callbacks
   // ===========================================================================
   const handleAddItem = useCallback((item: MenuItem) => {
@@ -115,14 +115,10 @@ export default function OrderEntryPoint() {
 
     setIsSubmitting(true);
     
-    const orderData = await placeOrder(currentOrder, customerInfo, selectedTable!); // Using non-null assertion as it's checked
-    
-    // In a real app, you would now save orderData to Firestore.
-    // For this example, we'll simulate it and show the invoice.
     try {
-        const docRef = await addDoc(collection(db, 'orders'), orderData);
+        const orderPayload = placeOrder(currentOrder, customerInfo, selectedTable!); 
+        const docRef = await addDoc(collection(db, 'orders'), orderPayload);
 
-        // If it's a dine-in order, update the table status
         if (orderType === 'dine-in' && selectedTable) {
             const tableRef = doc(db, 'tables', selectedTable.id);
             const batch = writeBatch(db);
@@ -130,7 +126,7 @@ export default function OrderEntryPoint() {
             await batch.commit();
         }
 
-        const finalOrder = { ...orderData, id: docRef.id };
+        const finalOrder = { ...orderPayload, id: docRef.id, createdAt: new Date().toISOString() } as Order;
         setLastPlacedOrder(finalOrder);
         setIsInvoiceOpen(true);
         handleClearOrder();
