@@ -310,7 +310,7 @@ export default function OrderEntryPoint() {
         
         <aside className="col-span-2 bg-white border-r flex flex-col">
           <h2 className="p-3 text-sm font-semibold tracking-tight border-b text-gray-600">Categories</h2>
-          <nav className="p-2">
+          <nav className="p-2 overflow-y-auto">
             <button onClick={() => setActiveCategory('all')} className={cn("w-full text-left p-3 rounded-md font-medium transition-colors text-sm", activeCategory === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-gray-100')}>
               All Items
             </button>
@@ -326,8 +326,8 @@ export default function OrderEntryPoint() {
           </nav>
         </aside>
 
-        <main className="col-span-7 flex flex-col p-4 overflow-hidden">
-          <div className="flex items-center mb-4 gap-4">
+        <main className="col-span-7 flex flex-col p-4 overflow-y-auto">
+          <div className="flex items-center mb-4 gap-4 shrink-0">
               <h1 className="text-2xl font-bold font-headline tracking-tight">Select Items</h1>
               <div className="relative flex-grow max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -335,7 +335,7 @@ export default function OrderEntryPoint() {
               </div>
           </div>
           
-          <div className="flex-grow grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 overflow-y-auto pr-2 pb-4">
+          <div className="flex-grow grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pr-2 pb-4">
             {menuLoading ? (
                [...Array(12)].map((_, i) => (
                 <Card key={i} className="overflow-hidden flex flex-col transition-all duration-300">
@@ -399,7 +399,7 @@ export default function OrderEntryPoint() {
               </div>
           </div>
 
-          <div className="flex-grow p-4">
+          <div className="flex-grow p-4 flex flex-col overflow-hidden">
               <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
           </div>
         </aside>

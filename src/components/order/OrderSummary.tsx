@@ -74,7 +74,7 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
   }
 
   return (
-    <div className="bg-white dark:bg-card border rounded-lg h-full flex flex-col shadow-sm">
+    <div className="bg-white dark:bg-card border rounded-lg h-full flex flex-col shadow-sm flex-1">
       {/* Items List */}
       <ScrollArea className="flex-grow p-3">
         <div className="space-y-3">
