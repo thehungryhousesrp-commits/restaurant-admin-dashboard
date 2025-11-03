@@ -48,21 +48,42 @@ export default function Header() {
                 />
             </div>
           </Link>
-          <nav className="hidden md:flex gap-6">
-            {navItems.map((item) => (
-              (item.public || user) && (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
-                    pathname === item.href && "text-foreground"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              )
-            ))}
+          <nav className="hidden md:flex gap-6 items-center">
+            {navItems.map((item) => {
+              if (item.public) {
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+                      pathname === item.href && "text-foreground"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              }
+              // For non-public items, handle loading and auth state
+              if (loadingAuth) {
+                return <Skeleton key={item.href} className="h-5 w-20" />;
+              }
+              if (user) {
+                 return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+                        pathname === item.href && "text-foreground"
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                 );
+              }
+              return null;
+            })}
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
