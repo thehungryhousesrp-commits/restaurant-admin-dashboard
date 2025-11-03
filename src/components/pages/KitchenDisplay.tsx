@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, CheckCircle2, Clock, Flame, Utensils, BarChart2, Server } from 'lucide-react';
+import { Check, CheckCircle2, Clock, Flame, Utensils, BarChart2, Server, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -195,33 +195,61 @@ export default function KitchenDisplay() {
          setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
     };
 
+    const DemoBanner = () => (
+        <div className="relative flex overflow-x-hidden bg-yellow-400 text-yellow-900 font-semibold shadow-md">
+            <div className="animate-marquee whitespace-nowrap py-2 flex items-center">
+                <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
+                <span className="text-sm">
+                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
+                </span>
+                <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
+                <span className="text-sm">
+                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
+                </span>
+            </div>
+            <div className="absolute top-0 animate-marquee2 whitespace-nowrap py-2 flex items-center">
+                 <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
+                <span className="text-sm">
+                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
+                </span>
+                <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
+                <span className="text-sm">
+                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
+                </span>
+            </div>
+        </div>
+    );
+
     if (orders.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-muted-foreground p-8 text-center bg-gray-50">
-                <CheckCircle2 className="h-28 w-28 mb-6 text-green-500" />
-                <h2 className="text-3xl font-bold font-headline">All Orders Fulfilled!</h2>
-                <p className="max-w-xl mt-2">This is a live demonstration of a modern Kitchen Display System (KDS). New orders would appear here in real-time. Below are the elite features this demo showcases.</p>
-                <Separator className="my-8 w-1/2" />
-                 
-                <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-                    <div className="space-y-4">
-                         <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><BarChart2 className="text-primary"/><span>Real-Time Analytics & Reporting</span></h3>
-                         <p className="text-gray-600">A live KDS connects to a reporting dashboard, giving managers instant insights into kitchen performance. This is crucial for optimizing operations and reducing wait times.</p>
-                         <Card>
-                            <CardContent className="p-4 space-y-3">
-                                <div className="flex justify-between text-sm"><span>Avg. Ticket Time:</span><span className="font-bold">7m 32s</span></div>
-                                <div className="flex justify-between text-sm"><span>Items per Hour:</span><span className="font-bold">128</span></div>
-                                <div className="flex justify-between text-sm"><span>Busiest Station:</span><span className="font-bold">Pasta</span></div>
-                            </CardContent>
-                         </Card>
-                    </div>
-                    <div className="space-y-4">
-                        <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><Server className="text-primary"/><span>Advanced KDS Features</span></h3>
-                        <ul className="text-gray-600 space-y-3">
-                           <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Station Routing:</span> Items are automatically routed to the correct kitchen station (Grill, Fryer, Pizza), improving workflow.</div></li>
-                           <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Order Pacing:</span> To prevent overload, the system can intelligently pace orders sent to the kitchen during peak hours.</div></li>
-                           <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Expo Screen Integration:</span> 'Bumping' an order sends it to an Expo screen for final quality check and coordination before it's delivered to the customer.</div></li>
-                        </ul>
+            <div className="bg-gray-50 min-h-[calc(100vh-5rem)]">
+                <DemoBanner />
+                <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-muted-foreground p-8 text-center">
+                    <CheckCircle2 className="h-28 w-28 mb-6 text-green-500" />
+                    <h2 className="text-3xl font-bold font-headline">All Orders Fulfilled!</h2>
+                    <p className="max-w-xl mt-2">This is a live demonstration of a modern Kitchen Display System (KDS). New orders would appear here in real-time. Below are the elite features this demo showcases.</p>
+                    <Separator className="my-8 w-1/2" />
+                    
+                    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><BarChart2 className="text-primary"/><span>Real-Time Analytics & Reporting</span></h3>
+                            <p className="text-gray-600">A live KDS connects to a reporting dashboard, giving managers instant insights into kitchen performance. This is crucial for optimizing operations and reducing wait times.</p>
+                            <Card>
+                                <CardContent className="p-4 space-y-3">
+                                    <div className="flex justify-between text-sm"><span>Avg. Ticket Time:</span><span className="font-bold">7m 32s</span></div>
+                                    <div className="flex justify-between text-sm"><span>Items per Hour:</span><span className="font-bold">128</span></div>
+                                    <div className="flex justify-between text-sm"><span>Busiest Station:</span><span className="font-bold">Pasta</span></div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><Server className="text-primary"/><span>Advanced KDS Features</span></h3>
+                            <ul className="text-gray-600 space-y-3">
+                            <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Station Routing:</span> Items are automatically routed to the correct kitchen station (Grill, Fryer, Pizza), improving workflow.</div></li>
+                            <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Order Pacing:</span> To prevent overload, the system can intelligently pace orders sent to the kitchen during peak hours.</div></li>
+                            <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Expo Screen Integration:</span> 'Bumping' an order sends it to an Expo screen for final quality check and coordination before it's delivered to the customer.</div></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -229,27 +257,32 @@ export default function KitchenDisplay() {
     }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 bg-gray-100 min-h-[calc(100vh-5rem)]">
-            <h1 className="text-4xl font-bold font-headline tracking-tight mb-6 text-center">Live Kitchen Order Display</h1>
-            
-            <Tabs defaultValue="tickets" className="w-full">
-                <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-6">
-                    <TabsTrigger value="tickets">Tickets View</TabsTrigger>
-                    <TabsTrigger value="summary">Summary View</TabsTrigger>
-                </TabsList>
+        <div className="bg-gray-100 min-h-[calc(100vh-5rem)]">
+            <DemoBanner />
+            <div className="p-4 sm:p-6 lg:p-8">
+                <h1 className="text-4xl font-bold font-headline tracking-tight mb-6 text-center">Live Kitchen Order Display</h1>
+                
+                <Tabs defaultValue="tickets" className="w-full">
+                    <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-6">
+                        <TabsTrigger value="tickets">Tickets View</TabsTrigger>
+                        <TabsTrigger value="summary">Summary View</TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="tickets">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {orders.map(order => (
-                            <KitchenOrderCard key={order.id} order={order} onToggleItem={handleToggleItem} onBumpOrder={handleBumpOrder} />
-                        ))}
-                    </div>
-                </TabsContent>
+                    <TabsContent value="tickets">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {orders.map(order => (
+                                <KitchenOrderCard key={order.id} order={order} onToggleItem={handleToggleItem} onBumpOrder={handleBumpOrder} />
+                            ))}
+                        </div>
+                    </TabsContent>
 
-                <TabsContent value="summary">
-                    <SummaryView orders={orders} />
-                </TabsContent>
-            </Tabs>
+                    <TabsContent value="summary">
+                        <SummaryView orders={orders} />
+                    </TabsContent>
+                </Tabs>
+            </div>
         </div>
     );
 }
+
+    
