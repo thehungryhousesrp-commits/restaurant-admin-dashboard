@@ -47,7 +47,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       price: 0,
       category: "",
       isAvailable: true,
-      isVeg: false, // Default to Non-Veg
+      isVeg: false,
     },
   });
 
@@ -58,8 +58,9 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         description: itemToEdit.description || "",
         price: itemToEdit.price || 0,
         category: itemToEdit.category || "",
-        isAvailable: itemToEdit.isAvailable ?? true,
-        isVeg: itemToEdit.isVeg ?? false,
+        // Ensure booleans are always booleans, not undefined
+        isAvailable: typeof itemToEdit.isAvailable === 'boolean' ? itemToEdit.isAvailable : true,
+        isVeg: typeof itemToEdit.isVeg === 'boolean' ? itemToEdit.isVeg : false,
       });
     } else {
       form.reset({
@@ -76,6 +77,8 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
     try {
+      // **Robust Data Handling**: Ensure boolean values are explicitly set.
+      // This prevents 'undefined' from being saved to Firestore.
       const finalData: Omit<MenuItem, 'id'> = {
         ...data,
         isAvailable: data.isAvailable ?? true,

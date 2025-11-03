@@ -72,8 +72,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         snapshot.forEach(doc => {
             const data = doc.data();
             // **Critical Data Sanitization**
-            // Ensures that all items in the app state have the necessary boolean fields.
-            // This prevents UI components from breaking on old or incomplete data.
+            // This guarantees that every menu item in the app state has valid boolean fields,
+            // preventing UI breakages from old or incomplete Firestore data.
             items.push({
                 id: doc.id,
                 ...data,
