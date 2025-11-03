@@ -11,10 +11,13 @@ interface InvoiceDisplayProps {
 }
 
 const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ order }, ref) => {
+    // This calculation might be slightly off due to floating point inaccuracies.
+    // It's better to calculate based on the stored values if precision is critical.
     const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
 
     return (
-        <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
+        <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 font-sans text-black">
+            {/* Using text-black on the parent to ensure content is visible on a white print background */}
             <div className="flex flex-col items-center gap-4 text-center mb-6">
                 <div className="relative h-24 w-24">
                   <Image
@@ -27,10 +30,10 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                 </div>
                 <div className="space-y-0.5">
                     <h1 className="font-headline text-3xl">The Hungry House Hub</h1>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-gray-600">
                         62/A Netaji Subhas Avenue, Serampore, Hooghly, 712201
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-gray-600">
                         Ph: 6289472216 | Email: thehungryhouse.srp@gmail.com
                     </p>
                 </div>
@@ -40,7 +43,7 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                 <div>
                     <h3 className="font-semibold mb-1">Billed To</h3>
                     <p className="font-medium">{order.customerInfo.name}</p>
-                    <p className="text-muted-foreground">{order.customerInfo.phone}</p>
+                    <p className="text-gray-600">{order.customerInfo.phone}</p>
                 </div>
                 <div className="text-right space-y-0.5">
                     <p><span className="font-semibold">Invoice #:</span> {order.id.slice(-6).toUpperCase()}</p>
@@ -49,54 +52,55 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                 </div>
             </div>
 
-            <Separator className="my-4" />
+            <Separator className="my-4 bg-gray-300" />
             
             <h2 className="text-lg font-bold text-center font-headline tracking-wider mb-4">E-BILL</h2>
 
             <Table className="text-sm">
                 <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-1/2">Item</TableHead>
-                        <TableHead className="text-center">Qty</TableHead>
-                        <TableHead className="text-right">Rate</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                    <TableRow className="border-b border-gray-300">
+                        <TableHead className="w-1/2 text-black font-semibold">Item</TableHead>
+                        <TableHead className="text-center text-black font-semibold">Qty</TableHead>
+                        <TableHead className="text-right text-black font-semibold">Rate</TableHead>
+                        <TableHead className="text-right text-black font-semibold">Amount</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {order.items.map((item, index) => (
-                        <TableRow key={index}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="text-center">{item.quantity}</TableCell>
-                            <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
-                            <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                        <TableRow key={index} className="border-b border-gray-200">
+                            <TableCell className="font-medium py-1.5">{item.name}</TableCell>
+                            <TableCell className="text-center py-1.5">{item.quantity}</TableCell>
+                            <TableCell className="text-right py-1.5">₹{item.price.toFixed(2)}</TableCell>
+                            <TableCell className="text-right py-1.5">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
             </Table>
             
-            <Separator className="my-4" />
+            <Separator className="my-4 bg-gray-300" />
             
             <div className="flex justify-end mb-6">
                 <div className="w-full max-w-[220px] space-y-2 text-sm">
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="text-gray-600">Subtotal</span>
                         <span>₹{order.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">CGST @ 2.5%</span>
+                        <span className="text-gray-600">CGST @ 2.5%</span>
                         <span>₹{order.cgst.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">SGST @ 2.5%</span>
+                        <span className="text-gray-600">SGST @ 2.5%</span>
                         <span>₹{order.sgst.toFixed(2)}</span>
                     </div>
-                    {roundOff.toFixed(2) !== '0.00' && roundOff.toFixed(2) !== '-0.00' && (
+                    {/* Only show round off if it's not zero */}
+                    {Math.abs(roundOff) > 0.001 && (
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">Round Off</span>
+                            <span className="text-gray-600">Round Off</span>
                             <span>{roundOff > 0 ? '+' : '-'}₹{Math.abs(roundOff).toFixed(2)}</span>
                         </div>
                     )}
-                    <Separator className="my-2"/>
+                    <Separator className="my-2 bg-gray-300"/>
                     <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span>₹{order.total.toFixed(2)}</span>
@@ -106,7 +110,7 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
 
             <div className="w-full text-center">
                 <h4 className="font-semibold font-headline text-lg">Thank you for choosing us!</h4>
-                <p className="text-sm text-muted-foreground">Please Visit Again</p>
+                <p className="text-sm text-gray-600">Please Visit Again</p>
             </div>
         </div>
     );
