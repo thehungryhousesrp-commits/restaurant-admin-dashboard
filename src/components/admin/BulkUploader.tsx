@@ -107,13 +107,16 @@ function BulkUploader() {
           return Promise.resolve(); // Skip this item
         }
 
+        // Smart default for isVeg
+        const isNonVegKeyword = ['chicken', 'mutton', 'fish', 'prawn', 'egg', 'wings'].some(keyword => item.name.toLowerCase().includes(keyword));
+
         const payload: Omit<MenuItem, 'id'> = {
           name: item.name,
           price: item.price,
           category: categoryId, 
-          description: '', // Default description, can be edited later
+          description: '.', // Placeholder description as requested
           isAvailable: true, // Default to available
-          isVeg: !item.name.toLowerCase().includes('chicken'), // Simple logic to default isVeg
+          isVeg: !isNonVegKeyword, // Set based on keyword check
         };
         return addMenuItem(payload);
       });
