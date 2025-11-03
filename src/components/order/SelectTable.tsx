@@ -1,3 +1,4 @@
+
 'use client';
 
 import { type Table } from "@/lib/types";
@@ -61,9 +62,6 @@ export default function SelectTable({ onTableSelect, selectedTable }: SelectTabl
     
 
     const handleTableClick = (table: EnrichedTable) => {
-        // Only available tables are selectable
-        if (table.status !== 'available') return;
-
         if (selectedTable?.id === table.id) {
             onTableSelect(null);
         } else {
@@ -100,7 +98,6 @@ export default function SelectTable({ onTableSelect, selectedTable }: SelectTabl
             {enrichedTables.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     {enrichedTables.map(table => {
-                        const isSelectable = table.status === 'available';
                         const isSelected = selectedTable?.id === table.id;
                         const styles = getStatusStyles(table.status);
 
@@ -109,10 +106,9 @@ export default function SelectTable({ onTableSelect, selectedTable }: SelectTabl
                                 key={table.id}
                                 onClick={() => handleTableClick(table)}
                                 className={cn(
-                                    "transition-all duration-200 flex flex-col justify-between",
+                                    "transition-all duration-200 flex flex-col justify-between cursor-pointer hover:shadow-lg hover:ring-2 hover:ring-primary/50",
                                     styles.bg, styles.border,
-                                    isSelectable ? "cursor-pointer hover:shadow-lg hover:ring-2 hover:ring-primary/50" : "cursor-not-allowed opacity-90",
-                                    isSelected && isSelectable && "ring-2 ring-primary shadow-lg"
+                                    isSelected && "ring-2 ring-primary shadow-lg"
                                 )}
                             >
                                 <CardHeader className="p-3 text-center">
