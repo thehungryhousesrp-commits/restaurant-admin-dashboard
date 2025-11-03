@@ -14,13 +14,14 @@ interface OrderSummaryProps {
 
 const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
 
-export default function OrderSummary({ orderItems: items, onUpdateOrder: onUpdateItems }: OrderSummaryProps) {
+export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummaryProps) {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
 
   // Update quantity
   const handleUpdateQuantity = useCallback(
     (itemId: string, quantity: number) => {
+      const items = orderItems || [];
       if (quantity <= 0) {
         handleRemoveItem(itemId);
         return;
@@ -28,33 +29,36 @@ export default function OrderSummary({ orderItems: items, onUpdateOrder: onUpdat
       const updated = items.map(item =>
         item.itemId === itemId ? { ...item, quantity } : item
       );
-      onUpdateItems(updated);
+      onUpdateOrder(updated);
     },
-    [items, onUpdateItems]
+    [orderItems, onUpdateOrder]
   );
 
   // Remove item from order
   const handleRemoveItem = useCallback(
     (itemId: string) => {
+      const items = orderItems || [];
       const updated = items.filter(item => item.itemId !== itemId);
-      onUpdateItems(updated);
+      onUpdateOrder(updated);
     },
-    [items, onUpdateItems]
+    [orderItems, onUpdateOrder]
   );
 
   // Save special instructions for an item
   const handleSaveNote = useCallback(
     (itemId: string) => {
+      const items = orderItems || [];
       const updated = items.map(item =>
         item.itemId === itemId ? { ...item, specialInstructions: noteText } : item
       );
-      onUpdateItems(updated);
+      onUpdateOrder(updated);
       setEditingNoteId(null);
       setNoteText('');
     },
-    [items, onUpdateItems, noteText]
+    [orderItems, onUpdateOrder, noteText]
   );
 
+  const items = orderItems || [];
   // Calculate totals
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cgst = subtotal * (GST_RATE / 2);

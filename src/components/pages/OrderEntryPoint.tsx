@@ -57,8 +57,10 @@ const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string,
 
   await batch.commit();
 
+  // The 'as any' is a temporary workaround because the server-side and client-side Order types might differ slightly (e.g., Timestamps).
+  // This is safe here because we've just constructed the object.
   return {
-    finalOrder: { id: newOrderRef.id, ...newOrderData } as unknown as Order,
+    finalOrder: { id: newOrderRef.id, ...newOrderData } as any,
     docRef: newOrderRef
   };
 };
@@ -132,7 +134,7 @@ export default function OrderEntryPoint() {
 
   const { toast } = useToast();
 
-  const activeKey = orderType === 'dine-in' ? selectedTable?.id : 'takeaway';
+  const activeKey = orderType === 'dine-in' ? selectedTable?.id : (takeawayCustomer ? 'takeaway' : null);
   const currentOrder = activeKey ? inProgressOrders[activeKey]?.items ?? [] : [];
   const currentCustomerInfo = activeKey ? inProgressOrders[activeKey]?.customerInfo ?? { name: '', phone: '' } : { name: '', phone: '' };
 
@@ -150,7 +152,7 @@ export default function OrderEntryPoint() {
     if (!activeKey) return;
     setInProgressOrders(prev => ({
       ...prev,
-      [activeKey]: { ...prev[activeKey], items: updatedItems },
+      [activeKey]: { ...(prev[activeKey] || { items: [], customerInfo: {name: '', phone: ''}}), items: updatedItems },
     }));
   }, [activeKey]);
   
@@ -158,7 +160,7 @@ export default function OrderEntryPoint() {
     if (!activeKey) return;
     setInProgressOrders(prev => ({
       ...prev,
-      [activeKey]: { ...prev[activeKey], customerInfo: info },
+      [activeKey]: { ...(prev[activeKey] || { items: [] }), customerInfo: info },
     }));
   }, [activeKey]);
 
@@ -196,17 +198,24 @@ export default function OrderEntryPoint() {
     });
   }, [activeKey]);
   
-  const resetOrderState = useCallback((keyToReset?: string) => {
-     if (keyToReset) {
-        setInProgressOrders(prev => {
-            const newOrders = { ...prev };
-            delete newOrders[keyToReset];
-            return newOrders;
-        });
-    }
+  const resetCurrentOrderState = useCallback((keyToReset: string) => {
+     setInProgressOrders(prev => {
+         const newOrders = { ...prev };
+         delete newOrders[keyToReset];
+         return newOrders;
+     });
+
+     if (orderType === 'dine-in') {
+        setSelectedTable(null);
+     } else {
+        setTakeawayCustomer(null);
+     }
+  }, [orderType]);
+  
+  const resetSelection = () => {
     setSelectedTable(null);
     setTakeawayCustomer(null);
-  }, []);
+  };
 
   const handlePlaceOrder = useCallback(async () => {
     if (!activeKey || currentOrder.length === 0) {
@@ -218,14 +227,15 @@ export default function OrderEntryPoint() {
     
     try {
         const finalCustomerInfo = {
-            name: currentCustomerInfo.name || (orderType === 'dine-in' && selectedTable ? selectedTable.name : 'Customer'),
+            name: currentCustomerInfo.name || (orderType === 'dine-in' && selectedTable ? selectedTable.name : (takeawayCustomer?.name || 'Customer')),
             phone: currentCustomerInfo.phone
         };
+
         const newOrderData = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
         
         setLastPlacedOrder(newOrderData.finalOrder);
         setIsInvoiceOpen(true);
-        resetOrderState(activeKey);
+        resetCurrentOrderState(activeKey);
         
         toast({
             title: "Order Placed Successfully!",
@@ -238,15 +248,15 @@ export default function OrderEntryPoint() {
     } finally {
         setIsSubmitting(false);
     }
-  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, orderType, toast, resetOrderState]);
+  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, takeawayCustomer, orderType, toast, resetCurrentOrderState]);
 
   const handleCancelOrder = useCallback(() => {
     if (!activeKey) return;
     if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
-        resetOrderState(activeKey);
+        resetCurrentOrderState(activeKey);
         toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
     }
-  }, [activeKey, resetOrderState, toast]);
+  }, [activeKey, resetCurrentOrderState, toast]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
 
@@ -269,7 +279,10 @@ export default function OrderEntryPoint() {
                 ) : (
                     <TakeawayForm onContinue={(info) => {
                         setTakeawayCustomer(info);
-                        setInProgressOrders(prev => ({...prev, takeaway: {items: [], customerInfo: info}}))
+                        // Initialize the order for the 'takeaway' key
+                        if (!inProgressOrders['takeaway']) {
+                            setInProgressOrders(prev => ({...prev, takeaway: {items: [], customerInfo: info}}))
+                        }
                     }} />
                 )}
               </div>
@@ -333,7 +346,7 @@ export default function OrderEntryPoint() {
           <div className="p-4 border-b space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold font-headline">Current Order</h2>
-                <Button variant="ghost" size="sm" onClick={() => resetOrderState()} className="flex items-center gap-1 text-xs">
+                <Button variant="ghost" size="sm" onClick={resetSelection} className="flex items-center gap-1 text-xs">
                     <ArrowLeft className="h-3 w-3" /> Back
                 </Button>
               </div>
@@ -370,14 +383,14 @@ export default function OrderEntryPoint() {
                     <Trash2 className="mr-2 h-4 w-4" /> Cancel Order
                  </Button>
               </div>
-                <Button onClick={() => resetOrderState(activeKey)} variant="outline" size="lg" className="w-full">
+                <Button onClick={() => activeKey && resetCurrentOrderState(activeKey)} variant="outline" size="lg" className="w-full">
                     <X className="mr-2 h-4 w-4" /> Clear Selections
                 </Button>
 
 
           </div>
 
-          <div className="p-4 flex-grow">
+          <div className="p-4 flex-grow overflow-y-auto">
               <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
           </div>
         </aside>
