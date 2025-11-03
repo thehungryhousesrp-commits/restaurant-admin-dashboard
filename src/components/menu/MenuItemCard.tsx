@@ -15,7 +15,7 @@ interface MenuItemCardProps {
 export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
   // Defensive defaults for boolean properties
   const isAvailable = item.isAvailable ?? true;
-  const isVeg = item.isVeg ?? true;
+  const isVeg = item.isVeg ?? false;
 
   return (
     <Card className={cn(
