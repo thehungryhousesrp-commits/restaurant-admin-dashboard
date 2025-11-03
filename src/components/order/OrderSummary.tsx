@@ -73,7 +73,7 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
   return (
     <div className="space-y-4 h-full flex flex-col">
       {/* Items List */}
-      <ScrollArea className="flex-grow pr-4 -mr-4">
+      <ScrollArea className="flex-grow">
         <div className="space-y-3">
             {orderItems.map(item => (
             <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-white shadow-sm">

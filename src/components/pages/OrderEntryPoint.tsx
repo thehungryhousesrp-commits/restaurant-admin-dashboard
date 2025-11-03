@@ -258,12 +258,11 @@ export default function OrderEntryPoint() {
   
   // This function will be called when the invoice dialog is closed.
   const onInvoiceDialogClose = (isOpen: boolean) => {
-    setIsInvoiceOpen(isOpen);
     if (!isOpen) {
-        // Reset the state only after the dialog has been closed.
         resetCurrentOrderState(); 
         setLastPlacedOrder(null);
     }
+    setIsInvoiceOpen(isOpen);
   };
 
   const handleCancelOrder = useCallback(() => {
@@ -401,7 +400,7 @@ export default function OrderEntryPoint() {
               </div>
           </div>
 
-          <div className="p-4 flex-grow overflow-y-auto">
+          <div className="p-4 flex-grow">
               <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
           </div>
         </aside>
@@ -415,4 +414,5 @@ export default function OrderEntryPoint() {
     </div>
   );
 }
+
 
