@@ -12,8 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { InvoicePreview } from '@/components/order/InvoicePreview';
 import { AppContext } from '@/context/AppContext';
-import { addDoc, collection, doc, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { placeOrder } from '@/lib/order';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,14 +40,23 @@ export default function OrderEntryPoint() {
   // ===========================================================================
   // Memoized Filtering
   // ===========================================================================
-  const categoryMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
-  
   const filteredMenuItems = useMemo(() => {
-    return menuItems
-      .filter(item => categoryMap.has(item.category)) // Only show items with a valid category
-      .filter(item => activeCategory === 'all' || item.category === activeCategory)
-      .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [menuItems, activeCategory, searchQuery, categoryMap]);
+    let items = menuItems;
+
+    // Filter by selected category
+    if (activeCategory !== 'all') {
+      items = items.filter(item => item.category === activeCategory);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      items = items.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return items;
+  }, [menuItems, activeCategory, searchQuery]);
 
   // ===========================================================================
   // Callbacks
@@ -96,20 +103,12 @@ export default function OrderEntryPoint() {
     setIsSubmitting(true);
     
     try {
-        const orderPayload = placeOrder(currentOrder, customerInfo, selectedTable!); 
-        const docRef = await addDoc(collection(db, 'orders'), orderPayload);
-
-        if (orderType === 'dine-in' && selectedTable) {
-            const tableRef = doc(db, 'tables', selectedTable.id);
-            const batch = writeBatch(db);
-            batch.update(tableRef, { status: 'occupied' });
-            await batch.commit();
-        }
-
-        const finalOrder = { ...orderPayload, id: docRef.id, createdAt: new Date().toISOString() } as Order;
+        const { finalOrder, docRef } = await placeOrder(currentOrder, customerInfo, selectedTable, orderType);
+        
         setLastPlacedOrder(finalOrder);
         setIsInvoiceOpen(true);
         handleClearOrder();
+        
         toast({
             title: "Order Placed Successfully!",
             description: `Order ID: ${docRef.id.slice(-6).toUpperCase()}`,
