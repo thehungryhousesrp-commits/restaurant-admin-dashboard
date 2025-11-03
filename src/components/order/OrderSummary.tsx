@@ -5,8 +5,9 @@ import { useState, useCallback } from 'react';
 import { type OrderItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, Plus, Minus } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 interface OrderSummaryProps {
   orderItems: OrderItem[];
@@ -64,20 +65,21 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
 
   if (orderItems.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-gray-50/50 rounded-lg">
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-gray-100 dark:bg-gray-800/30 rounded-lg border-2 border-dashed">
+        <ShoppingCart className="h-16 w-16 mb-4 text-gray-400" />
         <p className="font-medium text-lg">Your order is empty</p>
-        <p className="text-sm">Please add items from the menu to get started.</p>
+        <p className="text-sm text-center">Please add items from the menu to get started.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="bg-white dark:bg-card border rounded-lg h-full flex flex-col shadow-sm">
       {/* Items List */}
-      <ScrollArea className="flex-grow">
+      <ScrollArea className="flex-grow p-3">
         <div className="space-y-3">
             {orderItems.map(item => (
-            <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-white shadow-sm">
+            <div key={item.itemId} className="p-3 border rounded-lg space-y-2 bg-gray-50 dark:bg-background/50">
                 {/* Item Header */}
                 <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -153,7 +155,7 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
       </ScrollArea>
 
       {/* Totals */}
-      <div className="border-t pt-3 space-y-2 mt-auto">
+      <div className="p-4 border-t bg-slate-50 dark:bg-background/70 rounded-b-lg space-y-2 mt-auto">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Subtotal:</span>
           <span>₹{subtotal.toFixed(2)}</span>
@@ -166,7 +168,8 @@ export default function OrderSummary({ orderItems, onUpdateOrder }: OrderSummary
           <span>SGST (2.5%):</span>
           <span>₹{sgst.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between font-bold text-lg border-t pt-2">
+        <Separator className="my-2"/>
+        <div className="flex justify-between font-bold text-lg">
           <span>Total:</span>
           <span className="text-primary">₹{total.toFixed(2)}</span>
         </div>
