@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useContext } from 'react';
+import { useState, useCallback, useMemo, useContext, useEffect } from 'react';
 import { type OrderItem, type Table, type MenuItem, type Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,14 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardFooter, CardHeader, CardContent } from '@/components/ui/card';
 
-const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string, phone: string }, selectedTable: Table | null, orderType: 'dine-in' | 'takeaway'): Promise<{ finalOrder: Order, docRef: any }> => {
+// ===============================================================
+// TYPES AND STATE
+// ===============================================================
+
+type OrderType = 'dine-in' | 'takeaway';
+type InProgressOrders = Record<string, { items: OrderItem[]; customerInfo: { name: string; phone: string } }>;
+
+const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string, phone: string }, selectedTable: Table | null, orderType: OrderType): Promise<{ finalOrder: Order, docRef: any }> => {
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cgst = subtotal * 0.025;
   const sgst = subtotal * 0.025;
@@ -34,7 +41,7 @@ const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string,
     sgst,
     total,
     status: 'Preparing' as const,
-    createdAt: new Date().toISOString(), // Use ISO string for consistency
+    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
@@ -98,22 +105,62 @@ const TakeawayForm = ({ onContinue }: { onContinue: (info: { name: string, phone
     );
 };
 
+
+// ===============================================================
+// MAIN COMPONENT
+// ===============================================================
+
 export default function OrderEntryPoint() {
   const { menuItems, categories, menuLoading, categoriesLoading } = useContext(AppContext);
   
+  // App State
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
-  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
+  const [takeawayCustomer, setTakeawayCustomer] = useState<{name: string, phone: string} | null>(null);
+  const [orderType, setOrderType] = useState<OrderType>('dine-in');
+
+  // Order Management State
+  const [inProgressOrders, setInProgressOrders] = useState<InProgressOrders>({});
   
+  // UI State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   
+  // Menu Filtering State
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { toast } = useToast();
+
+  const activeKey = orderType === 'dine-in' ? selectedTable?.id : 'takeaway';
+  const currentOrder = activeKey ? inProgressOrders[activeKey]?.items ?? [] : [];
+  const currentCustomerInfo = activeKey ? inProgressOrders[activeKey]?.customerInfo ?? { name: '', phone: '' } : { name: '', phone: '' };
+
+  const handleSelectTable = (table: Table) => {
+    setSelectedTable(table);
+    if (!inProgressOrders[table.id]) {
+      setInProgressOrders(prev => ({
+        ...prev,
+        [table.id]: { items: [], customerInfo: { name: '', phone: '' } }
+      }));
+    }
+  };
+
+  const handleUpdateOrder = useCallback((updatedItems: OrderItem[]) => {
+    if (!activeKey) return;
+    setInProgressOrders(prev => ({
+      ...prev,
+      [activeKey]: { ...prev[activeKey], items: updatedItems },
+    }));
+  }, [activeKey]);
+  
+  const handleUpdateCustomerInfo = useCallback((info: { name: string; phone: string }) => {
+    if (!activeKey) return;
+    setInProgressOrders(prev => ({
+      ...prev,
+      [activeKey]: { ...prev[activeKey], customerInfo: info },
+    }));
+  }, [activeKey]);
 
   const filteredMenuItems = useMemo(() => {
     let items = menuItems;
@@ -129,43 +176,40 @@ export default function OrderEntryPoint() {
   }, [menuItems, activeCategory, searchQuery]);
 
   const handleAddItem = useCallback((item: MenuItem) => {
-    setCurrentOrder(prev => {
-      const existing = prev.find(o => o.itemId === item.id);
-      if (existing) {
-        return prev.map(o =>
+    if (!activeKey) return;
+
+    setInProgressOrders(prev => {
+      const existingOrder = prev[activeKey] || { items: [], customerInfo: { name: '', phone: '' }};
+      const existingItem = existingOrder.items.find(o => o.itemId === item.id);
+      
+      let newItems: OrderItem[];
+      if (existingItem) {
+        newItems = existingOrder.items.map(o =>
           o.itemId === item.id ? { ...o, quantity: o.quantity + 1, total: (o.quantity + 1) * o.price } : o
         );
+      } else {
+        newItems = [...existingOrder.items, {
+          itemId: item.id, name: item.name, quantity: 1, price: item.price, total: item.price, specialInstructions: '',
+        }];
       }
-      return [...prev, {
-        itemId: item.id,
-        name: item.name,
-        quantity: 1,
-        price: item.price,
-        total: item.price,
-        specialInstructions: '',
-      }];
+      return { ...prev, [activeKey]: { ...existingOrder, items: newItems } };
     });
-  }, []);
-
-  const handleUpdateOrder = useCallback((updatedOrder: OrderItem[]) => {
-    setCurrentOrder(updatedOrder);
-  }, []);
-
-  const resetOrderState = useCallback(() => {
-    setCurrentOrder([]);
-    setSelectedTable(null);
-    setCustomerInfo({ name: '', phone: '' });
-  }, []);
+  }, [activeKey]);
   
-  const handleCancelOrder = useCallback(() => {
-     if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
-        resetOrderState();
-        toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
-     }
-  }, [resetOrderState, toast]);
+  const resetOrderState = useCallback((keyToReset?: string) => {
+     if (keyToReset) {
+        setInProgressOrders(prev => {
+            const newOrders = { ...prev };
+            delete newOrders[keyToReset];
+            return newOrders;
+        });
+    }
+    setSelectedTable(null);
+    setTakeawayCustomer(null);
+  }, []);
 
   const handlePlaceOrder = useCallback(async () => {
-    if (currentOrder.length === 0) {
+    if (!activeKey || currentOrder.length === 0) {
         toast({ title: "Empty Order", description: "Please add items to the order.", variant: "destructive" });
         return;
     }
@@ -174,14 +218,14 @@ export default function OrderEntryPoint() {
     
     try {
         const finalCustomerInfo = {
-            name: customerInfo.name || (orderType === 'dine-in' && selectedTable ? selectedTable.name : 'Customer'),
-            phone: customerInfo.phone
+            name: currentCustomerInfo.name || (orderType === 'dine-in' && selectedTable ? selectedTable.name : 'Customer'),
+            phone: currentCustomerInfo.phone
         };
         const newOrderData = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
         
         setLastPlacedOrder(newOrderData.finalOrder);
         setIsInvoiceOpen(true);
-        resetOrderState();
+        resetOrderState(activeKey);
         
         toast({
             title: "Order Placed Successfully!",
@@ -194,12 +238,19 @@ export default function OrderEntryPoint() {
     } finally {
         setIsSubmitting(false);
     }
-  }, [selectedTable, currentOrder, customerInfo, toast, resetOrderState, orderType]);
-  
-  const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && customerInfo.name);
+  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, orderType, toast, resetOrderState]);
 
-  // Initial Step: Select Order Type
-  if (!showMenu && !selectedTable) {
+  const handleCancelOrder = useCallback(() => {
+    if (!activeKey) return;
+    if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
+        resetOrderState(activeKey);
+        toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
+    }
+  }, [activeKey, resetOrderState, toast]);
+
+  const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
+
+  if (!showMenu) {
       return (
           <div className="h-[calc(100vh-5rem)] flex flex-col bg-gray-50 font-sans">
               <div className="p-4 border-b bg-white shadow-sm">
@@ -213,10 +264,13 @@ export default function OrderEntryPoint() {
                 {orderType === 'dine-in' ? (
                      <div className="p-4 sm:p-6">
                         <h3 className="text-lg font-semibold mb-3">2. Select a Table</h3>
-                        <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
+                        <SelectTable onTableSelect={handleSelectTable} selectedTable={selectedTable} inProgressOrders={inProgressOrders}/>
                      </div>
                 ) : (
-                    <TakeawayForm onContinue={(info) => setCustomerInfo(info)} />
+                    <TakeawayForm onContinue={(info) => {
+                        setTakeawayCustomer(info);
+                        setInProgressOrders(prev => ({...prev, takeaway: {items: [], customerInfo: info}}))
+                    }} />
                 )}
               </div>
           </div>
@@ -279,7 +333,7 @@ export default function OrderEntryPoint() {
           <div className="p-4 border-b space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold font-headline">Current Order</h2>
-                <Button variant="ghost" size="sm" onClick={resetOrderState} className="flex items-center gap-1 text-xs">
+                <Button variant="ghost" size="sm" onClick={() => resetOrderState()} className="flex items-center gap-1 text-xs">
                     <ArrowLeft className="h-3 w-3" /> Back
                 </Button>
               </div>
@@ -290,20 +344,20 @@ export default function OrderEntryPoint() {
                   </div>
               )}
 
-               {orderType === 'takeaway' && (
+               {orderType === 'takeaway' && takeawayCustomer && (
                   <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md">
-                     Takeaway for: <span className="font-bold">{customerInfo.name || 'Customer'}</span>
+                     Takeaway for: <span className="font-bold">{takeawayCustomer.name}</span>
                   </div>
               )}
 
               <div className="space-y-3">
                   <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="customer-name" placeholder="Customer Name (Optional)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="pl-10 h-9 text-sm"/>
+                      <Input id="customer-name" placeholder="Customer Name (Optional)" value={currentCustomerInfo.name} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, name: e.target.value })} className="pl-10 h-9 text-sm"/>
                   </div>
                   <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="customer-phone" placeholder="Customer Phone (Optional)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="pl-10 h-9 text-sm"/>
+                      <Input id="customer-phone" placeholder="Customer Phone (Optional)" value={currentCustomerInfo.phone} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, phone: e.target.value })} className="pl-10 h-9 text-sm"/>
                   </div>
               </div>
               
@@ -316,7 +370,7 @@ export default function OrderEntryPoint() {
                     <Trash2 className="mr-2 h-4 w-4" /> Cancel Order
                  </Button>
               </div>
-                <Button onClick={resetOrderState} variant="outline" size="lg" className="w-full">
+                <Button onClick={() => resetOrderState(activeKey)} variant="outline" size="lg" className="w-full">
                     <X className="mr-2 h-4 w-4" /> Clear Selections
                 </Button>
 

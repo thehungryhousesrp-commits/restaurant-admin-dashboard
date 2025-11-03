@@ -2,84 +2,42 @@
 'use client';
 
 import { type Table } from "@/lib/types";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Armchair, User, Utensils, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import { AppContext } from "@/context/AppContext";
 
-// --- Enhanced Data Model with Mock Data ---
-// In a real application, this data would come from your backend (e.g., Firestore).
-type EnrichedTable = Table & {
-    partySize?: number;
-    serverName?: string;
-    status: 'available' | 'occupied' | 'reserved' | 'cleaning';
-};
+type InProgressOrders = Record<string, { items: any[]; customerInfo: { name: string; phone: string } }>;
 
-// Props updated to handle the new enriched table type
 interface SelectTableProps {
-    onTableSelect: (table: EnrichedTable | null) => void;
-    selectedTable: EnrichedTable | null;
+    onTableSelect: (table: Table) => void;
+    selectedTable: Table | null;
+    inProgressOrders: InProgressOrders;
 }
 
-export default function SelectTable({ onTableSelect, selectedTable }: SelectTableProps) {
-    const { tables: rawTables, loading } = useContext(AppContext);
-
-    // --- Mock Data Enrichment ---
-    // This adds placeholder data for party size, server, and new statuses.
-    // This logic should be replaced with real data from Firestore when available.
-    const enrichedTables: EnrichedTable[] = useMemo(() => {
-        return rawTables.map((table, index) => {
-            const mockData: Partial<EnrichedTable> = {};
-            switch (index % 5) {
-                case 1:
-                    mockData.status = 'occupied';
-                    mockData.partySize = 4;
-                    mockData.serverName = 'Anjali';
-                    break;
-                case 2:
-                     mockData.status = 'occupied';
-                    mockData.partySize = 2;
-                    mockData.serverName = 'Ravi';
-                    break;
-                case 3:
-                    mockData.status = 'reserved';
-                    mockData.partySize = 6;
-                    break;
-                case 4:
-                    mockData.status = 'cleaning';
-                    break;
-                default:
-                    mockData.status = 'available';
-                    break;
-            }
-            // Ensure original status from DB is used if not mocked
-            const finalStatus = mockData.status || table.status;
-            return { ...table, ...mockData, status: finalStatus };
-        });
-    }, [rawTables]);
+export default function SelectTable({ onTableSelect, selectedTable, inProgressOrders }: SelectTableProps) {
+    const { tables, loading } = useContext(AppContext);
     
-
-    const handleTableClick = (table: EnrichedTable) => {
-        if (selectedTable?.id === table.id) {
-            onTableSelect(null);
-        } else {
-            onTableSelect(table);
+    const getTableStatus = (table: Table): 'available' | 'occupied' => {
+        const order = inProgressOrders[table.id];
+        if (order && (order.items.length > 0 || order.customerInfo.name || order.customerInfo.phone)) {
+            return 'occupied';
         }
+        return 'available';
     };
 
-    // --- Dynamic Styling based on Status ---
-    const getStatusStyles = (status: EnrichedTable['status']) => {
+    const handleTableClick = (table: Table) => {
+        onTableSelect(table);
+    };
+
+    const getStatusStyles = (status: 'available' | 'occupied') => {
         switch (status) {
             case 'available':
                 return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300', icon: <Utensils className="h-5 w-5 mx-auto text-green-600" /> };
             case 'occupied':
                 return { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300', icon: <Armchair className="h-5 w-5 mx-auto text-red-600" /> };
-            case 'reserved':
-                return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300', icon: <User className="h-5 w-5 mx-auto text-blue-600" /> };
-            case 'cleaning':
-                 return { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: <Sparkles className="h-5 w-5 mx-auto text-yellow-600" /> };
             default:
                 return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300', icon: <Armchair className="h-5 w-5 mx-auto text-gray-600" /> };
         }
@@ -95,11 +53,12 @@ export default function SelectTable({ onTableSelect, selectedTable }: SelectTabl
 
     return (
         <div>
-            {enrichedTables.length > 0 ? (
+            {tables.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {enrichedTables.map(table => {
+                    {tables.map(table => {
+                        const status = getTableStatus(table);
                         const isSelected = selectedTable?.id === table.id;
-                        const styles = getStatusStyles(table.status);
+                        const styles = getStatusStyles(status);
 
                         return (
                             <Card
@@ -117,15 +76,9 @@ export default function SelectTable({ onTableSelect, selectedTable }: SelectTabl
                                 <CardContent className="p-3 text-center flex-grow flex flex-col items-center justify-center">
                                     {styles.icon}
                                     <p className={cn("text-sm font-semibold capitalize mt-2", styles.text)}>
-                                        {table.status.replace('_', ' ')}
+                                        {status}
                                     </p>
-                                    {table.partySize && (
-                                        <p className="text-xs text-muted-foreground mt-1">{table.partySize} Guests</p>
-                                    )}
                                 </CardContent>
-                                <CardFooter className={cn("p-2 text-center text-xs justify-center", styles.text)}>
-                                    {table.serverName ? `Served by: ${table.serverName}` : ''}
-                                </CardFooter>
                             </Card>
                         );
                     })}
