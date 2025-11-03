@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import AdminDashboard from '@/components/pages/AdminDashboard';
 import Header from '@/components/layout/Header';
 
-export default function AdminPage() {
+export default function AdminMenuPage() {
     const [user, loadingAuth] = useAuthState(auth);
     const router = useRouter();
 
