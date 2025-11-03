@@ -12,11 +12,49 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { InvoicePreview } from '@/components/order/InvoicePreview';
 import { AppContext } from '@/context/AppContext';
-import { placeOrder } from '@/lib/order';
+import { addDoc, collection, doc, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardFooter, CardHeader } from '@/components/ui/card';
-import { Separator } from '../ui/separator';
+
+const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string, phone: string }, selectedTable: Table | null, orderType: 'dine-in' | 'takeaway'): Promise<{ finalOrder: Order, docRef: any }> => {
+  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cgst = subtotal * 0.025;
+  const sgst = subtotal * 0.025;
+  const total = Math.round(subtotal + cgst + sgst);
+
+  const newOrderData = {
+    items: orderItems,
+    customerInfo,
+    tableId: selectedTable?.id || 'takeaway',
+    tableName: selectedTable?.name || 'Takeaway',
+    subtotal,
+    cgst,
+    sgst,
+    total,
+    status: 'Preparing' as const,
+    createdAt: new Date().toISOString(), // Use ISO string for consistency
+    updatedAt: new Date().toISOString(),
+  };
+
+  const batch = writeBatch(db);
+  const newOrderRef = doc(collection(db, 'orders'));
+  
+  batch.set(newOrderRef, newOrderData);
+
+  if (orderType === 'dine-in' && selectedTable) {
+      const tableRef = doc(db, 'tables', selectedTable.id);
+      batch.update(tableRef, { status: 'occupied' });
+  }
+
+  await batch.commit();
+
+  return {
+    finalOrder: { id: newOrderRef.id, ...newOrderData } as unknown as Order,
+    docRef: newOrderRef
+  };
+};
 
 export default function OrderEntryPoint() {
   // ===========================================================================
@@ -181,16 +219,16 @@ export default function OrderEntryPoint() {
               </div>
           </div>
           
-          <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-4">
+          <div className="flex-grow grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 overflow-y-auto pr-2 pb-4">
             {menuLoading ? (
-               [...Array(8)].map((_, i) => (
+               [...Array(12)].map((_, i) => (
                 <Card key={i} className="overflow-hidden flex flex-col transition-all duration-300">
-                    <CardHeader className="flex-grow p-4 pb-2">
+                    <CardHeader className="flex-grow p-3 pb-2">
                         <Skeleton className="h-4 w-3/4" />
                         <Skeleton className="h-3 w-1/2 mt-2" />
                     </CardHeader>
-                    <CardFooter className="p-4 pt-2 mt-auto flex justify-between items-center">
-                        <Skeleton className="h-6 w-1/4" />
+                    <CardFooter className="p-3 pt-2 mt-auto flex justify-between items-center">
+                        <Skeleton className="h-5 w-1/4" />
                         <Skeleton className="h-8 w-1/3" />
                     </CardFooter>
                 </Card>
@@ -210,52 +248,52 @@ export default function OrderEntryPoint() {
         
         {/* Right: Order Panel */}
         <aside className="col-span-3 bg-white border-l flex flex-col">
-            <div className="p-4 border-b space-y-4">
-                 <h2 className="text-xl font-bold font-headline">Current Order</h2>
-                 
-                 <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={() => setOrderType('dine-in')} variant={orderType === 'dine-in' ? 'default' : 'outline'}>Dine-In</Button>
-                    <Button onClick={() => setOrderType('takeaway')} variant={orderType === 'takeaway' ? 'default' : 'outline'}>Takeaway</Button>
-                </div>
+          <div className="p-4 border-b space-y-4">
+              <h2 className="text-xl font-bold font-headline">Current Order</h2>
+              
+              <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={() => setOrderType('dine-in')} variant={orderType === 'dine-in' ? 'default' : 'outline'}>Dine-In</Button>
+                  <Button onClick={() => setOrderType('takeaway')} variant={orderType === 'takeaway' ? 'default' : 'outline'}>Takeaway</Button>
+              </div>
 
-                 {orderType === 'dine-in' && selectedTable && (
-                     <div className="text-sm text-muted-foreground flex items-center justify-between">
-                         <span>Table: <span className="font-bold text-primary">{selectedTable.name}</span></span>
-                         <button onClick={() => setSelectedTable(null)} className="text-xs text-red-500 hover:underline">Change</button>
-                     </div>
-                 )}
+              {orderType === 'dine-in' && selectedTable && (
+                  <div className="text-sm text-muted-foreground flex items-center justify-between">
+                      <span>Table: <span className="font-bold text-primary">{selectedTable.name}</span></span>
+                      <button onClick={() => setSelectedTable(null)} className="text-xs text-red-500 hover:underline">Change</button>
+                  </div>
+              )}
 
-                 {orderType === 'takeaway' && (
-                    <div className="space-y-2">
-                        <Input placeholder="Customer Name" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
-                        <Input placeholder="Customer Phone (optional)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} />
-                    </div>
-                )}
-            </div>
+              {orderType === 'takeaway' && (
+                  <div className="space-y-2">
+                      <Input placeholder="Customer Name" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
+                      <Input placeholder="Customer Phone (optional)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} />
+                  </div>
+              )}
+          </div>
 
-            <div className="flex-1 flex flex-col p-4 overflow-hidden">
-                {!selectedTable && orderType === 'dine-in' ? (
-                    <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
-                ) : (
-                    <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} onClearOrder={handleClearOrder} />
-                )}
-            </div>
+          <div className="flex-1 flex flex-col p-4 overflow-hidden">
+              {!selectedTable && orderType === 'dine-in' ? (
+                  <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
+              ) : (
+                  <OrderSummary items={currentOrder} onUpdateItems={handleUpdateOrder} onClearOrder={handleClearOrder} />
+              )}
+          </div>
 
-            <div className="p-4 border-t bg-gray-50">
-                <Button
-                    onClick={handlePlaceOrder}
-                    disabled={isSubmitting || (orderType === 'dine-in' && !selectedTable) || currentOrder.length === 0}
-                    className="w-full"
-                    size="lg"
-                >
-                    {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    )}
-                    {isSubmitting ? 'Placing Order...' : 'Place Order & Generate Invoice'}
-                </Button>
-            </div>
+          <div className="p-4 border-t bg-gray-50">
+              <Button
+                  onClick={handlePlaceOrder}
+                  disabled={isSubmitting || (orderType === 'dine-in' && !selectedTable) || currentOrder.length === 0}
+                  className="w-full"
+                  size="lg"
+              >
+                  {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  )}
+                  {isSubmitting ? 'Placing Order...' : 'Place Order & Generate Invoice'}
+              </Button>
+          </div>
         </aside>
       </div>
 
