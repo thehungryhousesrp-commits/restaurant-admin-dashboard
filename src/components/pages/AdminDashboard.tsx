@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useCallback, useContext } from 'react';
 import { type MenuItem, type Order, type Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download } from 'lucide-react';
 import {
   Table as ShadcnTable,
   TableHead,
@@ -349,12 +350,51 @@ const MenuItemsView = () => {
  */
 const OrdersView = () => {
   const [ordersSnapshot, loadingOrders] = useCollection(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
+  const { toast } = useToast();
 
   const orders = (ordersSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || []) as Order[];
 
+  const downloadCSV = useCallback(() => {
+    if (orders.length === 0) {
+      toast({ title: 'No Orders to Export', description: 'There are currently no orders to export.', variant: 'destructive' });
+      return;
+    }
+
+    const headers = ['Invoice #', 'Customer Name', 'Customer Phone', 'Table', 'Date', 'Total Amount'];
+    const rows = orders.map(order => [
+      order.id.slice(-6).toUpperCase(),
+      order.customerInfo.name,
+      order.customerInfo.phone,
+      order.tableName,
+      new Date(order.createdAt).toLocaleDateString(),
+      order.total.toFixed(2),
+    ]);
+
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n" 
+      + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: 'Export Successful', description: 'Your orders have been downloaded as a CSV file.' });
+
+  }, [orders, toast]);
+
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Orders</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Orders</h2>
+        <Button onClick={downloadCSV} variant="outline" disabled={loadingOrders || orders.length === 0}>
+          <Download className="mr-2 h-4 w-4" />
+          Export as CSV
+        </Button>
+      </div>
 
       <div className="border rounded-lg overflow-hidden">
         <ShadcnTable>
