@@ -5,7 +5,7 @@ import { type MenuItem, type Order, type Table } from "@/lib/types";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Edit, Trash2, Eye, Wand2, ShieldAlert, Image as ImageIconPlaceholder, SquareStack, Utensils, LayoutList, Armchair, ShoppingCart } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Eye, Wand2, ShieldAlert, SquareStack, Utensils, LayoutList, Armchair, ShoppingCart } from "lucide-react";
 import {
   Table as ShadcnTable,
   TableBody,
@@ -33,7 +33,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import Image from "next/image";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import MenuForm from "@/components/admin/MenuForm";
@@ -174,7 +173,6 @@ const MenuItemsView = () => {
                                     checked={isAllSelected ? true : (isPartialSelected ? 'indeterminate' : false)}
                                 />
                             </TableHead>
-                            <TableHead className="w-[80px]">Image</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead className="text-right">Price</TableHead>
@@ -190,15 +188,6 @@ const MenuItemsView = () => {
                                         onCheckedChange={(checked) => handleRowSelect(item.id, checked === true)}
                                         checked={selectedItems.includes(item.id)}
                                     />
-                                </TableCell>
-                                <TableCell>
-                                    <div className="w-[50px] h-[50px] rounded-md bg-muted flex items-center justify-center">
-                                        {item.imageUrl ? (
-                                            <Image src={item.imageUrl} alt={item.name} width={50} height={50} className="rounded-md object-cover w-full h-full" />
-                                        ) : (
-                                            <ImageIconPlaceholder className="h-6 w-6 text-muted-foreground" />
-                                        )}
-                                    </div>
                                 </TableCell>
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{getCategoryName(item.category)}</TableCell>
@@ -219,7 +208,7 @@ const MenuItemsView = () => {
             </div>
             
             <Dialog open={isFormOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="sm:max-w-4xl">
+                <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">
                           {itemToEdit ? "Edit Menu Item" : "Add New Menu Item"}

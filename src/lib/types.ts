@@ -15,8 +15,6 @@ export interface MenuItem {
   description: string;
   price: number;
   category: string;
-  imageUrl: string;
-  imageHint: string;
   isAvailable: boolean;
   isVeg: boolean;
   isSpicy: boolean;

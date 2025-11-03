@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,9 +23,8 @@ import { menuItemSchema } from "@/lib/schemas";
 import { useAppContext } from "@/context/AppContext";
 import { type MenuItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, UploadCloud } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { extractDirectImageUrl } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type MenuFormValues = z.infer<typeof menuItemSchema>;
@@ -50,15 +48,12 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
       description: itemToEdit?.description || "",
       price: itemToEdit?.price || 0,
       category: itemToEdit?.category || "",
-      imageUrl: itemToEdit?.imageUrl || "",
       isAvailable: itemToEdit?.isAvailable ?? true,
       isVeg: itemToEdit?.isVeg ?? true,
       isSpicy: itemToEdit?.isSpicy ?? false,
       isChefsSpecial: itemToEdit?.isChefsSpecial ?? false,
     },
   });
-
-  const imageUrl = form.watch("imageUrl");
 
   useEffect(() => {
     if (itemToEdit) {
@@ -76,7 +71,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         description: "",
         price: 0,
         category: "",
-        imageUrl: "",
         isAvailable: true,
         isVeg: true,
         isSpicy: false,
@@ -90,8 +84,6 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
     try {
       const finalData: Omit<MenuItem, 'id'> = {
         ...data,
-        imageUrl: data.imageUrl || "",
-        imageHint: data.name.toLowerCase().split(' ').slice(0, 2).join(' '),
         // Ensure boolean values are always present
         isAvailable: data.isAvailable ?? true,
         isVeg: data.isVeg ?? true,
@@ -114,178 +106,130 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         setIsSubmitting(false);
     }
   };
-  
-  const handleImageUrlBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    const extractedUrl = extractDirectImageUrl(rawValue);
-    form.setValue("imageUrl", extractedUrl, { shouldValidate: true });
-  }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left Column for Form Fields */}
-          <div className="space-y-6">
+        <div className="space-y-6">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name <span className="text-destructive">*</span></FormLabel>
+                <FormControl><Input placeholder="Margherita Pizza" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                 <div className="flex items-center justify-between">
+                  <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
+                </div>
+                <FormControl><Textarea placeholder="Classic Italian pizza..." {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex gap-4">
             <FormField
               control={form.control}
-              name="name"
+              name="price"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name <span className="text-destructive">*</span></FormLabel>
-                  <FormControl><Input placeholder="Margherita Pizza" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                   <div className="flex items-center justify-between">
-                    <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
+                <FormItem className="flex-grow">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Price (INR) <span className="text-destructive">*</span></FormLabel>
                   </div>
-                  <FormControl><Textarea placeholder="Classic Italian pizza..." {...field} /></FormControl>
+                  <FormControl>
+                      <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="flex gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem className="flex-grow">
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Price (INR) <span className="text-destructive">*</span></FormLabel>
-                    </div>
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem className="flex-grow">
+                  <FormLabel>Category <span className="text-destructive">*</span></FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
-                        <Input type="number" step="0.01" placeholder="499.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                      <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem className="flex-grow">
-                    <FormLabel>Category <span className="text-destructive">*</span></FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="isAvailable"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5"><FormLabel>Available for Serving</FormLabel></div>
-                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4 rounded-lg border p-3 shadow-sm">
-                 <FormField
-                    control={form.control}
-                    name="isVeg"
-                    render={({ field }) => (
-                        <FormItem className="space-y-3">
-                            <FormLabel>Food Type</FormLabel>
-                            <FormControl>
-                                <RadioGroup
-                                onValueChange={(value) => field.onChange(value === 'true')}
-                                value={String(field.value)}
-                                className="flex gap-4"
-                                name="foodType"
-                                id="foodType"
-                                >
-                                <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl><RadioGroupItem value="true" id="isVeg-true" /></FormControl>
-                                    <FormLabel htmlFor="isVeg-true" className="font-normal">Veg</FormLabel>
-                                </FormItem>
-                                <FormItem className="flex items-center space-x-2 space-y-0">
-                                    <FormControl><RadioGroupItem value="false" id="isVeg-false" /></FormControl>
-                                    <FormLabel htmlFor="isVeg-false" className="font-normal">Non-Veg</FormLabel>
-                                </FormItem>
-                                </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                <div className="space-y-2">
-                    <Label>Other Flags</Label>
-                    <div className="flex flex-col gap-3 pt-1">
-                        <FormField control={form.control} name="isSpicy" render={({ field }) => (
-                            <FormItem className="flex items-center gap-2 space-y-0">
-                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
-                            <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
-                            </FormItem>
-                        )} />
-                        <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
-                            <FormItem className="flex items-center gap-2 space-y-0">
-                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
-                            <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
-                            </FormItem>
-                        )} />
-                    </div>
-                </div>
-              </div>
-            </div>
+                    <SelectContent>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
-
-          {/* Right Column for Image */}
           <div className="space-y-4">
-             <FormField
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Image URL</FormLabel>
-                    </div>
-                    <FormControl>
-                      <Input 
-                        placeholder="https://i.ibb.co/image.png" 
-                        {...field}
-                        onBlur={handleImageUrlBlur}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Paste any link from an image hosting service like <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" className="underline">ImgBB</a>. We'll extract the direct link.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div>
-                <Label>Image Preview</Label>
-                <div className="relative aspect-video w-full rounded-md overflow-hidden border mt-2 bg-muted">
-                  {imageUrl && imageUrl.startsWith('http') ? (
-                      <Image src={imageUrl} alt="Preview" fill className="object-cover" />
-                  ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                          <UploadCloud className="h-12 w-12" />
-                          <p className="mt-2 text-sm text-center">Paste an image URL to see a preview</p>
-                      </div>
+            <FormField
+              control={form.control}
+              name="isAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5"><FormLabel>Available for Serving</FormLabel></div>
+                  <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4 rounded-lg border p-3 shadow-sm">
+               <FormField
+                  control={form.control}
+                  name="isVeg"
+                  render={({ field }) => (
+                      <FormItem className="space-y-3">
+                          <FormLabel>Food Type</FormLabel>
+                          <FormControl>
+                              <RadioGroup
+                              onValueChange={(value) => field.onChange(value === 'true')}
+                              value={String(field.value)}
+                              className="flex gap-4"
+                              name="foodType"
+                              id="foodType"
+                              >
+                              <FormItem className="flex items-center space-x-2 space-y-0">
+                                  <FormControl><RadioGroupItem value="true" id="isVeg-true" /></FormControl>
+                                  <FormLabel htmlFor="isVeg-true" className="font-normal">Veg</FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-2 space-y-0">
+                                  <FormControl><RadioGroupItem value="false" id="isVeg-false" /></FormControl>
+                                  <FormLabel htmlFor="isVeg-false" className="font-normal">Non-Veg</FormLabel>
+                              </FormItem>
+                              </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
                   )}
-                </div>
+                  />
+              <div className="space-y-2">
+                  <Label>Other Flags</Label>
+                  <div className="flex flex-col gap-3 pt-1">
+                      <FormField control={form.control} name="isSpicy" render={({ field }) => (
+                          <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isSpicy" /></FormControl>
+                          <Label htmlFor="isSpicy" className="font-normal">Spicy</Label>
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="isChefsSpecial" render={({ field }) => (
+                          <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="isChefsSpecial" /></FormControl>
+                          <Label htmlFor="isChefsSpecial" className="font-normal">Chef's Special</Label>
+                          </FormItem>
+                      )} />
+                  </div>
               </div>
+            </div>
           </div>
         </div>
         <Button type="submit" disabled={isSubmitting}>

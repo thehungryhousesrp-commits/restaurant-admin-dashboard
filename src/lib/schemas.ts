@@ -9,8 +9,6 @@ export const menuItemSchema = z.object({
   isVeg: z.boolean(),
   isSpicy: z.boolean(),
   isChefsSpecial: z.boolean(),
-  imageUrl: z.string().url("Please enter a valid URL.").or(z.literal("")).optional(),
-  imageHint: z.string().optional(),
 });
 
 export const categorySchema = z.object({
