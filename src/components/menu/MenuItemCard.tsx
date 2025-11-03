@@ -49,7 +49,7 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
         <div className="flex items-center gap-2">
             {typeof isVeg === 'boolean' && (
               <span 
-                className={cn("h-3 w-3 rounded-full", isVeg ? "bg-green-500" : "bg-red-500")}
+                className={cn("h-3 w-3 rounded-full", isVeg ? "bg-green-600" : "bg-red-600")}
                 title={isVeg ? 'Vegetarian' : 'Non-Vegetarian'}
               ></span>
             )}
