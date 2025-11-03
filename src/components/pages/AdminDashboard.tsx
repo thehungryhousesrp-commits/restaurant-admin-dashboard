@@ -462,12 +462,6 @@ const OrdersView = () => {
               Showing {filteredOrders.length} of {allOrders.length} total orders.
             </p>
         </div>
-        <div className="flex gap-2">
-            <Button onClick={() => downloadCSV(false)} variant="outline" disabled={loadingOrders || filteredOrders.length === 0}>
-                <Download className="mr-2 h-4 w-4" />
-                Export as CSV
-            </Button>
-        </div>
       </div>
       
       {/* Filtering Section */}
