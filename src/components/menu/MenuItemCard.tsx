@@ -16,8 +16,7 @@ interface MenuItemCardProps {
 export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
   const { isAvailable, isVeg, name, price, description } = item;
 
-  // Set default availability to true if it's undefined
-  const available = typeof isAvailable === 'boolean' ? isAvailable : true;
+  const available = item.isAvailable;
 
   return (
     <Card className={cn(
@@ -37,7 +36,6 @@ export default function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) 
 
       <CardFooter className="p-4 pt-2 mt-auto flex justify-between items-center">
         <div className="flex gap-2 items-center">
-            {/* Only render the badge if isVeg is explicitly a boolean */}
             {typeof isVeg === 'boolean' && (
               isVeg ? (
                 <Badge variant="outline" className="border-green-500 text-green-600">Veg</Badge>
