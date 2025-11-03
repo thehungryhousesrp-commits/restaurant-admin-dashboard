@@ -203,15 +203,19 @@ export default function OrderEntryPoint() {
   if (!showMenu) {
       return (
           <div className="h-[calc(100vh-5rem)] flex flex-col bg-gray-50 font-sans">
-              <div className="p-4 border-b bg-white">
+              <div className="p-4 border-b bg-white shadow-sm">
+                  <h2 className="text-xl font-bold font-headline text-center mb-3">1. Select an Order Type</h2>
                   <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
                       <Button onClick={() => setOrderType('dine-in')} variant={orderType === 'dine-in' ? 'default' : 'outline'} size="lg">Dine-In</Button>
                       <Button onClick={() => setOrderType('takeaway')} variant={orderType === 'takeaway' ? 'default' : 'outline'} size="lg">Takeaway</Button>
                   </div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 overflow-y-auto">
                 {orderType === 'dine-in' ? (
-                     <div className="p-4"><SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} /></div>
+                     <div className="p-4 sm:p-6">
+                        <h3 className="text-lg font-semibold mb-3">2. Select an Available Table</h3>
+                        <SelectTable onTableSelect={setSelectedTable} selectedTable={selectedTable} />
+                     </div>
                 ) : (
                     <TakeawayForm onContinue={(info) => setCustomerInfo(info)} />
                 )}
