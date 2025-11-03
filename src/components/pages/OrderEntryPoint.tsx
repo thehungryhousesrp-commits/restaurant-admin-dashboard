@@ -265,6 +265,7 @@ export default function OrderEntryPoint() {
   
   const resetCurrentOrderState = useCallback(() => {
      if(!activeKey) return;
+     // This function is now just responsible for clearing the data.
      setInProgressOrders(prev => {
          const newOrders = { ...prev };
          delete newOrders[activeKey];
@@ -324,22 +325,17 @@ export default function OrderEntryPoint() {
   };
 
   const handleCancelOrder = useCallback(() => {
-    if (!activeKey) return;
-    if (confirm('Are you sure you want to cancel this entire order? All items will be removed.')) {
-        // Clear the data for the current order
+    if (confirm('Are you sure you want to clear all fields for this order?')) {
+      if (activeKey) {
         setInProgressOrders(prev => {
-            const newOrders = { ...prev };
-            if (activeKey) {
-                delete newOrders[activeKey];
-            }
-            return newOrders;
+          const newOrders = { ...prev };
+          delete newOrders[activeKey];
+          return newOrders;
         });
-
-        // Reset the selection, which will force the UI back to the initial view
-        setSelectedTable(null);
-        setTakeawayCustomer(null);
-
-        toast({ title: 'Order Cancelled', description: 'The current order has been cleared.', variant: 'destructive' });
+      }
+      setSelectedTable(null);
+      setTakeawayCustomer(null);
+      toast({ title: 'Order Cleared', description: 'All fields have been reset.', variant: 'destructive' });
     }
   }, [activeKey, toast]);
 
@@ -500,3 +496,5 @@ export default function OrderEntryPoint() {
     </div>
   );
 }
+
+    
