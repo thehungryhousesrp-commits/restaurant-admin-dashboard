@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback, useMemo, useContext, useEffect } from 'react';
@@ -223,11 +224,16 @@ export default function OrderEntryPoint() {
         return;
     }
 
+    if (!currentCustomerInfo.name || !currentCustomerInfo.phone) {
+        toast({ title: "Missing Information", description: "Please enter customer name and phone number.", variant: "destructive" });
+        return;
+    }
+
     setIsSubmitting(true);
     
     try {
         const finalCustomerInfo = {
-            name: currentCustomerInfo.name || (orderType === 'dine-in' && selectedTable ? selectedTable.name : (takeawayCustomer?.name || 'Customer')),
+            name: currentCustomerInfo.name,
             phone: currentCustomerInfo.phone
         };
 
@@ -259,6 +265,8 @@ export default function OrderEntryPoint() {
   }, [activeKey, resetCurrentOrderState, toast]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
+
+  const canPlaceOrder = currentOrder.length > 0 && !!currentCustomerInfo.name && !!currentCustomerInfo.phone;
 
   if (!showMenu) {
       return (
@@ -366,16 +374,16 @@ export default function OrderEntryPoint() {
               <div className="space-y-3">
                   <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="customer-name" placeholder="Customer Name (Optional)" value={currentCustomerInfo.name} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, name: e.target.value })} className="pl-10 h-9 text-sm"/>
+                      <Input id="customer-name" placeholder="Customer Name *" value={currentCustomerInfo.name} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, name: e.target.value })} className="pl-10 h-9 text-sm"/>
                   </div>
                   <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="customer-phone" placeholder="Customer Phone (Optional)" value={currentCustomerInfo.phone} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, phone: e.target.value })} className="pl-10 h-9 text-sm"/>
+                      <Input id="customer-phone" placeholder="Customer Phone *" value={currentCustomerInfo.phone} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, phone: e.target.value })} className="pl-10 h-9 text-sm"/>
                   </div>
               </div>
               
               <div className="grid grid-cols-2 gap-2">
-                 <Button onClick={handlePlaceOrder} disabled={isSubmitting || currentOrder.length === 0} className="w-full" size="lg" style={{backgroundColor: '#10B981'}}>
+                 <Button onClick={handlePlaceOrder} disabled={isSubmitting || !canPlaceOrder} className="w-full" size="lg" style={{backgroundColor: '#10B981'}}>
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                     {isSubmitting ? 'Placing...' : 'Place Order'}
                  </Button>
