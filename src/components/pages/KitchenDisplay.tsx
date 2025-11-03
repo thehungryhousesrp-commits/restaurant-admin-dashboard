@@ -4,10 +4,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, CheckCircle2, Clock, Flame, Utensils } from 'lucide-react';
+import { Check, CheckCircle2, Clock, Flame, Utensils, BarChart2, Server } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 // ============================================================================
 // DEMO DATA (This would come from your real-time database)
@@ -18,9 +19,9 @@ const initialDemoOrders = [
     tableName: 'Table 5',
     createdAt: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
     items: [
-      { id: 'item-1', name: 'Margherita Pizza', quantity: 1, prepared: false },
-      { id: 'item-2', name: 'Pasta Carbonara', quantity: 2, prepared: true },
-      { id: 'item-3', name: 'Classic Burger', quantity: 1, prepared: false },
+      { id: 'item-1', name: 'Margherita Pizza', quantity: 1, prepared: false, station: 'Pizza' },
+      { id: 'item-2', name: 'Pasta Carbonara', quantity: 2, prepared: true, station: 'Pasta' },
+      { id: 'item-3', name: 'Classic Burger', quantity: 1, prepared: false, station: 'Grill' },
     ],
   },
   {
@@ -28,8 +29,8 @@ const initialDemoOrders = [
     tableName: 'Takeaway',
     createdAt: new Date(Date.now() - 7 * 60 * 1000), // 7 minutes ago
     items: [
-        { id: 'item-2', name: 'Pasta Carbonara', quantity: 1, prepared: false },
-        { id: 'item-4', name: 'BBQ Chicken Wings', quantity: 1, prepared: false },
+        { id: 'item-2a', name: 'Pasta Carbonara', quantity: 1, prepared: false, station: 'Pasta' },
+        { id: 'item-4', name: 'BBQ Chicken Wings', quantity: 1, prepared: false, station: 'Fryer' },
     ],
   },
   {
@@ -37,7 +38,7 @@ const initialDemoOrders = [
     tableName: 'Table 2',
     createdAt: new Date(Date.now() - 12 * 60 * 1000), // 12 minutes ago
     items: [
-        { id: 'item-5', name: 'Spicy Arrabbiata', quantity: 1, prepared: true },
+        { id: 'item-5', name: 'Spicy Arrabbiata', quantity: 1, prepared: true, station: 'Pasta' },
     ],
   },
 ];
@@ -88,15 +89,22 @@ const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: DemoOrd
                             key={item.id}
                             onClick={() => onToggleItem(order.id, item.id)}
                             className={cn(
-                                "flex justify-between items-center p-3 cursor-pointer transition-colors",
+                                "p-3 cursor-pointer transition-colors",
                                 item.prepared ? 'bg-green-100/50 text-muted-foreground line-through' : 'hover:bg-blue-50/50'
                             )}
                         >
-                            <div className="flex items-center gap-3">
-                                <span className={cn("font-bold text-lg", item.prepared ? "text-green-600" : "text-primary")}>{item.quantity}x</span>
-                                <span className="font-semibold text-base">{item.name}</span>
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <span className={cn("font-bold text-lg", item.prepared ? "text-green-600" : "text-primary")}>{item.quantity}x</span>
+                                    <span className="font-semibold text-base">{item.name}</span>
+                                </div>
+                                {item.prepared && <CheckCircle2 className="h-6 w-6 text-green-500" />}
                             </div>
-                            {item.prepared && <CheckCircle2 className="h-6 w-6 text-green-500" />}
+                            {item.station && (
+                                <Badge variant="secondary" className="mt-2 text-xs">
+                                  <Server className="h-3 w-3 mr-1.5"/> Station: {item.station}
+                                </Badge>
+                            )}
                         </li>
                     ))}
                 </ul>
@@ -110,7 +118,7 @@ const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: DemoOrd
                     size="lg"
                 >
                     <Check className="mr-2 h-5 w-5"/>
-                    Bump Order
+                    Bump to Expo
                 </Button>
             </div>
         </Card>
@@ -152,7 +160,7 @@ const SummaryView = ({ orders }: { orders: DemoOrder[] }) => {
             </CardHeader>
             <CardContent>
                 <p className="text-muted-foreground mb-4">
-                    This view consolidates all items from active orders, helping chefs prioritize preparation.
+                    This view consolidates all items from active orders, helping chefs prioritize preparation by item type across all tickets.
                 </p>
                 <ul className="space-y-3">
                     {sortedItems.map(([name, quantity]) => (
@@ -192,14 +200,30 @@ export default function KitchenDisplay() {
             <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-muted-foreground p-8 text-center bg-gray-50">
                 <CheckCircle2 className="h-28 w-28 mb-6 text-green-500" />
                 <h2 className="text-3xl font-bold font-headline">All Orders Fulfilled!</h2>
-                <p className="max-w-md mt-2">The kitchen is clear. New orders will appear here automatically. This screen is a live demonstration of a modern Kitchen Display System (KDS).</p>
-                 <Separator className="my-6 w-1/2" />
-                 <h3 className="text-xl font-semibold mb-3">Features Showcased:</h3>
-                 <ul className="text-left space-y-2 text-gray-600">
-                     <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1"/><span>**Dual-Mode Display:** Switch between individual 'Tickets' and a consolidated 'Summary' view for efficiency.</span></li>
-                     <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1"/><span>**Smart Timers:** Tickets change color based on age (Green → Yellow → Red) to help prioritize.</span></li>
-                     <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1"/><span>**Interactive Workflow:** Tap items to mark them as done and 'Bump' the entire order when complete.</span></li>
-                 </ul>
+                <p className="max-w-xl mt-2">This is a live demonstration of a modern Kitchen Display System (KDS). New orders would appear here in real-time. Below are the elite features this demo showcases.</p>
+                <Separator className="my-8 w-1/2" />
+                 
+                <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                    <div className="space-y-4">
+                         <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><BarChart2 className="text-primary"/><span>Real-Time Analytics & Reporting</span></h3>
+                         <p className="text-gray-600">A live KDS connects to a reporting dashboard, giving managers instant insights into kitchen performance. This is crucial for optimizing operations and reducing wait times.</p>
+                         <Card>
+                            <CardContent className="p-4 space-y-3">
+                                <div className="flex justify-between text-sm"><span>Avg. Ticket Time:</span><span className="font-bold">7m 32s</span></div>
+                                <div className="flex justify-between text-sm"><span>Items per Hour:</span><span className="font-bold">128</span></div>
+                                <div className="flex justify-between text-sm"><span>Busiest Station:</span><span className="font-bold">Pasta</span></div>
+                            </CardContent>
+                         </Card>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><Server className="text-primary"/><span>Advanced KDS Features</span></h3>
+                        <ul className="text-gray-600 space-y-3">
+                           <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Station Routing:</span> Items are automatically routed to the correct kitchen station (Grill, Fryer, Pizza), improving workflow.</div></li>
+                           <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Order Pacing:</span> To prevent overload, the system can intelligently pace orders sent to the kitchen during peak hours.</div></li>
+                           <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Expo Screen Integration:</span> 'Bumping' an order sends it to an Expo screen for final quality check and coordination before it's delivered to the customer.</div></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         );
     }
