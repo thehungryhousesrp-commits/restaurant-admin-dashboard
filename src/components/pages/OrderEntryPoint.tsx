@@ -177,7 +177,10 @@ export default function OrderEntryPoint() {
     setIsSubmitting(true);
     
     try {
-        const finalCustomerInfo = orderType === 'takeaway' ? customerInfo : { name: `Table: ${selectedTable?.name}`, phone: ''};
+        const finalCustomerInfo = {
+            name: customerInfo.name || (orderType === 'dine-in' && selectedTable ? selectedTable.name : 'Customer'),
+            phone: customerInfo.phone
+        };
         const newOrderData = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
         
         setLastPlacedOrder(newOrderData.finalOrder);
@@ -200,7 +203,7 @@ export default function OrderEntryPoint() {
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && customerInfo.name);
 
   // Initial Step: Select Order Type
-  if (!showMenu) {
+  if (!showMenu && !selectedTable) {
       return (
           <div className="h-[calc(100vh-5rem)] flex flex-col bg-gray-50 font-sans">
               <div className="p-4 border-b bg-white shadow-sm">
@@ -291,11 +294,23 @@ export default function OrderEntryPoint() {
                   </div>
               )}
 
-               {orderType === 'takeaway' && customerInfo.name && (
+               {orderType === 'takeaway' && (
                   <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md">
-                     Takeaway for: <span className="font-bold">{customerInfo.name}</span>
+                     Takeaway for: <span className="font-bold">{customerInfo.name || 'Customer'}</span>
                   </div>
               )}
+
+              <div className="space-y-3">
+                  <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input id="customer-name" placeholder="Customer Name (Optional)" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} className="pl-10 h-9 text-sm"/>
+                  </div>
+                  <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input id="customer-phone" placeholder="Customer Phone (Optional)" value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="pl-10 h-9 text-sm"/>
+                  </div>
+              </div>
+
 
               <Button onClick={handlePlaceOrder} disabled={isSubmitting || currentOrder.length === 0} className="w-full" size="lg">
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
