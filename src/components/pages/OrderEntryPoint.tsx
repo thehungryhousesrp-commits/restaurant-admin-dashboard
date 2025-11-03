@@ -241,7 +241,7 @@ export default function OrderEntryPoint() {
         const newOrderData = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
         
         setLastPlacedOrder(newOrderData.finalOrder);
-        setIsInvoiceOpen(true); // Open the dialog immediately
+        setIsInvoiceOpen(true);
         
         toast({
             title: "Order Placed Successfully!",
@@ -254,9 +254,8 @@ export default function OrderEntryPoint() {
     } finally {
         setIsSubmitting(false);
     }
-  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, takeawayCustomer, orderType, toast]);
+  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, orderType, toast]);
   
-  // This function will be called when the invoice dialog is closed.
   const onInvoiceDialogClose = (isOpen: boolean) => {
     if (!isOpen) {
         resetCurrentOrderState(); 
@@ -358,8 +357,8 @@ export default function OrderEntryPoint() {
         </main>
         
         <aside className="col-span-3 bg-white border-l flex flex-col">
-          <div className="p-4 border-b space-y-4">
-              <div className="flex justify-between items-center">
+          <div className="p-4 border-b shrink-0">
+              <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold font-headline">Current Order</h2>
                 <Button variant="ghost" size="sm" onClick={resetSelection} className="flex items-center gap-1 text-xs">
                     <ArrowLeft className="h-3 w-3" /> Back
@@ -367,18 +366,18 @@ export default function OrderEntryPoint() {
               </div>
 
                {orderType === 'dine-in' && selectedTable && (
-                  <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md">
+                  <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md mb-4">
                       Dine-In for Table: <span className="font-bold">{selectedTable.name}</span>
                   </div>
               )}
 
                {orderType === 'takeaway' && takeawayCustomer && (
-                  <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md">
+                  <div className="text-sm font-medium text-primary p-2 bg-primary/10 rounded-md mb-4">
                      Takeaway for: <span className="font-bold">{takeawayCustomer.name}</span>
                   </div>
               )}
 
-              <div className="space-y-3">
+              <div className="space-y-3 mb-4">
                   <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input id="customer-name" placeholder="Customer Name *" value={currentCustomerInfo.name} onChange={e => handleUpdateCustomerInfo({ ...currentCustomerInfo, name: e.target.value })} className="pl-10 h-9 text-sm"/>
@@ -395,12 +394,12 @@ export default function OrderEntryPoint() {
                     {isSubmitting ? 'Placing...' : 'Place Order'}
                  </Button>
                  <Button onClick={handleCancelOrder} variant="destructive" size="lg" disabled={isSubmitting || currentOrder.length === 0}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Cancel Order
+                    <Trash2 className="mr-2 h-4 w-4" /> Cancel
                  </Button>
               </div>
           </div>
 
-          <div className="p-4 flex-grow">
+          <div className="flex-grow p-4 overflow-y-hidden">
               <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
           </div>
         </aside>
@@ -414,5 +413,3 @@ export default function OrderEntryPoint() {
     </div>
   );
 }
-
-
