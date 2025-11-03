@@ -1,29 +1,41 @@
 
 'use client';
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Info, Wand2, Loader2, UploadCloud, Trash2 } from 'lucide-react';
+import { Info, Wand2, Loader2, UploadCloud, Trash2, Edit, Check, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { type Category, type MenuItem } from '@/lib/types';
 import { AppContext } from '@/context/AppContext';
-import { addCategory, addMenuItem } from '@/lib/menu';
+import { addCategory, addMenuItem, updateMenuItem } from '@/lib/menu';
+import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
 
-interface ParsedMenuItem {
-  id: string;
+
+// The state for each item being reviewed, including its duplicate status
+interface ReviewItem {
+  id: string; // A temporary unique ID for the react key
   name: string;
   price: number;
   categoryName: string;
+  isDuplicate: boolean;
+  existingItemId?: string; // If it's a duplicate, the ID of the existing item
+  resolution: 'new' | 'skip' | 'overwrite' | 'rename'; // How to handle the item
 }
 
 const defaultMenuText = `Shakes
 Cold Coffee: 139
 Oreo Shake: 149
+
+Biryani
+Chicken Biryani: 250
+Chicken Biryani: 150
+Veg Biryani: 220
 
 Continental Starter
 Cheese Nachos with Salsa: 150
@@ -31,57 +43,102 @@ BBQ Chicken Wings: 200
 `;
 
 function BulkUploader() {
-  const { categories, loading: loadingCategories } = useContext(AppContext);
+  const { categories, menuItems, loading: loadingCategories } = useContext(AppContext);
   const { toast } = useToast();
   const [rawInput, setRawInput] = useState(defaultMenuText);
-  const [parsedItems, setParsedItems] = useState<ParsedMenuItem[]>([]);
+  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const parseMenuText = (text: string): ParsedMenuItem[] => {
-    const lines = text.split('\n');
+  // Memoize a map of existing item names for quick lookups
+  const existingMenuItemMap = useMemo(() => {
+    const map = new Map<string, string>(); // Maps lowercase name to original item ID
+    menuItems.forEach(item => {
+      map.set(item.name.toLowerCase(), item.id);
+    });
+    return map;
+  }, [menuItems]);
+
+
+  const handleParse = () => {
+    setIsParsing(true);
+
+    const lines = rawInput.split('\n');
     let currentCategory = 'Uncategorized';
-    const items: ParsedMenuItem[] = [];
+    const items: ReviewItem[] = [];
+
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
       if (!trimmedLine) return;
+
       if (trimmedLine.includes(':')) {
         const parts = trimmedLine.split(':');
         const name = parts[0].trim();
         const price = parseFloat(parts[1].trim());
+
         if (name && !isNaN(price)) {
-          items.push({ id: `parsed-${Date.now()}-${index}`, name, price, categoryName: currentCategory });
+          const lowerCaseName = name.toLowerCase();
+          const isDuplicate = existingMenuItemMap.has(lowerCaseName);
+          items.push({
+            id: `review-${Date.now()}-${index}`,
+            name,
+            price,
+            categoryName: currentCategory,
+            isDuplicate,
+            existingItemId: isDuplicate ? existingMenuItemMap.get(lowerCaseName) : undefined,
+            resolution: isDuplicate ? 'skip' : 'new', // Default duplicates to 'skip'
+          });
         }
       } else {
         currentCategory = trimmedLine;
       }
     });
-    return items;
-  };
 
-  const handleParse = () => {
-    setIsParsing(true);
-    const items = parseMenuText(rawInput);
-    setParsedItems(items);
+    setReviewItems(items);
     setIsParsing(false);
-    toast({ title: "Review Your Items", description: `Found ${items.length} items. Check them below.` });
+    const duplicateCount = items.filter(item => item.isDuplicate).length;
+    toast({
+      title: "Review Your Items",
+      description: `Found ${items.length} items. ${duplicateCount > 0 ? `${duplicateCount} potential duplicates were detected.` : ''}`,
+    });
   };
 
-  const handleUpdateItem = (id: string, field: keyof ParsedMenuItem, value: string | number) => {
-    setParsedItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const handleUpdateItem = (id: string, field: keyof ReviewItem, value: string | number) => {
+    setReviewItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+  
+  const handleSetResolution = (id: string, resolution: ReviewItem['resolution']) => {
+    setReviewItems(prev => prev.map(item => {
+      if (item.id === id) {
+        // If user wants to rename, but name is still a duplicate, keep it as 'rename'
+        if (resolution === 'new' && existingMenuItemMap.has(item.name.toLowerCase()) && item.name.toLowerCase() !== menuItems.find(mi => mi.id === item.existingItemId)?.name.toLowerCase()) {
+           toast({ title: 'Still a Duplicate', description: `"${item.name}" already exists. Please choose a unique name.`, variant: 'destructive' });
+           return { ...item, resolution: 'rename' };
+        }
+        return { ...item, resolution };
+      }
+      return item;
+    }));
   };
 
   const handleRemoveItem = (id: string) => {
-    setParsedItems(prev => prev.filter(item => item.id !== id));
+    setReviewItems(prev => prev.filter(item => item.id !== id));
   };
 
   const handleInitiateUpload = async () => {
     setIsUploading(true);
     toast({ title: "Starting Upload...", description: "Please wait.", duration: 5000 });
 
+    const itemsToUpload = reviewItems.filter(item => item.resolution === 'new');
+    const itemsToOverwrite = reviewItems.filter(item => item.resolution === 'overwrite');
+    
     try {
       // Step 1: Handle Categories
-      const uniqueCategoryNames = [...new Set(parsedItems.map(p => p.categoryName))];
+      const allItemCategoryNames = reviewItems
+        .filter(item => item.resolution === 'new' || item.resolution === 'overwrite')
+        .map(p => p.categoryName);
+        
+      const uniqueCategoryNames = [...new Set(allItemCategoryNames)];
       const existingCategoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c]));
       const newCategoryNames = uniqueCategoryNames.filter(name => !existingCategoryMap.has(name.toLowerCase()));
       
@@ -95,37 +152,44 @@ function BulkUploader() {
       }
 
       // Step 2: Create a definitive map of all categories (old and new)
-      const finalCategoryMap = new Map(categories.map(c => [c.name, c.id]));
-      newCategories.forEach(c => finalCategoryMap.set(c.name, c.id));
+      const finalCategoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c.id]));
+      newCategories.forEach(c => finalCategoryMap.set(c.name.toLowerCase(), c.id));
 
-      // Step 3: Upload Menu Items
-      toast({ title: "Uploading Menu Items...", description: `Adding ${parsedItems.length} items to your menu.` });
-      const uploadPromises = parsedItems.map(item => {
-        const categoryId = finalCategoryMap.get(item.categoryName);
+      // Step 3: Upload New and Overwrite Existing Menu Items
+      const finalUploadCount = itemsToUpload.length + itemsToOverwrite.length;
+      toast({ title: "Processing Menu Items...", description: `Adding or updating ${finalUploadCount} items.` });
+
+      const uploadPromises = reviewItems.map(item => {
+        if (item.resolution !== 'new' && item.resolution !== 'overwrite') {
+          return Promise.resolve(); // Skip this item
+        }
+        const categoryId = finalCategoryMap.get(item.categoryName.toLowerCase());
         if (!categoryId) {
           console.warn(`Could not find category ID for ${item.categoryName}. Skipping item ${item.name}`);
           return Promise.resolve(); // Skip this item
         }
 
-        // Smart default for isVeg
         const isNonVegKeyword = ['chicken', 'mutton', 'fish', 'prawn', 'egg', 'wings'].some(keyword => item.name.toLowerCase().includes(keyword));
 
         const payload: Omit<MenuItem, 'id'> = {
           name: item.name,
           price: item.price,
           category: categoryId, 
-          description: '.', // Placeholder description as requested
-          isAvailable: true, // Default to available
-          isVeg: !isNonVegKeyword, // Set based on keyword check
+          description: '.',
+          isAvailable: true,
+          isVeg: !isNonVegKeyword,
         };
+
+        if(item.resolution === 'overwrite' && item.existingItemId) {
+          return updateMenuItem(item.existingItemId, payload);
+        }
         return addMenuItem(payload);
       });
 
       await Promise.all(uploadPromises);
 
-      toast({ title: "Upload Complete!", description: `Successfully added ${parsedItems.length} items to your menu.`, duration: 5000 });
-      setParsedItems([]);
-      setRawInput(defaultMenuText);
+      toast({ title: "Upload Complete!", description: `Successfully processed ${finalUploadCount} items.`, duration: 5000 });
+      setReviewItems([]);
 
     } catch (error) {
       console.error("Upload failed", error);
@@ -134,13 +198,16 @@ function BulkUploader() {
       setIsUploading(false);
     }
   };
+  
+  const itemsToProcessCount = reviewItems.filter(item => item.resolution === 'new' || item.resolution === 'overwrite').length;
+
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center gap-2"><Wand2 /> Bulk Menu Uploader</CardTitle>
-          <CardDescription>Paste your menu text to parse and upload items in batches.</CardDescription>
+          <CardDescription>Paste your menu text to parse and upload items in batches. The system will detect duplicates.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
@@ -163,17 +230,18 @@ function BulkUploader() {
         </CardContent>
       </Card>
 
-      {parsedItems.length > 0 && (
+      {reviewItems.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Review & Edit Items</CardTitle>
-            <CardDescription>Verify the parsed items. Make any corrections before uploading.</CardDescription>
+            <CardDescription>Verify the parsed items. Duplicates are flagged and skipped by default. You can choose to rename or overwrite them.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Status</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Price (INR)</TableHead>
                     <TableHead>Category</TableHead>
@@ -181,15 +249,42 @@ function BulkUploader() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {parsedItems.map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell><Input value={item.name} onChange={e => handleUpdateItem(item.id, 'name', e.target.value)} className="h-8" disabled={isUploading} /></TableCell>
+                  {reviewItems.map(item => (
+                    <TableRow key={item.id} className={cn(item.isDuplicate && item.resolution !== 'new' && 'bg-yellow-50/50')}>
+                      <TableCell>
+                        {item.resolution === 'new' && <Badge variant="default">New</Badge>}
+                        {item.resolution === 'skip' && <Badge variant="secondary">Skipped</Badge>}
+                        {item.resolution === 'overwrite' && <Badge variant="destructive">Overwrite</Badge>}
+                        {item.resolution === 'rename' && <Badge variant="outline">Renaming</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        {item.resolution === 'rename' ? (
+                          <div className="flex items-center gap-2">
+                            <Input value={item.name} onChange={e => handleUpdateItem(item.id, 'name', e.target.value)} className="h-8" disabled={isUploading} />
+                            <Button size="icon" className="h-8 w-8" onClick={() => handleSetResolution(item.id, 'new')}><Check className="h-4 w-4" /></Button>
+                          </div>
+                        ) : item.isDuplicate && item.resolution !== 'new' ? (
+                          <div className="font-medium text-yellow-700">⚠️ {item.name}</div>
+                        ): (
+                          <Input value={item.name} onChange={e => handleUpdateItem(item.id, 'name', e.target.value)} className="h-8" disabled={isUploading} />
+                        )}
+                      </TableCell>
                       <TableCell><Input type="number" value={item.price} onChange={e => handleUpdateItem(item.id, 'price', parseFloat(e.target.value) || 0)} className="h-8" disabled={isUploading} /></TableCell>
                       <TableCell><Input value={item.categoryName} onChange={e => handleUpdateItem(item.id, 'categoryName', e.target.value)} className="h-8" disabled={isUploading} /></TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="text-destructive" disabled={isUploading}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {item.isDuplicate && item.resolution !== 'new' ? (
+                            <div className="flex gap-1 justify-end">
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleSetResolution(item.id, 'skip')}>Skip</Button>
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleSetResolution(item.id, 'rename')}>Rename</Button>
+                                <Button variant="destructive" size="sm" className="h-8" onClick={() => handleSetResolution(item.id, 'overwrite')}>Overwrite</Button>
+                            </div>
+                        ) : item.resolution === 'rename' ? (
+                           <Button variant="ghost" size="sm" className="h-8" onClick={() => handleSetResolution(item.id, 'skip')}>Cancel</Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="text-destructive" disabled={isUploading}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -198,9 +293,9 @@ function BulkUploader() {
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button onClick={handleInitiateUpload} disabled={isUploading || parsedItems.length === 0 || loadingCategories}>
+            <Button onClick={handleInitiateUpload} disabled={isUploading || itemsToProcessCount === 0 || loadingCategories}>
               {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-              {isUploading ? 'Uploading...' : `Upload ${parsedItems.length} Items`}
+              {isUploading ? 'Uploading...' : `Upload ${itemsToProcessCount} Items`}
             </Button>
           </CardFooter>
         </Card>
