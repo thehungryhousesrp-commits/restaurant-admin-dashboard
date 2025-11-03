@@ -8,13 +8,13 @@ import { Trash2, Plus, Minus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface OrderSummaryProps {
-  items: OrderItem[];
-  onUpdateItems: (items: OrderItem[]) => void;
+  orderItems: OrderItem[];
+  onUpdateOrder: (items: OrderItem[]) => void;
 }
 
 const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
 
-export default function OrderSummary({ items, onUpdateItems }: OrderSummaryProps) {
+export default function OrderSummary({ orderItems: items, onUpdateOrder: onUpdateItems }: OrderSummaryProps) {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
 
