@@ -182,7 +182,7 @@ export default function OrderEntryPoint() {
     if (!activeKey) return;
 
     setInProgressOrders(prev => {
-      const existingOrder = prev[activeKey] || { items: [], customerInfo: { name: '', phone: '' }};
+      const existingOrder = prev[activeKey] || { items: [], customerInfo: { name: '', phone: '' } };
       const existingItem = existingOrder.items.find(o => o.itemId === item.id);
       
       let newItems: OrderItem[];
@@ -238,14 +238,14 @@ export default function OrderEntryPoint() {
             phone: currentCustomerInfo.phone
         };
 
-        const newOrderData = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
+        const { finalOrder } = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
         
-        setLastPlacedOrder(newOrderData.finalOrder);
+        setLastPlacedOrder(finalOrder);
         setIsInvoiceOpen(true);
         
         toast({
             title: "Order Placed Successfully!",
-            description: `Order ID: ${newOrderData.docRef.id.slice(-6).toUpperCase()}`,
+            description: `Order ID: ${finalOrder.id.slice(-6).toUpperCase()}`,
             className: "bg-green-100 border-green-300 text-green-800",
         });
     } catch (error) {
@@ -257,11 +257,11 @@ export default function OrderEntryPoint() {
   }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, orderType, toast]);
   
   const onInvoiceDialogClose = (isOpen: boolean) => {
+    setIsInvoiceOpen(isOpen);
     if (!isOpen) {
         resetCurrentOrderState(); 
         setLastPlacedOrder(null);
     }
-    setIsInvoiceOpen(isOpen);
   };
 
   const handleCancelOrder = useCallback(() => {
@@ -399,7 +399,7 @@ export default function OrderEntryPoint() {
               </div>
           </div>
 
-          <div className="flex-grow p-4 overflow-y-hidden">
+          <div className="flex-grow p-4">
               <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
           </div>
         </aside>
