@@ -42,22 +42,24 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const form = useForm<MenuFormValues>({
     resolver: zodResolver(menuItemSchema),
     defaultValues: {
-      name: itemToEdit?.name || "",
-      description: itemToEdit?.description || "",
-      price: itemToEdit?.price || 0,
-      category: itemToEdit?.category || "",
-      isAvailable: itemToEdit?.isAvailable ?? true,
-      isVeg: itemToEdit?.isVeg ?? true,
+      name: "",
+      description: "",
+      price: 0,
+      category: "",
+      isAvailable: true,
+      isVeg: false, // Default to Non-Veg
     },
   });
 
   useEffect(() => {
     if (itemToEdit) {
       form.reset({
-        ...itemToEdit,
+        name: itemToEdit.name || "",
+        description: itemToEdit.description || "",
         price: itemToEdit.price || 0,
+        category: itemToEdit.category || "",
         isAvailable: itemToEdit.isAvailable ?? true,
-        isVeg: itemToEdit.isVeg ?? true,
+        isVeg: itemToEdit.isVeg ?? false,
       });
     } else {
       form.reset({
@@ -66,7 +68,7 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
         price: 0,
         category: "",
         isAvailable: true,
-        isVeg: true,
+        isVeg: false,
       });
     }
   }, [itemToEdit, form]);
