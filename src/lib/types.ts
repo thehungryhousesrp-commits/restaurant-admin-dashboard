@@ -1,5 +1,4 @@
 
-
 export interface Category {
   id: string;
   name: string;
@@ -61,6 +60,7 @@ export interface AppUser {
   uid: string;
   email: string | null;
   displayName: string | null;
+  phoneNumber?: string | null;
   restaurantIds: string[]; // List of restaurant IDs the user has access to
   activeRestaurantId?: string; // The currently selected restaurant
 }

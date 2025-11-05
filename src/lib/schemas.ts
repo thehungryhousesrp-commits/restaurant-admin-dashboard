@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const menuItemSchema = z.object({
@@ -26,6 +27,7 @@ export const signupSchema = z.object({
   name: z.string().min(2, 'Name is required'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  phone: z.string().min(10, 'A valid phone number is required'),
 });
 
 export const createRestaurantSchema = z.object({

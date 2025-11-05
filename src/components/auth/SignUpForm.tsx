@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from 'react-hook-form';
@@ -16,18 +17,44 @@ import { Input } from '@/components/ui/input';
 import { signupSchema } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { Loader2, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 type SignUpFormValues = z.infer<typeof signupSchema>;
+
+// This function must be called in a useEffect to avoid creating multiple verifiers.
+const setupRecaptcha = () => {
+    if (!auth) return;
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible',
+          'callback': (response: any) => {
+              // reCAPTCHA solved, allow signInWithPhoneNumber.
+          }
+      });
+    }
+    return (window as any).recaptchaVerifier;
+}
 
 export default function SignUpForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+
+  useEffect(() => {
+    // Setup reCAPTCHA on component mount
+    setupRecaptcha();
+  }, []);
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signupSchema),
@@ -35,26 +62,66 @@ export default function SignUpForm() {
       name: '',
       email: '',
       password: '',
+      phone: '',
     },
   });
 
+  const handleSendOtp = async () => {
+    const phoneNumber = form.getValues('phone');
+    if (!/^\+?91[6-9]\d{9}$/.test(phoneNumber)) {
+        form.setError('phone', { type: 'manual', message: 'Please enter a valid Indian phone number (e.g., +919876543210).' });
+        return;
+    }
+    setSendingOtp(true);
+    try {
+        const appVerifier = (window as any).recaptchaVerifier;
+        const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+        setConfirmationResult(result);
+        setOtpSent(true);
+        toast({ title: "OTP Sent", description: "Please check your phone for the verification code." });
+    } catch (error) {
+        console.error("Error sending OTP:", error);
+        toast({ title: "Failed to Send OTP", description: "Please check the phone number and try again.", variant: "destructive" });
+    } finally {
+        setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!confirmationResult || !otp) return;
+    setVerifyingOtp(true);
+    try {
+        await confirmationResult.confirm(otp);
+        setPhoneVerified(true);
+        setOtpSent(false); // Hide OTP field
+        toast({ title: "Phone Verified!", className: "bg-green-100 border-green-300 text-green-800" });
+    } catch (error) {
+        console.error("Error verifying OTP:", error);
+        toast({ title: "Invalid OTP", description: "The code you entered is incorrect. Please try again.", variant: "destructive" });
+    } finally {
+        setVerifyingOtp(false);
+    }
+  };
+
   const onSubmit = async (data: SignUpFormValues) => {
+    if (!phoneVerified) {
+        toast({ title: "Phone Not Verified", description: "Please verify your phone number to continue.", variant: "destructive" });
+        return;
+    }
     setLoading(true);
     try {
-      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // 2. Update user's profile with their name
       await updateProfile(user, { displayName: data.name });
 
-      // 3. Create a corresponding user document in Firestore
       const userDocRef = doc(db, 'users', user.uid);
       await setDoc(userDocRef, {
         uid: user.uid,
         displayName: data.name,
         email: user.email,
-        restaurantIds: [], // Initially, the user has no restaurants
+        phoneNumber: data.phone,
+        restaurantIds: [],
         createdAt: serverTimestamp(),
       });
 
@@ -63,7 +130,6 @@ export default function SignUpForm() {
         description: "Redirecting you to set up your first restaurant.",
       });
 
-      // 4. Redirect to onboarding page
       router.push('/onboarding');
 
     } catch (error: any) {
@@ -85,6 +151,7 @@ export default function SignUpForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div id="recaptcha-container"></div>
         <FormField
           control={form.control}
           name="name"
@@ -92,7 +159,7 @@ export default function SignUpForm() {
             <FormItem>
               <FormLabel>Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="John Doe" {...field} />
+                <Input placeholder="John Doe" {...field} disabled={loading}/>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -105,7 +172,7 @@ export default function SignUpForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="you@example.com" {...field} />
+                <Input type="email" placeholder="you@example.com" {...field} disabled={loading}/>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -118,13 +185,64 @@ export default function SignUpForm() {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input type="password" placeholder="••••••••" {...field} disabled={loading}/>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={loading}>
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <div className="relative w-full">
+                    <Input 
+                      type="tel" 
+                      placeholder="+919876543210" 
+                      {...field}
+                      disabled={otpSent || phoneVerified || loading}
+                      className={cn(phoneVerified && "border-green-500 focus-visible:ring-green-500")}
+                    />
+                    {phoneVerified && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />}
+                  </div>
+                </FormControl>
+                {!phoneVerified && (
+                  <Button type="button" onClick={handleSendOtp} disabled={sendingOtp || !field.value} className="shrink-0">
+                    {sendingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {otpSent ? 'Resend' : 'Send OTP'}
+                  </Button>
+                )}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        {otpSent && !phoneVerified && (
+          <div className="space-y-2">
+              <FormLabel>Enter OTP</FormLabel>
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="text" 
+                  maxLength={6} 
+                  placeholder="123456" 
+                  value={otp} 
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="tracking-widest text-center"
+                />
+                <Button type="button" onClick={handleVerifyOtp} disabled={verifyingOtp || otp.length !== 6}>
+                  {verifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Verify
+                </Button>
+              </div>
+          </div>
+        )}
+
+        <Button type="submit" className="w-full" disabled={loading || !phoneVerified}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create Account
         </Button>
