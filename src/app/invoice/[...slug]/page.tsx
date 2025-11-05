@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useContext } from 'react';
@@ -173,66 +174,73 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   
   const [user, authLoading] = useAuthState(auth);
-  const { activeRestaurant } = useContext(AppContext);
+  const { appUser, appUserLoading } = useContext(AppContext);
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect if user is not logged in or if the URL restaurant doesn't match their active one.
-    if (!authLoading && (!user || activeRestaurant?.id !== restaurantId)) {
-        router.push('/login');
+    if (!authLoading && !appUserLoading && !user) {
+        // If we are done loading and there's no user, redirect to login.
+        router.replace('/login');
         return;
     }
-    
+
     if (!orderId || !restaurantId) {
       setError(ERROR_MESSAGES.NO_ORDER_ID);
       setLoading(false);
       return;
     }
-
-    const fetchOrder = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch order from the TENANT-SCOPED collection.
-        const orderRef = doc(db, `restaurants/${restaurantId}/orders`, orderId);
-        const orderSnap = await getDoc(orderRef);
-        
-        if (!orderSnap.exists()) {
-            console.warn('[Invoice] Order not found:', {restaurantId, orderId});
-            setError(ERROR_MESSAGES.ORDER_NOT_FOUND);
+    
+    if (user && appUser) {
+        // Verify that the user has access to this restaurant.
+        if (!appUser.restaurantIds.includes(restaurantId)) {
+            setError(ERROR_MESSAGES.PERMISSION_DENIED);
             setLoading(false);
             return;
         }
 
-        const orderData = orderSnap.data();
-        const createdAt = orderData.createdAt?.toDate ? orderData.createdAt.toDate() : new Date();
+        const fetchOrder = async () => {
+          try {
+            setLoading(true);
+            setError(null);
+            
+            // Fetch order from the TENANT-SCOPED collection.
+            const orderRef = doc(db, `restaurants/${restaurantId}/orders`, orderId);
+            const orderSnap = await getDoc(orderRef);
+            
+            if (!orderSnap.exists()) {
+                console.warn('[Invoice] Order not found:', {restaurantId, orderId});
+                setError(ERROR_MESSAGES.ORDER_NOT_FOUND);
+                setLoading(false);
+                return;
+            }
 
-        const fetchedOrder: Order = { 
-            id: orderSnap.id, 
-            ...orderData,
-            createdAt,
-        } as Order;
+            const orderData = orderSnap.data();
+            const createdAt = orderData.createdAt?.toDate ? orderData.createdAt.toDate() : new Date();
 
-        setOrder(fetchedOrder);
+            const fetchedOrder: Order = { 
+                id: orderSnap.id, 
+                ...orderData,
+                createdAt,
+            } as Order;
 
-      } catch (err) {
-        console.error('[Invoice] Error fetching data:', {
-          restaurantId,
-          orderId,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
-        setError(ERROR_MESSAGES.FIRESTORE_ERROR);
-      } finally {
-        setLoading(false);
-      }
-    };
+            setOrder(fetchedOrder);
 
-    if (user && activeRestaurant) {
+          } catch (err) {
+            console.error('[Invoice] Error fetching data:', {
+              restaurantId,
+              orderId,
+              error: err instanceof Error ? err.message : 'Unknown error',
+            });
+            setError(ERROR_MESSAGES.FIRESTORE_ERROR);
+          } finally {
+            setLoading(false);
+          }
+        };
+
         fetchOrder();
     }
     
-  }, [orderId, restaurantId, user, authLoading, activeRestaurant, router]);
+  }, [orderId, restaurantId, user, authLoading, appUser, appUserLoading, router]);
 
 
   // PDF Download Handler
@@ -285,12 +293,16 @@ export default function InvoicePage({ params }: InvoicePageProps) {
     }
   }, [order?.id]);
 
-  if (loading || authLoading) {
+  if (loading || authLoading || appUserLoading) {
     return <InvoiceLoadingSkeleton />;
   }
 
   if (error === ERROR_MESSAGES.ORDER_NOT_FOUND) {
     return <><DashboardHeader /><ErrorDisplay title="Order Not Found" message={error} showDetails /></>;
+  }
+  
+  if (error === ERROR_MESSAGES.PERMISSION_DENIED) {
+    return <><DashboardHeader /><ErrorDisplay title="Access Denied" message={error} showDetails /></>;
   }
 
   if (error) {
@@ -298,7 +310,9 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   }
 
   if (!order) {
-    notFound();
+    // This case will be hit if the user is not logged in and gets redirected, or if an error occurs.
+    // We show a loading skeleton until redirection completes.
+    return <InvoiceLoadingSkeleton />;
   }
 
   return (
