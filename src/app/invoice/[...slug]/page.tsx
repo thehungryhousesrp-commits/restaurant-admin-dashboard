@@ -21,8 +21,8 @@ import DashboardHeader from '@/components/layout/DashboardHeader';
 
 interface InvoicePageProps {
   params: {
-    restaurantId: string;
-    orderId: string;
+    // The slug will be an array like: [restaurantId, orderId]
+    slug: string[];
   };
 }
 
@@ -49,8 +49,6 @@ const ERROR_MESSAGES = {
   FIRESTORE_TIMEOUT: 'Request timed out. Please check your internet connection and try again.',
   PDF_DOWNLOAD: 'Failed to download PDF. Please try again.',
 } as const;
-
-const FIRESTORE_TIMEOUT_MS = 10000;
 
 // Utility Functions
 const generatePdfFilename = (orderId: string): string => {
@@ -166,7 +164,7 @@ const ErrorDisplay = ({ title, message, showDetails = false }: ErrorDisplayProps
 
 // Main Component
 export default function InvoicePage({ params }: InvoicePageProps) {
-  const { restaurantId, orderId } = params;
+  const [restaurantId, orderId] = params.slug || [];
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +205,15 @@ export default function InvoicePage({ params }: InvoicePageProps) {
             return;
         }
 
-        const fetchedOrder = { id: orderSnap.id, ...orderSnap.data() } as Order;
+        const orderData = orderSnap.data();
+        const createdAt = orderData.createdAt?.toDate ? orderData.createdAt.toDate() : new Date();
+
+        const fetchedOrder: Order = { 
+            id: orderSnap.id, 
+            ...orderData,
+            createdAt,
+        } as Order;
+
         setOrder(fetchedOrder);
 
       } catch (err) {

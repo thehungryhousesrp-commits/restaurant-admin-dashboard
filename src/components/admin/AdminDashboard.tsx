@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useCallback, useContext, useEffect } from 'react';
@@ -19,7 +20,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -58,6 +58,7 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 
 // ============================================================================
@@ -243,8 +244,9 @@ const MenuItemsView = () => {
   // Toggle item availability
   const handleToggleAvailability = useCallback(
     async (item: MenuItem, isAvailable: boolean) => {
+      if (!restaurantId) return;
       try {
-        await updateMenuItem(restaurantId!, item.id, { isAvailable });
+        await updateMenuItem(restaurantId, item.id, { isAvailable });
         toast({ title: `${item.name} is now ${isAvailable ? 'available' : 'unavailable'}` });
       } catch (error) {
         console.error('Error updating availability:', error);
@@ -275,10 +277,10 @@ const MenuItemsView = () => {
 
   // Delete selected items
   const handleDeleteSelected = useCallback(async () => {
-    if (deleteConfirmation !== 'DELETE') return;
+    if (deleteConfirmation !== 'DELETE' || !restaurantId) return;
 
     try {
-      await deleteMenuItems(restaurantId!, selectedItems);
+      await deleteMenuItems(restaurantId, selectedItems);
       toast({
         title: 'Success',
         description: `${selectedItems.length} item(s) deleted permanently`,
@@ -688,13 +690,13 @@ const OrdersView = () => {
                   </TableCell>
                   <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
                   <TableCell>{order.tableName}</TableCell>
-                  <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>{order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
                   <TableCell className="text-right">₹{order.total.toFixed(2)}</TableCell>
                   <TableCell className="text-center">
                     <Button variant="outline" size="sm" asChild>
-                      <a href={`/invoice/${order.id}`} target="_blank" rel="noopener noreferrer">
+                      <Link href={`/invoice/${restaurantId}/${order.id}`} target="_blank" rel="noopener noreferrer">
                         <Eye className="h-4 w-4" />
-                      </a>
+                      </Link>
                     </Button>
                   </TableCell>
                 </TableRow>

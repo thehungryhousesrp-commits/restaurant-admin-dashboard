@@ -3,13 +3,45 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper Functions
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isRestaurantOwner(restaurantId) {
+      return get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+    }
+
+    function isRestaurantMember(restaurantId) {
+      // This is a placeholder. In a real app, you'd check a 'members' subcollection or roles.
+      // For now, we'll allow the owner.
+      return isRestaurantOwner(restaurantId);
+    }
     
-    // WARNING: These rules are for development purposes only and are NOT secure
-    // for a production environment. They allow any signed-in user to read and write
-    // to the entire database.
+    // Authenticated users can read their own user document.
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+    }
     
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Only the owner of a restaurant can read/write its top-level document.
+    match /restaurants/{restaurantId} {
+      allow read, update: if isRestaurantOwner(restaurantId);
+      // Users cannot create or delete restaurants directly; this must be done via a Cloud Function.
+      allow create, delete: if false;
+
+      // Rules for all subcollections within a restaurant document.
+      // These rules ensure that any access to a subcollection document
+      // requires that the user is a member of that restaurant.
+      match /{collection}/{docId} {
+        allow read, write: if isRestaurantMember(restaurantId);
+      }
+    }
+    
+    // Completely disable direct client access to the global `orders` collection.
+    // It should have been removed, but this rule provides an extra layer of security.
+    match /orders/{orderId} {
+        allow read, write: if false;
     }
   }
 }

@@ -11,13 +11,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Order, type Restaurant } from "@/lib/types";
 import { Share2, Copy, MessageCircle, Printer } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import InvoiceDisplay from "./InvoiceDisplay";
 
 interface InvoicePreviewProps {
@@ -35,10 +33,10 @@ export function InvoicePreview({ order, restaurant }: InvoicePreviewProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-        setShareableLink(`${window.location.origin}/invoice/${order.id}`);
+    if (typeof window !== 'undefined' && order.restaurantId) {
+        setShareableLink(`${window.location.origin}/invoice/${order.restaurantId}/${order.id}`);
     }
-  }, [order.id]);
+  }, [order.id, order.restaurantId]);
 
   const copyLink = () => {
     navigator.clipboard.writeText(shareableLink);

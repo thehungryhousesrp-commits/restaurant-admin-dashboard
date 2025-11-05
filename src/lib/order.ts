@@ -1,8 +1,7 @@
 
 
-
 import { type Order, type OrderItem, type CustomerInfo, type Table, type Restaurant } from "./types";
-import { serverTimestamp, writeBatch, doc, collection, getDoc } from "firebase/firestore";
+import { serverTimestamp, writeBatch, doc, collection, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 export const placeOrder = async (
@@ -42,28 +41,14 @@ export const placeOrder = async (
         restaurantLogoUrl: restaurantData?.logoUrl || '',
         userId: 'staff-member-1', // This should be dynamic in a real app from auth context
     };
-    
-    // Also create a copy for the top-level collection for easy lookup
-    const topLevelOrderData = {
-        ...newOrderData,
-        // We don't store serverTimestamps in the top-level copy, we use a fixed date.
-        createdAt: new Date(), 
-        updatedAt: new Date(),
-    };
-
 
     const batch = writeBatch(db);
 
-    // 1. Reference to the order in the restaurant-specific subcollection
+    // 1. Reference to the order in the restaurant-specific subcollection ONLY.
     const restaurantOrderRef = doc(collection(db, `restaurants/${restaurantId}/orders`));
     batch.set(restaurantOrderRef, newOrderData);
 
-    // 2. Reference to the same order in the top-level collection for easy invoice lookup
-    const topLevelOrderRef = doc(db, 'orders', restaurantOrderRef.id);
-    batch.set(topLevelOrderRef, topLevelOrderData);
-
-
-    // 3. If it's a dine-in order, update the table status
+    // 2. If it's a dine-in order, update the table status
     if (selectedTable) {
         const tableRef = doc(db, `restaurants/${restaurantId}/tables`, selectedTable.id);
         batch.update(tableRef, { status: 'occupied' });
@@ -83,11 +68,9 @@ export const deleteOrders = async (restaurantId: string, orderIds: string[]) => 
     if (orderIds.length === 0) return;
     const batch = writeBatch(db);
     orderIds.forEach(id => {
-        // Delete from both collections
+        // Delete only from the tenant-scoped collection
         const restaurantOrderRef = doc(db, `restaurants/${restaurantId}/orders`, id);
-        const topLevelOrderRef = doc(db, 'orders', id);
         batch.delete(restaurantOrderRef);
-        batch.delete(topLevelOrderRef);
     });
     await batch.commit();
 };
