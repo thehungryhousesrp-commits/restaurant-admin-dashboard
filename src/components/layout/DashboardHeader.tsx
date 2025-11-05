@@ -40,7 +40,7 @@ export default function DashboardHeader() {
              <div className="relative h-16 w-40">
                 <Image
                     src="/Picsart_25-07-02_21-51-50-642 (1).png"
-                    alt="The Hungry House Hub Logo"
+                    alt="Reskot Logo"
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     style={{ objectFit: 'contain' }}

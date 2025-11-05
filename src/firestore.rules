@@ -9,27 +9,31 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Rules for the top-level `users` collection (if you have one for profiles)
+    // Rules for the `users` collection
     match /users/{userId} {
-      // Only the user themselves can read or write to their own profile document.
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      // A user can read their own document.
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      // A user can update their own document (e.g., to change activeRestaurantId).
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      // Users can only be created as part of the signup flow.
+      allow create: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Rules for the multi-tenant `restaurants` collection
-    // This is the core of the multi-tenant security model.
+    // Rules for the `restaurants` collection
+    match /restaurants/{restaurantId} {
+      // A restaurant document can only be created by a signed-in user who will be the owner.
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      // Only the owner of a restaurant can read or modify its main document.
+      allow get, update: if isSignedIn() && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+    }
+    
+    // Rules for all sub-collections within a restaurant (e.g., menu-items, orders)
     match /restaurants/{restaurantId}/{document=**} {
-      // In a real app, you would check a custom claim on the user's auth token
-      // that lists which restaurants they have access to.
-      // e.g., `allow read, write: if isSignedIn() && restaurantId in request.auth.token.restaurants;`
-      // For now, since we don't have full auth logic, we will allow any signed-in user
-      // to access data within any restaurant. THIS IS FOR DEVELOPMENT ONLY.
-      allow read, write: if isSignedIn();
+      // To access any data within a restaurant, the user must be authenticated
+      // and their UID must be present in a user document that contains the restaurantId
+      // in its 'restaurantIds' array.
+      allow read, write: if isSignedIn() 
+        && restaurantId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantIds;
     }
-
-    // ======================================================================
-    // The rules below are now obsolete because access is controlled by the
-    // /restaurants/{restaurantId} rule above. They are removed to prevent
-    // any potential conflicts or security holes. All data must be nested.
-    // ======================================================================
   }
 }

@@ -1,11 +1,17 @@
+import PublicHeader from "@/components/layout/PublicHeader";
 
 // This is a special layout for public-facing pages like the invoice.
-// It deliberately does NOT include the main <Header> component
-// to prevent customers from navigating to other parts of the app.
+// It deliberately does NOT include the main <AppProvider> or internal components
+// to ensure it's lightweight and separate from the main app.
 export default function PublicLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <main>{children}</main>;
+  return (
+    <>
+      <PublicHeader />
+      <main>{children}</main>
+    </>
+  );
 }

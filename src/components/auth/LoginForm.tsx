@@ -42,9 +42,11 @@ export default function LoginForm() {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: "Login Successful",
-        description: "Redirecting to dashboard...",
+        description: "Redirecting...",
       });
-      router.push('/admin/menu');
+      // The redirection logic is now handled in the main page.tsx
+      // based on whether the user has a restaurant or not.
+      router.push('/');
     } catch (error) {
       toast({
         title: "Login Failed",

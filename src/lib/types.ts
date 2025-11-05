@@ -1,4 +1,5 @@
 
+
 export interface Category {
   id: string;
   name: string;
@@ -52,4 +53,22 @@ export interface Order {
   updatedAt: any;
   restaurantId: string;
   userId: string;
+}
+
+
+// New types for multi-tenancy
+export interface AppUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  restaurantIds: string[]; // List of restaurant IDs the user has access to
+  activeRestaurantId?: string; // The currently selected restaurant
+}
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  ownerId: string;
+  // Add other restaurant details here as needed (address, GST, etc.)
+  createdAt: any;
 }

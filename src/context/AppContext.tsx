@@ -2,94 +2,117 @@
 'use client';
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { collection, onSnapshot, DocumentData } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { type MenuItem, type Category, type Table } from '@/lib/types';
+import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { db, auth } from '@/lib/firebase';
+import { type MenuItem, type Category, type Table, type AppUser } from '@/lib/types';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 interface AppContextType {
+  user: FirebaseUser | null | undefined;
+  appUser: AppUser | null;
+  authLoading: boolean;
+  appUserLoading: boolean;
+  restaurantId: string | null;
   menuItems: MenuItem[];
   categories: Category[];
   tables: Table[];
   menuLoading: boolean;
   categoriesLoading: boolean;
   tablesLoading: boolean;
-  restaurantId: string;
 }
 
-// ============================================================================
-// !!! IMPORTANT DEVELOPMENT NOTE !!!
-// This is a temporary, hardcoded restaurant ID for development purposes.
-// In a real multi-tenant application, this ID would be dynamically determined
-// from the authenticated user's session (e.g., from their JWT claims).
-// This allows us to build and test the multi-tenant data structure before
-// the full authentication flow is implemented.
-const TEMP_DEV_RESTAURANT_ID = "main-restaurant";
-// ============================================================================
-
-
 export const AppContext = createContext<AppContextType>({
+  user: undefined,
+  appUser: null,
+  authLoading: true,
+  appUserLoading: true,
+  restaurantId: null,
   menuItems: [],
   categories: [],
   tables: [],
   menuLoading: true,
   categoriesLoading: true,
   tablesLoading: true,
-  restaurantId: TEMP_DEV_RESTAURANT_ID,
 });
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [user, authLoading] = useAuthState(auth);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [appUserLoading, setAppUserLoading] = useState(true);
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [tablesLoading, setTablesLoading] = useState(true);
-  const restaurantId = TEMP_DEV_RESTAURANT_ID;
 
+  const restaurantId = appUser?.activeRestaurantId || (appUser?.restaurantIds && appUser.restaurantIds[0]) || null;
+  
+  // Effect to fetch the custom user document from Firestore
   useEffect(() => {
-    if (!restaurantId) return;
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setAppUser({ uid: docSnap.id, ...docSnap.data() } as AppUser);
+        } else {
+          // This case might happen if user record in auth exists but not in firestore.
+          // Should be handled by your sign-up logic.
+          setAppUser(null);
+        }
+        setAppUserLoading(false);
+      }, (error) => {
+        console.error("Error fetching app user:", error);
+        setAppUser(null);
+        setAppUserLoading(false);
+      });
+      return () => unsubscribe();
+    } else if (!authLoading) {
+      // User is not logged in
+      setAppUser(null);
+      setAppUserLoading(false);
+    }
+  }, [user, authLoading]);
 
-    // Path to collections within the specific restaurant document
+
+  // Effect to fetch restaurant-specific data
+  useEffect(() => {
+    if (!restaurantId) {
+      // If there's no restaurant ID, reset data and stop loading states
+      setMenuItems([]);
+      setCategories([]);
+      setTables([]);
+      setMenuLoading(false);
+      setCategoriesLoading(false);
+      setTablesLoading(false);
+      return;
+    };
+
+    setMenuLoading(true);
+    setCategoriesLoading(true);
+    setTablesLoading(true);
+
     const menuItemsPath = `restaurants/${restaurantId}/menu-items`;
     const categoriesPath = `restaurants/${restaurantId}/categories`;
     const tablesPath = `restaurants/${restaurantId}/tables`;
 
     const unsubscribeMenuItems = onSnapshot(collection(db, menuItemsPath), (snapshot) => {
-      const items = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name || 'Unnamed Item',
-          description: data.description || '',
-          price: data.price || 0,
-          category: data.category || 'uncategorized',
-          isAvailable: data.isAvailable,
-          isVeg: data.isVeg,
-          restaurantId: restaurantId,
-        } as MenuItem;
-      });
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
       setMenuItems(items);
-      setMenuLoading(false);
-    }, (error) => {
-      console.error(`Error fetching menu items for restaurant ${restaurantId}: `, error);
       setMenuLoading(false);
     });
 
     const unsubscribeCategories = onSnapshot(collection(db, categoriesPath), (snapshot) => {
-      const cats = snapshot.docs.map(doc => ({ id: doc.id, restaurantId, ...doc.data() } as Category));
+      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
       setCategories(cats);
-      setCategoriesLoading(false);
-    }, (error) => {
-      console.error(`Error fetching categories for restaurant ${restaurantId}: `, error);
       setCategoriesLoading(false);
     });
 
     const unsubscribeTables = onSnapshot(collection(db, tablesPath), (snapshot) => {
-      const tbls = snapshot.docs.map(doc => ({ id: doc.id, restaurantId, ...doc.data() } as Table));
+      const tbls = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
       setTables(tbls);
-      setTablesLoading(false);
-    }, (error) => {
-      console.error(`Error fetching tables for restaurant ${restaurantId}: `, error);
       setTablesLoading(false);
     });
 
@@ -101,13 +124,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [restaurantId]);
 
   const value = {
+    user,
+    appUser,
+    authLoading,
+    appUserLoading,
+    restaurantId,
     menuItems,
     categories,
     tables,
     menuLoading,
     categoriesLoading,
     tablesLoading,
-    restaurantId,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -17,7 +17,7 @@ export default function PublicHeader() {
              <div className="relative h-16 w-40">
                 <Image
                     src="/Picsart_25-07-02_21-51-50-642 (1).png"
-                    alt="The Hungry House Hub Logo"
+                    alt="Reskot Logo"
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     style={{ objectFit: 'contain' }}
@@ -28,9 +28,14 @@ export default function PublicHeader() {
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-2">
-             {pathname !== '/login' && (
+             {pathname !== '/login' && pathname !== '/signup' && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/login">Login</Link>
+                </Button>
+             )}
+             {pathname !== '/signup' && (
                 <Button asChild variant="default" size="sm">
-                  <Link href="/login">Login / Sign Up</Link>
+                  <Link href="/signup">Sign Up</Link>
                 </Button>
              )}
           </nav>
