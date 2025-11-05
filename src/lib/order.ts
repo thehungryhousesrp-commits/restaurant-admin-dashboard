@@ -21,7 +21,7 @@ export const placeOrder = async (
     const restaurantData = restaurantSnap.data() as Restaurant;
 
     // Create the order data that will be stored in the subcollection
-    const newOrderData = {
+    const newOrderData: Omit<Order, 'id'> = {
         items: currentOrder.map(item => ({
             ...item,
             total: item.price * item.quantity,
@@ -40,6 +40,7 @@ export const placeOrder = async (
         restaurantName: restaurantData?.name || 'Unnamed Restaurant',
         restaurantLogoUrl: restaurantData?.logoUrl || '',
         userId: 'staff-member-1', // This should be dynamic in a real app from auth context
+        preparedItems: [], // Initialize as empty array
     };
 
     const batch = writeBatch(db);

@@ -1,7 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { AppContext } from '@/context/AppContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Check, CheckCircle2, Clock, Flame, Utensils, BarChart2, Server, AlertTriangle } from 'lucide-react';
@@ -9,53 +13,21 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { type Order, type OrderItem } from '@/lib/types';
+import { Skeleton } from '../ui/skeleton';
 
-// ============================================================================
-// DEMO DATA (This would come from your real-time database)
-// ============================================================================
-const initialDemoOrders = [
-  {
-    id: 'KOT-001',
-    tableName: 'Table 5',
-    createdAt: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-    items: [
-      { id: 'item-1', name: 'Margherita Pizza', quantity: 1, prepared: false, station: 'Pizza' },
-      { id: 'item-2', name: 'Pasta Carbonara', quantity: 2, prepared: true, station: 'Pasta' },
-      { id: 'item-3', name: 'Classic Burger', quantity: 1, prepared: false, station: 'Grill' },
-    ],
-  },
-  {
-    id: 'KOT-002',
-    tableName: 'Takeaway',
-    createdAt: new Date(Date.now() - 7 * 60 * 1000), // 7 minutes ago
-    items: [
-        { id: 'item-2a', name: 'Pasta Carbonara', quantity: 1, prepared: false, station: 'Pasta' },
-        { id: 'item-4', name: 'BBQ Chicken Wings', quantity: 1, prepared: false, station: 'Fryer' },
-    ],
-  },
-  {
-    id: 'KOT-003',
-    tableName: 'Table 2',
-    createdAt: new Date(Date.now() - 12 * 60 * 1000), // 12 minutes ago
-    items: [
-        { id: 'item-5', name: 'Spicy Arrabbiata', quantity: 1, prepared: true, station: 'Pasta' },
-    ],
-  },
-];
-
-type DemoOrder = typeof initialDemoOrders[0];
-type DemoItem = DemoOrder['items'][0];
 
 // ============================================================================
 // KITCHEN ORDER CARD COMPONENT
 // ============================================================================
-const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: DemoOrder; onToggleItem: (orderId: string, itemId: string) => void; onBumpOrder: (orderId: string) => void; }) => {
+const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: Order; onToggleItem: (orderId: string, itemId: string) => void; onBumpOrder: (orderId: string) => void; }) => {
     const [timeAgo, setTimeAgo] = useState('');
     const [totalSeconds, setTotalSeconds] = useState(0);
 
     useEffect(() => {
+        const orderTimestamp = order.createdAt?.toDate ? order.createdAt.toDate() : new Date();
         const updateTimer = () => {
-            const seconds = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000);
+            const seconds = Math.floor((Date.now() - orderTimestamp.getTime()) / 1000);
             setTotalSeconds(seconds);
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = seconds % 60;
@@ -71,7 +43,9 @@ const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: DemoOrd
         totalSeconds > 300 ? 'bg-yellow-400 text-black' : // Over 5 mins
         'bg-green-500 text-white';
 
-    const allItemsPrepared = order.items.every(item => item.prepared);
+    // An item is considered "prepared" if its ID is in the preparedItems array.
+    const isItemPrepared = (item: OrderItem) => order.preparedItems?.includes(item.itemId);
+    const allItemsPrepared = order.items.every(isItemPrepared);
 
     return (
         <Card className="flex flex-col border-2 border-gray-200/80 shadow-lg bg-card rounded-xl overflow-hidden h-[450px]">
@@ -86,23 +60,23 @@ const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: DemoOrd
                 <ul className="divide-y">
                     {order.items.map((item) => (
                         <li 
-                            key={item.id}
-                            onClick={() => onToggleItem(order.id, item.id)}
+                            key={item.itemId}
+                            onClick={() => onToggleItem(order.id, item.itemId)}
                             className={cn(
                                 "p-3 cursor-pointer transition-colors",
-                                item.prepared ? 'bg-green-100/50 text-muted-foreground line-through' : 'hover:bg-blue-50/50'
+                                isItemPrepared(item) ? 'bg-green-100/50 text-muted-foreground line-through' : 'hover:bg-blue-50/50'
                             )}
                         >
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
-                                    <span className={cn("font-bold text-lg", item.prepared ? "text-green-600" : "text-primary")}>{item.quantity}x</span>
+                                    <span className={cn("font-bold text-lg", isItemPrepared(item) ? "text-green-600" : "text-primary")}>{item.quantity}x</span>
                                     <span className="font-semibold text-base">{item.name}</span>
                                 </div>
-                                {item.prepared && <CheckCircle2 className="h-6 w-6 text-green-500" />}
+                                {isItemPrepared(item) && <CheckCircle2 className="h-6 w-6 text-green-500" />}
                             </div>
-                            {item.station && (
-                                <Badge variant="secondary" className="mt-2 text-xs">
-                                  <Server className="h-3 w-3 mr-1.5"/> Station: {item.station}
+                            {item.specialInstructions && (
+                                <Badge variant="outline" className="mt-2 text-xs">
+                                  Note: {item.specialInstructions}
                                 </Badge>
                             )}
                         </li>
@@ -118,7 +92,7 @@ const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: DemoOrd
                     size="lg"
                 >
                     <Check className="mr-2 h-5 w-5"/>
-                    Bump to Expo
+                    Mark as Completed
                 </Button>
             </div>
         </Card>
@@ -128,8 +102,8 @@ const KitchenOrderCard = ({ order, onToggleItem, onBumpOrder }: { order: DemoOrd
 // ============================================================================
 // SUMMARY VIEW COMPONENT
 // ============================================================================
-const SummaryView = ({ orders }: { orders: DemoOrder[] }) => {
-    const itemSummary = orders.flatMap(o => o.items.filter(i => !i.prepared))
+const SummaryView = ({ orders }: { orders: Order[] }) => {
+    const itemSummary = orders.flatMap(o => o.items.filter(i => !o.preparedItems?.includes(i.itemId)))
         .reduce((acc, item) => {
             if (!acc[item.name]) {
                 acc[item.name] = 0;
@@ -155,12 +129,12 @@ const SummaryView = ({ orders }: { orders: DemoOrder[] }) => {
             <CardHeader>
                 <CardTitle className="text-2xl font-headline flex items-center gap-3">
                     <Flame className="text-primary"/>
-                    <span>Kitchen Summary</span>
+                    <span>Live Kitchen Summary</span>
                 </CardTitle>
             </CardHeader>
             <CardContent>
                 <p className="text-muted-foreground mb-4">
-                    This view consolidates all items from active orders, helping chefs prioritize preparation by item type across all tickets.
+                    This is a consolidated list of all unprepared items from active orders.
                 </p>
                 <ul className="space-y-3">
                     {sortedItems.map(([name, quantity]) => (
@@ -179,58 +153,80 @@ const SummaryView = ({ orders }: { orders: DemoOrder[] }) => {
 // MAIN KITCHEN DISPLAY COMPONENT
 // ============================================================================
 export default function KitchenDisplay() {
-    const [orders, setOrders] = useState<DemoOrder[]>(initialDemoOrders);
+    const { restaurantId } = useContext(AppContext);
+    
+    // Query for orders that are in 'Preparing' status
+    const [ordersSnapshot, loading, error] = useCollection(
+        restaurantId ? query(collection(db, `restaurants/${restaurantId}/orders`), where('status', '==', 'Preparing')) : null
+    );
 
-    const handleToggleItem = (orderId: string, itemId: string) => {
-        setOrders(prevOrders => prevOrders.map(order => 
-            order.id === orderId 
-                ? { ...order, items: order.items.map(item => 
-                    item.id === itemId ? { ...item, prepared: !item.prepared } : item
-                )}
-                : order
-        ));
+    const orders = ordersSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)) || [];
+
+    const handleToggleItem = async (orderId: string, itemId: string) => {
+        if (!restaurantId) return;
+        const orderRef = doc(db, `restaurants/${restaurantId}/orders`, orderId);
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        const isPrepared = order.preparedItems?.includes(itemId);
+        
+        await updateDoc(orderRef, {
+            preparedItems: isPrepared ? arrayRemove(itemId) : arrayUnion(itemId)
+        });
     };
     
-    const handleBumpOrder = (orderId: string) => {
-         setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+    const handleBumpOrder = async (orderId: string) => {
+        if (!restaurantId) return;
+        const orderRef = doc(db, `restaurants/${restaurantId}/orders`, orderId);
+        await updateDoc(orderRef, {
+            status: 'Completed',
+            updatedAt: new Date(),
+        });
     };
 
-    const DemoBanner = () => (
-        <div className="relative flex overflow-x-hidden bg-yellow-400 text-yellow-900 font-semibold shadow-md">
-            <div className="animate-marquee whitespace-nowrap py-2 flex items-center">
-                <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
-                <span className="text-sm">
-                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
-                </span>
-                <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
-                <span className="text-sm">
-                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
-                </span>
+    if (!restaurantId) {
+         return (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-muted-foreground p-8 text-center">
+                <AlertTriangle className="h-24 w-24 mb-4 text-yellow-500" />
+                <h2 className="text-2xl font-bold">No Active Restaurant</h2>
+                <p>Please select an active restaurant from the header to see the kitchen display.</p>
             </div>
-            <div className="absolute top-0 animate-marquee2 whitespace-nowrap py-2 flex items-center">
-                 <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
-                <span className="text-sm">
-                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
-                </span>
-                <AlertTriangle className="h-5 w-5 mx-4 shrink-0" />
-                <span className="text-sm">
-                    This is a demo screen created for demonstration purposes only. This system is not live yet. Refer to the 'About Developer' page for more info.
-                </span>
+        )
+    }
+    
+    if (loading) {
+        return (
+             <div className="p-4 sm:p-6 lg:p-8">
+                <h1 className="text-4xl font-bold font-headline tracking-tight mb-6 text-center">Live Kitchen Order Display</h1>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => (
+                        <Card key={i} className="h-[450px]"><CardHeader><Skeleton className="h-8 w-3/4"/></CardHeader><CardContent className="space-y-2"><Skeleton className="h-6 w-full"/><Skeleton className="h-6 w-5/6"/><Skeleton className="h-6 w-full"/></CardContent></Card>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        )
+    }
+    
+    if (error) {
+        return (
+             <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-destructive-foreground bg-destructive p-8 text-center">
+                <AlertTriangle className="h-24 w-24 mb-4" />
+                <h2 className="text-2xl font-bold">Error Loading Orders</h2>
+                <p>{error.message}</p>
+            </div>
+        )
+    }
 
     if (orders.length === 0) {
         return (
             <div className="bg-gray-50 min-h-[calc(100vh-5rem)]">
-                <DemoBanner />
                 <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-muted-foreground p-8 text-center">
                     <CheckCircle2 className="h-28 w-28 mb-6 text-green-500" />
                     <h2 className="text-3xl font-bold font-headline">All Orders Fulfilled!</h2>
-                    <p className="max-w-xl mt-2">This is a live demonstration of a modern Kitchen Display System (KDS). New orders would appear here in real-time. Below are the elite features this demo showcases.</p>
+                    <p className="max-w-xl mt-2">The kitchen is clear. New orders will appear here in real-time as they are placed.</p>
                     <Separator className="my-8 w-1/2" />
                     
-                    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                     <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
                         <div className="space-y-4">
                             <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><BarChart2 className="text-primary"/><span>Real-Time Analytics & Reporting</span></h3>
                             <p className="text-gray-600">A live KDS connects to a reporting dashboard, giving managers instant insights into kitchen performance. This is crucial for optimizing operations and reducing wait times.</p>
@@ -245,9 +241,9 @@ export default function KitchenDisplay() {
                         <div className="space-y-4">
                             <h3 className="text-xl font-semibold mb-3 flex items-center gap-3"><Server className="text-primary"/><span>Advanced KDS Features</span></h3>
                             <ul className="text-gray-600 space-y-3">
-                            <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Station Routing:</span> Items are automatically routed to the correct kitchen station (Grill, Fryer, Pizza), improving workflow.</div></li>
+                            <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Station Routing:</span> Items can be automatically routed to the correct kitchen station (Grill, Fryer, Pizza), improving workflow.</div></li>
                             <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Order Pacing:</span> To prevent overload, the system can intelligently pace orders sent to the kitchen during peak hours.</div></li>
-                            <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Expo Screen Integration:</span> 'Bumping' an order sends it to an Expo screen for final quality check and coordination before it's delivered to the customer.</div></li>
+                            <li className="flex items-start gap-3"><Check className="h-5 w-5 text-green-500 mt-1 shrink-0"/><div><span className="font-semibold">Expo Screen Integration:</span> 'Bumping' an order can send it to an Expo screen for final quality check and coordination.</div></li>
                             </ul>
                         </div>
                     </div>
@@ -257,14 +253,13 @@ export default function KitchenDisplay() {
     }
 
     return (
-        <div className="bg-gray-100 min-h-[calc(100vh-5rem)]">
-            <DemoBanner />
+        <div className="bg-gray-100 dark:bg-black min-h-[calc(100vh-5rem)]">
             <div className="p-4 sm:p-6 lg:p-8">
                 <h1 className="text-4xl font-bold font-headline tracking-tight mb-6 text-center">Live Kitchen Order Display</h1>
                 
                 <Tabs defaultValue="tickets" className="w-full">
                     <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-6">
-                        <TabsTrigger value="tickets">Tickets View</TabsTrigger>
+                        <TabsTrigger value="tickets">Tickets View ({orders.length})</TabsTrigger>
                         <TabsTrigger value="summary">Summary View</TabsTrigger>
                     </TabsList>
 
@@ -284,7 +279,3 @@ export default function KitchenDisplay() {
         </div>
     );
 }
-
-    
-
-    

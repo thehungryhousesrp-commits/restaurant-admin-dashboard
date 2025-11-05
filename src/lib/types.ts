@@ -55,6 +55,7 @@ export interface Order {
   restaurantName: string;
   restaurantLogoUrl?: string; // Add logo URL to the order
   userId: string;
+  preparedItems?: string[]; // Array of itemIds that are marked as prepared
 }
 
 
