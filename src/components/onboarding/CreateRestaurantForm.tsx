@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { createRestaurantSchema } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { doc, collection, writeBatch, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, collection, writeBatch, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -61,11 +61,11 @@ export default function CreateRestaurantForm({ user, onFormSubmit }: CreateResta
                 description: `"${data.restaurantName}" is ready.`,
             });
             
-            // 4. If there's a callback, call it. Otherwise, redirect.
+            // 4. If there's a callback, call it. Otherwise, redirect to the main dashboard.
             if (onFormSubmit) {
                 onFormSubmit();
             } else {
-                router.push('/#features');
+                router.push('/order-entry');
             }
 
         } catch (error) {
