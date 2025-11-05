@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import LandingPage from '@/components/pages/LandingPage';
 import { AppContext } from '@/context/AppContext';
+import PublicHeader from '@/components/layout/PublicHeader';
 
 export default function Home() {
   const { authLoading, user, appUser, appUserLoading } = useContext(AppContext);
@@ -42,9 +43,10 @@ export default function Home() {
     );
   }
   
-  // If no user is logged in, show the public landing page.
+  // If no user is logged in, show the public landing page with a header.
   return (
     <div className="relative flex min-h-screen flex-col">
+      <PublicHeader />
       <main className="flex-1">
         <LandingPage />
       </main>
