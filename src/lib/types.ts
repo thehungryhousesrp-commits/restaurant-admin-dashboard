@@ -18,6 +18,7 @@ export interface MenuItem {
   category: string;
   isAvailable: boolean;
   isVeg: boolean;
+  restaurantId: string; // New field for multi-tenancy
 }
 
 export interface CustomerInfo {
@@ -47,6 +48,6 @@ export interface Order {
   status: 'Preparing' | 'Completed' | 'Cancelled' | 'Billed';
   createdAt: any; 
   updatedAt: any;
-  restaurantId: string;
+  restaurantId: string; // New field for multi-tenancy
   userId: string;
 }
