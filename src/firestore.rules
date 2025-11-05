@@ -4,36 +4,93 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is authenticated
+    // =================================
+    // Helper Functions
+    // =================================
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Rules for the `users` collection
+    // Get tenantId from the user's custom claims
+    function getTenantId() {
+      return request.auth.token.tenantId;
+    }
+
+    // Check if the user is operating within their assigned tenant
+    function isSameTenant(tenantId) {
+      return isSignedIn() && getTenantId() == tenantId;
+    }
+    
+    // Check if the user has admin role (we'll expand on this later)
+    function isAdmin() {
+      // For now, we assume the owner is the admin. This will be expanded with roles.
+      return get(/databases/$(database)/documents/restaurants/$(getTenantId())).data.ownerId == request.auth.uid;
+    }
+
+
+    // =================================
+    // Collection Rules
+    // =================================
+
+    // --- Users Collection ---
     match /users/{userId} {
-      // A user can read their own document.
-      allow get: if isSignedIn() && request.auth.uid == userId;
-      // A user can update their own document (e.g., to change activeRestaurantId).
-      allow update: if isSignedIn() && request.auth.uid == userId;
-      // Users can only be created as part of the signup flow.
+      // A user can read and update their own document.
+      allow get, update: if isSignedIn() && request.auth.uid == userId;
+      // User documents are created during the signup flow.
       allow create: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Rules for the `restaurants` collection
+    // --- Restaurants Collection ---
     match /restaurants/{restaurantId} {
-      // A restaurant document can only be created by a signed-in user who will be the owner.
+      // Allow creation if the user is the owner.
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      // Only the owner of a restaurant can read or modify its main document.
-      allow get, update: if isSignedIn() && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+      // Allow owner to read the main restaurant document.
+      allow get: if isSignedIn() && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+      // Only the owner can update core restaurant details.
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
     }
     
-    // Rules for all sub-collections within a restaurant (e.g., menu-items, orders)
-    match /restaurants/{restaurantId}/{document=**} {
-      // To access any data within a restaurant, the user must be authenticated
-      // and their UID must be present in a user document that contains the restaurantId
-      // in its 'restaurantIds' array.
-      allow read, write: if isSignedIn() 
-        && restaurantId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantIds;
+    // --- Restaurant Sub-collections ---
+    // These rules apply to all collections nested under a restaurant.
+    match /restaurants/{restaurantId}/{collection} {
+      // DEFAULT DENY: No access unless specified in a more specific rule below.
+      allow read, write: if false;
+    }
+
+    // --- Menu Items ---
+    match /restaurants/{restaurantId}/menu-items/{itemId} {
+        // Anyone authenticated into the correct tenant can read the menu.
+        allow get, list: if isSameTenant(restaurantId);
+        // Only admins of the tenant can create, update, or delete menu items.
+        allow create, update, delete: if isSameTenant(restaurantId) && isAdmin();
+    }
+
+    // --- Categories ---
+    match /restaurants/{restaurantId}/categories/{categoryId} {
+        allow get, list: if isSameTenant(restaurantId);
+        allow create, update, delete: if isSameTenant(restaurantId) && isAdmin();
+    }
+
+    // --- Tables ---
+    match /restaurants/{restaurantId}/tables/{tableId} {
+        allow get, list: if isSameTenant(restaurantId);
+        // Any staff member can update a table's status (e.g., 'occupied').
+        allow update: if isSameTenant(restaurantId);
+        // Only admins can add or remove tables from the restaurant layout.
+        allow create, delete: if isSameTenant(restaurantId) && isAdmin();
+    }
+
+    // --- Orders ---
+    match /restaurants/{restaurantId}/orders/{orderId} {
+        // Any staff member can create an order.
+        allow create: if isSameTenant(restaurantId);
+        // Any staff member can view orders.
+        allow get, list: if isSameTenant(restaurantId);
+        // Admins can update orders (e.g., to cancel or modify).
+        allow update: if isSameTenant(restaurantId) && isAdmin();
+        // Disallow deleting orders to maintain a historical record.
+        allow delete: if false;
     }
   }
 }
