@@ -25,9 +25,9 @@ const TEMP_DEV_RESTAURANT_ID = "main-restaurant";
 
 
 interface InvoicePageProps {
-  params: Promise<{
+  params: {
     orderId: string;
-  }>;
+  };
 }
 
 interface PDFGenerationOptions {
@@ -196,7 +196,7 @@ const ErrorDisplay = ({ title, message, showDetails = false }: ErrorDisplayProps
 
 // Main Component
 export default function InvoicePage({ params }: InvoicePageProps) {
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const { orderId } = params;
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,27 +205,16 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    const unwrapParams = async () => {
-      try {
-        const resolvedParams = await params;
-        setOrderId(resolvedParams.orderId);
-      } catch (error) {
-        console.error('[Invoice] Error unwrapping params:', error);
-        setError(ERROR_MESSAGES.NO_ORDER_ID);
-        setLoading(false);
-      }
-    };
-
-    unwrapParams();
-  }, [params]);
-
   // Fetch order from Firestore
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId) {
+      setError(ERROR_MESSAGES.NO_ORDER_ID);
+      setLoading(false);
+      return;
+    };
 
     const fetchOrder = async () => {
-      if (!orderId || typeof orderId !== 'string') {
+      if (typeof orderId !== 'string') {
         setError(ERROR_MESSAGES.NO_ORDER_ID);
         setLoading(false);
         console.warn('[Invoice] Invalid Order ID:', orderId);
