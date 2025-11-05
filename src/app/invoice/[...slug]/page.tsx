@@ -340,7 +340,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
               )}
             </Button>
           </div>
-          <InvoiceDisplay order={order} ref={invoiceRef} />
+          {/* Ensure createdAt is converted to a Date object before passing */}
+          <InvoiceDisplay order={{ ...order, createdAt: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt) }} ref={invoiceRef} />
         </div>
 
         {toast && (

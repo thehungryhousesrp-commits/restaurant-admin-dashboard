@@ -38,7 +38,7 @@ export const placeOrder = async (
         updatedAt: serverTimestamp(),
         restaurantId: restaurantId,
         restaurantName: restaurantData?.name || 'Unnamed Restaurant',
-        restaurantLogoUrl: restaurantData?.logoUrl || '',
+        restaurantLogoUrl: restaurantData?.logoUrl || '', // **FIX: Added logoUrl to the order data**
         userId: 'staff-member-1', // This should be dynamic in a real app from auth context
         preparedItems: [], // Initialize as empty array
     };

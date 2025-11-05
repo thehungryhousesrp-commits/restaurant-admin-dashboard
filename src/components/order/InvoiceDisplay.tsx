@@ -54,8 +54,8 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                 </div>
                 <div className="text-right space-y-0.5">
                     <p><span className="font-semibold">Invoice #:</span> {order.id.slice(-6).toUpperCase()}</p>
-                    <p><span className="font-semibold">Date:</span> {new Date(order.createdAt).toLocaleDateString()}</p>
-                    <p><span className="font-semibold">Time:</span> {new Date(order.createdAt).toLocaleTimeString()}</p>
+                    <p><span className="font-semibold">Date:</span> {new Date(order.createdAt.seconds * 1000).toLocaleDateString()}</p>
+                    <p><span className="font-semibold">Time:</span> {new Date(order.createdAt.seconds * 1000).toLocaleTimeString()}</p>
                 </div>
             </div>
 
