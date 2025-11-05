@@ -62,7 +62,7 @@ export default function DashboardHeader() {
     <header className="sticky top-0 z-40 w-full border-b bg-card/80 backdrop-blur-sm">
       <div className="container flex h-20 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
-          <Link href="/order-entry" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
              <div className="relative h-16 w-40">
                 <Image
                     src="/Picsart_25-07-02_21-51-50-642 (1).png"
