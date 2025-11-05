@@ -10,8 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
 interface OrderSummaryProps {
-  onUpdateOrder: (updatedOrder: OrderItem[]) => void;
   orderItems: OrderItem[];
+  onUpdateOrder: (updatedOrder: OrderItem[]) => void;
 }
 
 const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
