@@ -1,7 +1,8 @@
 
 
-import { type Order, type OrderItem, type CustomerInfo, type Table } from "./types";
-import { serverTimestamp, writeBatch, doc, collection, updateDoc, addDoc } from "firebase/firestore";
+
+import { type Order, type OrderItem, type CustomerInfo, type Table, type Restaurant } from "./types";
+import { serverTimestamp, writeBatch, doc, collection, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 export const placeOrder = async (
@@ -14,6 +15,11 @@ export const placeOrder = async (
     const cgst = subtotal * 0.025;
     const sgst = subtotal * 0.025;
     const total = Math.round(subtotal + cgst + sgst);
+
+    // Fetch the current restaurant data to get the logo and name
+    const restaurantRef = doc(db, 'restaurants', restaurantId);
+    const restaurantSnap = await getDoc(restaurantRef);
+    const restaurantData = restaurantSnap.data() as Restaurant;
 
     // Create the order data that will be stored in the subcollection
     const newOrderData = {
@@ -32,6 +38,8 @@ export const placeOrder = async (
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         restaurantId: restaurantId,
+        restaurantName: restaurantData?.name || 'Unnamed Restaurant',
+        restaurantLogoUrl: restaurantData?.logoUrl || '',
         userId: 'staff-member-1', // This should be dynamic in a real app from auth context
     };
     

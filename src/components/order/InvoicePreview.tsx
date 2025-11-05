@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import {
@@ -11,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { type Order } from "@/lib/types";
+import { type Order, type Restaurant } from "@/lib/types";
 import { Share2, Copy, MessageCircle, Printer } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -21,13 +22,14 @@ import InvoiceDisplay from "./InvoiceDisplay";
 
 interface InvoicePreviewProps {
   order: Order;
+  restaurant?: Restaurant | null; // Make restaurant prop optional
 }
 
 /**
  * A component to display a preview of the invoice inside a dialog.
  * This component now includes printing and WhatsApp sharing functionality.
  */
-export function InvoicePreview({ order }: InvoicePreviewProps) {
+export function InvoicePreview({ order, restaurant }: InvoicePreviewProps) {
   const { toast } = useToast();
   const [shareableLink, setShareableLink] = useState('');
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -84,7 +86,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
     <>
       {/* This is the content that will be printed, but it's hidden from view */}
       <div className="printable-area hidden">
-        <InvoiceDisplay order={order} ref={invoiceRef} />
+        <InvoiceDisplay order={order} restaurant={restaurant} ref={invoiceRef} />
       </div>
       
       {/* This is the dialog content shown on screen, which will be hidden during printing */}
@@ -95,7 +97,7 @@ export function InvoicePreview({ order }: InvoicePreviewProps) {
         
         <ScrollArea className="flex-1">
           {/* Display the invoice visually inside the dialog */}
-          <InvoiceDisplay order={order} />
+          <InvoiceDisplay order={order} restaurant={restaurant} />
         </ScrollArea>
 
         <div className="px-6 py-4 border-t bg-slate-50">

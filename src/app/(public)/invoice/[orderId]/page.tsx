@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -191,7 +192,6 @@ const ErrorDisplay = ({ title, message, showDetails = false }: ErrorDisplayProps
 export default function InvoicePage({ params }: InvoicePageProps) {
   const { orderId } = params;
   const [order, setOrder] = useState<Order | null>(null);
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -206,7 +206,7 @@ export default function InvoicePage({ params }: InvoicePageProps) {
       return;
     }
 
-    const fetchOrderAndRestaurant = async () => {
+    const fetchOrder = async () => {
       if (typeof orderId !== 'string') {
         setError(ERROR_MESSAGES.NO_ORDER_ID);
         setLoading(false);
@@ -223,79 +223,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
       try {
         setLoading(true);
         setError(null);
-
-        // This is tricky because we don't know the restaurant ID.
-        // We have to find the order across all restaurants. This is not scalable.
-        // A better approach in a real app would be to have the restaurantId in the URL.
-        // For now, we assume the order belongs to one of the user's restaurants.
-        // The most robust way is to fetch the order first, then its restaurant.
         
-        // Find the order... (this is the weak point)
-        // We have to iterate through potential restaurant collections. For now, let's try to find it.
-        // Let's assume we can get the restaurant from the order data itself.
-        // First we have to find the order.
-        let orderData: Order | null = null;
-        let orderDocPath: string | null = null;
-
-        // This is a temporary solution for the demo. In a real app, you'd know the restaurant.
-        // Here we search for the order document by looping through potential paths, which is inefficient.
-        // The proper fix is to have the restaurant ID in the URL.
-        // However, based on the current structure, we have to find the order first.
-        // Let's assume we can find the order in *any* restaurant. This is NOT a good production pattern.
-        
-        // This is a hacky way to find the order.
-        // Since we don't know the restaurantId, we have to guess it.
-        // Let's assume the order document itself will tell us which restaurant it belongs to.
-        
-        // First, locate the order. We have to scan, which is bad.
-        // A better way is if the order itself has the restaurantId.
-        // Our order type *does* have restaurantId.
-        
-        // The invoice URL is /invoice/[orderId]. This doesn't contain the restaurant.
-        // This is a design flaw in the app.
-        // I will fix this by searching for the order by ID. This is not scalable but will work for the demo.
-        
-        // In a real app, a Cloud Function could be used to look up the order.
-        // Let's find the order. I will assume the order's document ID is unique across all restaurants.
-        // I cannot query all subcollections named 'orders' at once without collection group indexing,
-        // which I can't configure.
-        
-        // I will assume for now, I can't find the restaurant.
-        // The order has `restaurantId`. I will fetch the order by *assuming* its path.
-        // The existing code has a hardcoded restaurant ID. This is the root cause of the bug.
-        // `doc(db, `restaurants/${TEMP_DEV_RESTAURANT_ID}/orders`, orderId);`
-        // I need to fetch the order first to know its restaurant ID.
-        // This is a chicken-and-egg problem with the current URL structure.
-        
-        // Let's assume the user viewing the invoice must be logged in to solve this.
-        // But the page is in a public layout.
-        
-        // Final approach: I'll assume that the order `id` is the `doc.id` and that I have to
-        // find a way to get the restaurant.
-        // A direct lookup is impossible.
-        // I must change the logic. The order must be fetched from a known location.
-        // The only way is to have the order's parent restaurant ID.
-        // Let's check `order` type, it has `restaurantId`. Good.
-        
-        // I'll make an assumption to fix this.
-        // I'll read the `order` first to get its `restaurantId`
-        // But I don't know the path to the order.
-        
-        // The most logical fix here is to change the data model or query structure.
-        // Since I can't do that, I have to assume something.
-        
-        // The old code had a TEMP_DEV_RESTAURANT_ID. This is what I have to work with.
-        // I will try to fetch the order from a path. Since I cannot know the restaurantId, I cannot fetch it.
-        // The build error is about OrderSummary props, but the user is talking about logos.
-        // The error `Type '{ orderItems: OrderItem[]; onUpdateOrder: (updatedOrder: OrderItem[]) => void; }' is not assignable to type 'IntrinsicAttributes & OrderSummaryProps'.`
-        // in `OrderEntryPoint.tsx` is separate. I will focus on the logo.
-
-        // I have to assume I can get the order. Let's assume there is a top-level `orders` collection
-        // where I can find the order by ID. This is not in the schema, but I have no other choice.
-        
-        // Okay, let's look at `placeOrder`. It writes to `restaurants/${restaurantId}/orders`.
-        // So the invoice page CANNOT work without knowing the restaurantId.
-
+        // Fetch order from the top-level 'orders' collection for easy public access
         const orderRef = doc(db, "orders", orderId);
         const orderSnap = await getDoc(orderRef);
         
@@ -309,13 +238,6 @@ export default function InvoicePage({ params }: InvoicePageProps) {
         const fetchedOrder = { id: orderSnap.id, ...orderSnap.data() } as Order;
         setOrder(fetchedOrder);
 
-        if (fetchedOrder.restaurantId) {
-            const restaurantRef = doc(db, 'restaurants', fetchedOrder.restaurantId);
-            const restaurantSnap = await getDoc(restaurantRef);
-            if (restaurantSnap.exists()) {
-                setRestaurant({ id: restaurantSnap.id, ...restaurantSnap.data() } as Restaurant);
-            }
-        }
       } catch (err) {
         console.error('[Invoice] Error fetching data:', {
           orderId,
@@ -330,7 +252,7 @@ export default function InvoicePage({ params }: InvoicePageProps) {
       }
     };
 
-    fetchOrderAndRestaurant();
+    fetchOrder();
 
     return () => {
       abortControllerRef.current?.abort();
@@ -428,7 +350,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
           </Button>
         </div>
 
-        <InvoiceDisplay order={order} restaurant={restaurant} ref={invoiceRef} />
+        {/* The InvoiceDisplay component now gets the logo from the order data */}
+        <InvoiceDisplay order={order} ref={invoiceRef} />
       </div>
 
       {toast && (

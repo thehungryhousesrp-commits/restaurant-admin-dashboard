@@ -1,4 +1,5 @@
 
+
 export interface Category {
   id: string;
   name: string;
@@ -51,6 +52,8 @@ export interface Order {
   createdAt: any; 
   updatedAt: any;
   restaurantId: string;
+  restaurantName: string;
+  restaurantLogoUrl?: string; // Add logo URL to the order
   userId: string;
 }
 

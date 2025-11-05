@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -9,13 +10,16 @@ import Image from "next/image";
 
 interface InvoiceDisplayProps {
   order: Order;
-  restaurant: Restaurant | null;
+  // Restaurant prop is now optional, as the logo can come from the order itself
+  restaurant?: Restaurant | null;
 }
 
 const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ order, restaurant }, ref) => {
     const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
     
-    const logoUrl = restaurant?.logoUrl || "/logo.png"; // Fallback to default logo
+    // Prioritize logo from the order, then from the restaurant prop, then fallback
+    const logoUrl = order.restaurantLogoUrl || restaurant?.logoUrl || "/logo.png";
+    const restaurantName = order.restaurantName || restaurant?.name || "The Hungry House Hub";
 
     return (
         <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 font-sans text-black">
@@ -23,7 +27,7 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                 <div className="relative h-24 w-24">
                   <Image
                     src={logoUrl}
-                    alt={restaurant?.name || "Reskot Logo"}
+                    alt={restaurantName}
                     fill
                     style={{ objectFit: 'contain' }}
                     priority
@@ -32,7 +36,7 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                   />
                 </div>
                 <div className="space-y-0.5">
-                    <h1 className="font-headline text-3xl">{restaurant?.name || "The Hungry House Hub"}</h1>
+                    <h1 className="font-headline text-3xl">{restaurantName}</h1>
                     <p className="text-xs text-gray-600">
                         62/A Netaji Subhas Avenue, Serampore, Hooghly, 712201
                     </p>

@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { useState, useCallback, useMemo, useContext, useRef, useEffect } from 'react';
-import { type OrderItem, type Table, type MenuItem, type Order } from '@/lib/types';
+import { type OrderItem, type Table, type MenuItem, type Order, type Restaurant } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, User, Phone, ArrowLeft, CheckCircle, Trash2 } from 'lucide-react';
@@ -133,7 +134,7 @@ const TakeawayForm = ({ onContinue }: { onContinue: (info: { name: string, phone
 // ===============================================================
 
 export default function OrderEntryPoint() {
-  const { menuItems, categories, restaurantId, menuLoading, categoriesLoading, tables } = useContext(AppContext);
+  const { menuItems, categories, restaurantId, menuLoading, categoriesLoading, activeRestaurant } = useContext(AppContext);
   
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [takeawayCustomer, setTakeawayCustomer] = useState<{name: string, phone: string} | null>(null);
