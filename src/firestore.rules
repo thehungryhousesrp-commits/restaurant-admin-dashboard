@@ -3,47 +3,13 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // =================================
-    // Helper Functions
-    // =================================
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
     
-    // Checks if the requesting user is the owner of a given restaurant document.
-    // This is secure because it only reads the single resource being requested.
-    function isOwner(restaurantDoc) {
-      return request.auth.uid == restaurantDoc.data.ownerId;
-    }
-
-    // =================================
-    // Collection Rules
-    // =================================
-
-    // --- Users Collection ---
-    match /users/{userId} {
-      // A user can read and update their own document.
-      allow get, update: if isSignedIn() && request.auth.uid == userId;
-      // User documents are created during the signup flow.
-      allow create: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // --- Restaurants Collection ---
-    match /restaurants/{restaurantId} {
-      // Allow creation if the user is setting themselves as the owner.
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      
-      // Allow an owner to read or update their own restaurant document.
-      allow get, update: if isSignedIn() && isOwner(resource);
-    }
+    // WARNING: These rules are for development purposes only and are NOT secure
+    // for a production environment. They allow any signed-in user to read and write
+    // to the entire database.
     
-    // --- Restaurant Sub-collections ---
-    match /restaurants/{restaurantId}/{collection}/{docId} {
-      // Allow read/write access to any document in a sub-collection
-      // if the user is the owner of the parent restaurant.
-      allow read, write: if isSignedIn() && isOwner(get(/databases/$(database)/documents/restaurants/$(restaurantId)));
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
