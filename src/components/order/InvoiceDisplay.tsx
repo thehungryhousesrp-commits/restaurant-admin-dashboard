@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from 'react';
@@ -17,9 +16,10 @@ interface InvoiceDisplayProps {
 const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ order, restaurant }, ref) => {
     const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
     
-    // Prioritize logo from the order, then from the restaurant prop, then fallback
+    // Prioritize logo from the order, then from the restaurant prop, then fallback to the Reskot logo
     const logoUrl = order.restaurantLogoUrl || restaurant?.logoUrl || "/logo.png";
-    const restaurantName = order.restaurantName || restaurant?.name || "The Hungry House Hub";
+    // Prioritize name from the order, then from restaurant prop, then fallback to a generic name
+    const restaurantName = order.restaurantName || restaurant?.name || "Unnamed Restaurant";
 
     return (
         <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 font-sans text-black">
