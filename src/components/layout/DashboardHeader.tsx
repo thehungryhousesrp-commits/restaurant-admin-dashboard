@@ -19,6 +19,7 @@ import { Building, ChevronDown, LogOut, PlusCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import CreateRestaurantForm from '../onboarding/CreateRestaurantForm';
 import { doc, updateDoc } from 'firebase/firestore';
+import LogoAnimation from './LogoAnimation';
 
 
 export default function DashboardHeader() {
@@ -63,15 +64,8 @@ export default function DashboardHeader() {
       <div className="container flex h-20 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
-             <div className="relative h-16 w-40">
-                <Image
-                    src="/Picsart_25-07-02_21-51-50-642 (1).png"
-                    alt="Reskot Logo"
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    style={{ objectFit: 'contain' }}
-                    priority
-                />
+             <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/20 ring-2 ring-purple-400/50 hover:ring-purple-400 transition-all duration-300">
+                <LogoAnimation />
             </div>
           </Link>
           <nav className="hidden md:flex gap-6 items-center">
