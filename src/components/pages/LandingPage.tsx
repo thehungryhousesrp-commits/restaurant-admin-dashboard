@@ -2,7 +2,6 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Zap, Shield, BarChart, Gem, Users, GitBranch } from 'lucide-react';
 import Link from 'next/link';
 
@@ -52,41 +51,47 @@ export default function LandingPage() {
   return (
     <div className="bg-background text-foreground">
       {/* Hero Section */}
-      <section className="py-20 sm:py-32">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tight">
-            The Ultimate Cloud POS for the Modern Indian Restaurant
-          </h1>
-          <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
-            Grow your business with Reskot – a powerful, all-in-one platform to manage orders, staff, and multiple outlets with ease and efficiency.
-          </p>
-          <div className="mt-8 flex justify-center gap-4">
-            <Button asChild size="lg" className="font-semibold">
-              <Link href="/login">Get Started for Free</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="font-semibold">
-              <Link href="#features">See Live Demo</Link>
-            </Button>
-          </div>
+      <section className="relative overflow-hidden bg-gray-900 text-white py-20 sm:py-32">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-transparent to-gray-900"></div>
+        
+        <div className="container mx-auto px-4 text-center relative z-10">
+            <img src="https://i.ibb.co/nTRZV7T/5fad425b-56e6-49d5-9781-f7420aeea30b-removebg-preview-1.png" alt="Reskot Logo" className="mx-auto mb-6 h-20" />
+            <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+                The Ultimate Cloud POS for the Modern Indian Restaurant
+            </h1>
+            <p className="mt-6 max-w-2xl mx-auto text-lg text-gray-300">
+                Grow your business with Reskot – a powerful, all-in-one platform to manage orders, staff, and multiple outlets with ease and efficiency.
+            </p>
+            <div className="mt-10 flex justify-center gap-4 flex-wrap">
+                <Button asChild size="lg" className="font-semibold text-base bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-transform hover:scale-105">
+                    <Link href="/signup">Start Free Trial</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="font-semibold text-base bg-white/10 border-white/20 hover:bg-white/20 backdrop-blur-sm transition-transform hover:scale-105">
+                    <Link href="/kitchen">See Live Demo</Link>
+                </Button>
+            </div>
         </div>
       </section>
 
       {/* Features Section */}
       <section id="features" className="py-20 sm:py-24 bg-secondary/50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold font-headline">Everything You Need to Succeed</h2>
-            <p className="mt-4 max-w-xl mx-auto text-muted-foreground">
+            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
               From order taking to final billing, Reskot streamlines every aspect of your restaurant's operations.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-background text-center p-6 border-transparent shadow-md hover:shadow-xl hover:border-primary/50 transition-all">
-                <div className="flex justify-center mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold font-headline mb-2">{feature.title}</h3>
+              <div key={index} className="bg-background p-6 rounded-xl border border-transparent shadow-sm hover:shadow-primary/10 hover:border-primary/30 transition-all duration-300 transform hover:-translate-y-1">
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="bg-primary/10 p-3 rounded-lg">{feature.icon}</div>
+                    <h3 className="text-xl font-bold font-headline">{feature.title}</h3>
+                </div>
                 <p className="text-muted-foreground">{feature.description}</p>
-              </Card>
+              </div>
             ))}
           </div>
         </div>
@@ -95,18 +100,18 @@ export default function LandingPage() {
       {/* "Why Reskot?" Section */}
       <section className="py-20 sm:py-24">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold font-headline">Why Choose Reskot Over Others?</h2>
-            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
+            <p className="mt-4 max-w-3xl mx-auto text-muted-foreground">
               Tired of outdated software and high aggregator fees? Reskot is built for growth, control, and peace of mind.
             </p>
           </div>
-          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             {whyReskot.map((item, index) => (
-              <div key={index} className="flex items-start gap-4 p-4">
+              <div key={index} className="flex items-start gap-4 p-2">
                 <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
                 <div>
-                  <h4 className="font-semibold">{item.title}</h4>
+                  <h4 className="font-semibold text-lg">{item.title}</h4>
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </div>
               </div>
@@ -116,19 +121,33 @@ export default function LandingPage() {
       </section>
       
       {/* Final CTA Section */}
-      <section className="py-20 sm:py-24 bg-primary/10">
+      <section className="py-20 sm:py-24 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline text-primary">Ready to Elevate Your Restaurant?</h2>
-            <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
+            <h2 className="text-3xl md:text-4xl font-bold font-headline">Ready to Elevate Your Restaurant?</h2>
+            <p className="mt-4 max-w-2xl mx-auto text-lg opacity-90">
                 Join hundreds of smart restaurant owners who are building a more profitable and efficient business with Reskot.
             </p>
             <div className="mt-8">
-                <Button asChild size="lg" className="font-semibold text-lg px-8 py-6">
-                  <Link href="/login">Start Your Free Trial Today</Link>
+                <Button asChild size="lg" variant="secondary" className="font-semibold text-lg px-10 py-7 shadow-2xl transition-transform hover:scale-105">
+                  <Link href="/signup">Start Your Free Trial Today</Link>
                 </Button>
             </div>
         </div>
       </section>
+      <style jsx global>{`
+        .bg-grid-pattern {
+          background-image:
+            linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+          background-size: 40px 40px;
+          animation: pan-grid 30s linear infinite;
+        }
+
+        @keyframes pan-grid {
+          0% { background-position: 0 0; }
+          100% { background-position: 40px 40px; }
+        }
+      `}</style>
     </div>
   );
 }
