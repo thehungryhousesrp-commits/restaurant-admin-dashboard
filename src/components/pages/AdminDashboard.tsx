@@ -5,7 +5,7 @@ import { useState, useCallback, useContext } from 'react';
 import { type MenuItem, type Order, type Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download, Calendar as CalendarIcon, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Download, Calendar as CalendarIcon, X } from 'lucide-react';
 import {
   Table as ShadcnTable,
   TableHead,
@@ -74,7 +74,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'categories', label: 'Categories', icon: LayoutList },
   { id: 'tables', label: 'Tables', icon: Armchair },
   { id: 'orders', label: 'Orders', icon: ShoppingCart },
-  { id: 'bulk-upload', label: 'Bulk Uploader', icon: Wand2 },
+  // { id: 'bulk-upload', label: 'Bulk Uploader', icon: Wand2 },
 ];
 
 // ============================================================================
@@ -673,7 +673,7 @@ export default function AdminDashboard() {
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Bulk Upload</h2>
-            <BulkUploader />
+            {/* <BulkUploader /> */}
           </div>
         );
       default:
