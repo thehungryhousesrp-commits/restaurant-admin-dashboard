@@ -237,7 +237,7 @@ export default function OrderEntryPoint() {
   }, [activeKey]);
   
   const handlePlaceOrder = useCallback(async () => {
-    if (!activeKey || currentOrder.length === 0) {
+    if (!activeKey || !restaurantId || currentOrder.length === 0) {
         toast({ title: "Empty Order", description: "Please add items to the order.", variant: "destructive" });
         return;
     }
