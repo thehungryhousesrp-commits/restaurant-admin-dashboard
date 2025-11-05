@@ -3,22 +3,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-
-// Define the schema for a single line of input from the raw text
-const RawItemLineSchema = z.object({
-  line: z.string().describe('A single line from the raw menu text, like "Chicken Biryani: 250"'),
-  category: z.string().describe('The last seen category heading for this item.'),
-});
-export type RawItemLine = z.infer<typeof RawItemLineSchema>;
-
-// Define the schema for the structured data we want the AI to return
-export const GeneratedItemSchema = z.object({
-    name: z.string().describe('The name of the dish, e.g., "Chicken Biryani"'),
-    price: z.number().describe('The price of the dish, e.g., 250'),
-    categoryName: z.string().describe('The category for the item, e.g., "Biryani"'),
-    isVeg: z.boolean().describe('Whether the item is vegetarian. Infer this based on the name (e.g., "Chicken" is not veg).'),
-}).describe('A single structured menu item extracted from a line of text.');
-export type GeneratedItem = z.infer<typeof GeneratedItemSchema>;
+import { RawItemLineSchema, GeneratedItemSchema, type GeneratedItem, type RawItemLine } from '@/lib/types';
 
 
 // ============================================================================

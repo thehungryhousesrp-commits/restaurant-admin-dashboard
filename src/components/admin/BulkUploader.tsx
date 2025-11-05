@@ -10,12 +10,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { type Category, type MenuItem } from '@/lib/types';
+import { type Category, type MenuItem, type RawItemLine, type GeneratedItem } from '@/lib/types';
 import { AppContext } from '@/context/AppContext';
 import { addCategory, addMenuItem, updateMenuItem } from '@/lib/menu';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
-import { generateBulkItems, type RawItemLine, type GeneratedItem } from '@/ai/generateBulkItems';
+import { generateBulkItems } from '@/ai/generateBulkItems';
 
 
 // The state for each item being reviewed, including its duplicate status

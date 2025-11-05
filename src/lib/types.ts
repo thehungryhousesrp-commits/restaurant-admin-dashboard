@@ -1,5 +1,8 @@
 
 
+import { z } from 'zod';
+import { RawItemLineSchema, GeneratedItemSchema } from './schemas';
+
 export interface Category {
   id: string;
   name: string;
@@ -76,3 +79,8 @@ export interface Restaurant {
   logoUrl?: string; // Add optional logoUrl
   createdAt: any;
 }
+
+
+// Types for AI Bulk Generation
+export type RawItemLine = z.infer<typeof RawItemLineSchema>;
+export type GeneratedItem = z.infer<typeof GeneratedItemSchema>;
