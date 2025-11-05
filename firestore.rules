@@ -4,49 +4,64 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
+    // Helper Functions
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // Rules for User profiles
+    function isRestaurantOwner(restaurantId) {
+      return get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+    }
+
+    function isRestaurantMember(restaurantId) {
+      // This is a placeholder. In a real app, you'd check a 'members' subcollection or roles.
+      // For now, we'll allow the owner.
+      return isRestaurantOwner(restaurantId);
+    }
+    
+    // Authenticated users can read their own user document.
     match /users/{userId} {
-      // Only the user themselves can write to their own document.
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read, update: if isOwner(userId);
     }
+    
+    // Only the owner of a restaurant can read/write its top-level document.
+    match /restaurants/{restaurantId} {
+      allow read, update: if isRestaurantOwner(restaurantId);
+      // Users cannot create or delete restaurants directly; this must be done via a Cloud Function.
+      allow create, delete: if false;
 
-    // Rules for Menu Items
-    match /menu-items/{itemId} {
-      // Anyone can view the menu.
-      allow get, list: if true;
-      // Only authenticated users can create, update, or delete menu items.
-      allow create, update, delete: if isSignedIn();
+      // Rules for all subcollections within a restaurant document.
+      // These rules ensure that any access to a subcollection document
+      // requires that the user is a member of that restaurant.
+      match /{collection}/{docId} {
+        allow read, write: if isRestaurantMember(restaurantId);
+      }
     }
-
-    // Rules for Categories
-    match /categories/{categoryId} {
-      // Anyone can view categories.
-      allow get, list: if true;
-      // Only authenticated users can create, update, or delete categories.
-      allow create, update, delete: if isSignedIn();
-    }
-
-    // Rules for Tables
-    match /tables/{tableId} {
-      // Anyone can view the list of tables and their status.
-      allow get, list: if true;
-      // Anyone can update a table's status (e.g., to 'occupied').
-      allow update: if true;
-      // Only authenticated users can create or delete tables.
-      allow create, delete: if isSignedIn();
-    }
-
-    // Rules for Orders
+    
+    // Completely disable direct client access to the global `orders` collection.
+    // It should have been removed, but this rule provides an extra layer of security.
     match /orders/{orderId} {
-        // Anyone can create an order (place an order).
-        allow create: if true;
-        // Only authenticated users can view, update or delete orders.
-        allow get, list, update, delete: if isSignedIn();
+        allow read, write: if false;
+    }
+  }
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow owners to upload logos to a specific path for their restaurant.
+    match /restaurants/{restaurantId}/logo/{fileName} {
+      // Users can only write to their own restaurant's folder.
+      allow write: if request.auth != null && resource.size < 2 * 1024 * 1024 // Max 2MB
+                      && resource.contentType.matches('image/.*')
+                      && get(/databases/(default)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+                      
+      // Anyone can read the logos. This is safe as they are public branding assets.
+      allow read: if true;
+    }
+    
+    // Deny all other writes to storage by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

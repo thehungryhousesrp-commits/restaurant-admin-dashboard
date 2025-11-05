@@ -6,7 +6,7 @@ import { useState, useCallback, useContext, useEffect } from 'react';
 import { type MenuItem, type Order, type Category, type Restaurant } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download, Calendar as CalendarIcon, X, Settings } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download, Calendar as CalendarIcon, X, Settings, Upload, Image as ImageIcon } from 'lucide-react';
 import {
   Table as ShadcnTable,
   TableHead,
@@ -41,7 +41,8 @@ import TableManager from '@/components/admin/TableManager';
 import BulkUploader from '@/components/admin/BulkUploader';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateMenuItem, deleteMenuItems } from '@/lib/menu';
 import { deleteOrders } from '@/lib/order';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -52,13 +53,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 
 // ============================================================================
@@ -122,46 +120,63 @@ const AdminSidebar = ({
 // ============================================================================
 // OUTLET SETTINGS VIEW
 // ============================================================================
-const outletSettingsSchema = z.object({
-  logoUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-});
-
-type OutletSettingsFormValues = z.infer<typeof outletSettingsSchema>;
 
 const OutletSettingsView = () => {
     const { activeRestaurant, restaurantId } = useContext(AppContext);
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(activeRestaurant?.logoUrl || null);
 
-    const form = useForm<OutletSettingsFormValues>({
-        resolver: zodResolver(outletSettingsSchema),
-        defaultValues: {
-            logoUrl: activeRestaurant?.logoUrl || '',
-        },
-    });
-    
-    // Ensure form is updated if the active restaurant changes
     useEffect(() => {
-        form.reset({
-            logoUrl: activeRestaurant?.logoUrl || '',
-        });
-    }, [activeRestaurant, form]);
+        setPreviewUrl(activeRestaurant?.logoUrl || null);
+    }, [activeRestaurant]);
 
-    const onSubmit = async (data: OutletSettingsFormValues) => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!selectedFile) {
+            toast({ title: 'No file selected', description: 'Please choose a logo to upload.', variant: 'destructive' });
+            return;
+        }
         if (!restaurantId) {
             toast({ title: 'Error', description: 'No active restaurant selected.', variant: 'destructive' });
             return;
         }
+
         setIsSubmitting(true);
         try {
+            // Create a storage reference
+            const logoStorageRef = storageRef(storage, `restaurants/${restaurantId}/logo/${selectedFile.name}`);
+            
+            // Upload the file
+            const uploadResult = await uploadBytes(logoStorageRef, selectedFile);
+            
+            // Get the download URL
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+
+            // Update the restaurant document in Firestore
             const restaurantRef = doc(db, 'restaurants', restaurantId);
             await updateDoc(restaurantRef, {
-                logoUrl: data.logoUrl,
+                logoUrl: downloadURL,
             });
-            toast({ title: 'Success', description: 'Outlet settings have been updated.' });
+
+            toast({ title: 'Success', description: 'Logo has been updated successfully.' });
+            setSelectedFile(null);
         } catch (error) {
-            console.error('Error updating outlet settings:', error);
-            toast({ title: 'Error', description: 'Failed to update settings.', variant: 'destructive' });
+            console.error('Error uploading logo:', error);
+            toast({ title: 'Upload Failed', description: 'Failed to upload new logo.', variant: 'destructive' });
         } finally {
             setIsSubmitting(false);
         }
@@ -173,35 +188,41 @@ const OutletSettingsView = () => {
             <Card>
                 <CardHeader>
                     <CardTitle>Brand Logo</CardTitle>
-                    <CardDescription>Enter the URL for your restaurant's logo. This will appear on invoices.</CardDescription>
+                    <CardDescription>Upload a logo for this outlet. This will appear on the dashboard and on invoices.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="logoUrl"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Logo Image URL</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="https://example.com/your-logo.png" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                           <div className="w-32 h-32 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted">
+                                {previewUrl ? (
+                                    <Image src={previewUrl} alt="Logo preview" width={128} height={128} className="object-contain rounded-md"/>
+                                ) : (
+                                    <ImageIcon className="h-10 w-10 text-muted-foreground" />
                                 )}
-                            />
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Settings
-                            </Button>
-                        </form>
-                    </Form>
+                           </div>
+                           <div className="flex-1 space-y-2">
+                                <label htmlFor="logo-upload" className="font-medium text-sm">Choose a logo file</label>
+                                <Input 
+                                    id="logo-upload" 
+                                    type="file"
+                                    accept="image/png, image/jpeg, image/gif, image/webp"
+                                    onChange={handleFileChange} 
+                                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                />
+                                <p className="text-xs text-muted-foreground">PNG, JPG, GIF, or WEBP. Max 2MB.</p>
+                           </div>
+                        </div>
+                        <Button type="submit" disabled={isSubmitting || !selectedFile}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                            {isSubmitting ? 'Uploading...' : 'Save and Upload Logo'}
+                        </Button>
+                    </form>
                 </CardContent>
             </Card>
         </div>
     );
 };
+
 
 
 // ============================================================================
