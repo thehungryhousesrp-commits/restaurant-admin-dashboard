@@ -9,7 +9,7 @@ import { Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
-interface OrderSummaryProps {
+export interface OrderSummaryProps {
   orderItems: OrderItem[];
   onUpdateOrder: (updatedOrder: OrderItem[]) => void;
 }

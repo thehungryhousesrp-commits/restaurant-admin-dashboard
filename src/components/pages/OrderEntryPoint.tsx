@@ -466,13 +466,13 @@ export default function OrderEntryPoint() {
         </div>
 
         <div className="p-4 flex-grow min-h-0">
-            <OrderSummary ref={orderSummaryListRef} orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
+            <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
         </div>
       </aside>
 
       <Dialog open={isInvoiceOpen} onOpenChange={onInvoiceDialogClose}>
         {lastPlacedOrder && (
-          <InvoicePreview order={lastPlacedOrder} />
+          <InvoicePreview order={lastPlacedOrder} restaurant={activeRestaurant} />
         )}
       </Dialog>
     </div>
