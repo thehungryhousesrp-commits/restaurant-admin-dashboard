@@ -12,9 +12,10 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Checks if the requesting user is the owner of a given restaurant.
-    function isOwner(restaurantId) {
-      return request.auth.uid == get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId;
+    // Checks if the requesting user is the owner of a given restaurant document.
+    // This is secure because it only reads the single resource being requested.
+    function isOwner(restaurantDoc) {
+      return request.auth.uid == restaurantDoc.data.ownerId;
     }
 
     // =================================
@@ -31,23 +32,18 @@ service cloud.firestore {
 
     // --- Restaurants Collection ---
     match /restaurants/{restaurantId} {
-      // Allow creation if the user is the owner.
+      // Allow creation if the user is setting themselves as the owner.
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      // Allow owner to read their own restaurant document.
-      allow get: if isSignedIn() && isOwner(restaurantId);
-      // Only the owner can update core restaurant details.
-      allow update: if isSignedIn() && isOwner(restaurantId);
+      
+      // Allow an owner to read or update their own restaurant document.
+      allow get, update: if isSignedIn() && isOwner(resource);
     }
     
     // --- Restaurant Sub-collections ---
-    // This provides a secure default for all nested collections.
     match /restaurants/{restaurantId}/{collection}/{docId} {
-      // Only the owner of the restaurant can access its sub-collections.
-      allow read, write: if isSignedIn() && isOwner(restaurantId);
-      // Exception: We will allow order creation for anyone for now (e.g., guest flow later)
-      // but only the owner can delete them.
-      allow create: if collection == 'orders';
-      allow delete: if isSignedIn() && isOwner(restaurantId);
+      // Allow read/write access to any document in a sub-collection
+      // if the user is the owner of the parent restaurant.
+      allow read, write: if isSignedIn() && isOwner(get(/databases/$(database)/documents/restaurants/$(restaurantId)));
     }
   }
 }
