@@ -50,9 +50,9 @@ const parseItemPrompt = ai.definePrompt({
  * This flow takes an array of raw menu lines and processes them in parallel
  * to return a structured array of menu items.
  */
-export const generateBulkItems = ai.defineFlow(
+const generateBulkItemsFlow = ai.defineFlow(
   {
-    name: 'generateBulkItems',
+    name: 'generateBulkItemsFlow',
     inputSchema: z.array(RawItemLineSchema),
     outputSchema: z.array(GeneratedItemSchema),
   },
@@ -77,3 +77,12 @@ export const generateBulkItems = ai.defineFlow(
     return results.filter((item): item is GeneratedItem => item !== null);
   }
 );
+
+
+/**
+ * This is the exported async function that satisfies the 'use server' constraint.
+ * It acts as a simple wrapper around our Genkit flow.
+ */
+export async function generateBulkItems(rawLines: RawItemLine[]): Promise<GeneratedItem[]> {
+  return await generateBulkItemsFlow(rawLines);
+}
