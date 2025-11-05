@@ -75,7 +75,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 sm:py-24 bg-secondary/50">
+      <section id="features" className="py-20 sm:py-24 bg-gray-100 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold font-headline">Everything You Need to Succeed</h2>
