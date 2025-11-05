@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -19,7 +20,7 @@ import { db } from "@/lib/firebase";
 type TableFormValues = z.infer<typeof tableSchema>;
 
 export default function TableManager() {
-  const { tables, loading } = useContext(AppContext);
+  const { tables, loading, restaurantId } = useContext(AppContext);
   const { toast } = useToast();
 
   const form = useForm<TableFormValues>({
@@ -29,7 +30,8 @@ export default function TableManager() {
 
   const onSubmit = async (data: TableFormValues) => {
     try {
-      await addDoc(collection(db, "tables"), { name: data.name, status: 'available' });
+      const tablesColRef = collection(db, `restaurants/${restaurantId}/tables`);
+      await addDoc(tablesColRef, { name: data.name, status: 'available', restaurantId });
       toast({ title: "Table Added", description: `"${data.name}" has been added.` });
       form.reset();
     } catch (error) {
@@ -40,7 +42,8 @@ export default function TableManager() {
   
   const handleDelete = async (id: string) => {
     try {
-        await deleteDoc(doc(db, "tables", id));
+        const tableDocRef = doc(db, `restaurants/${restaurantId}/tables`, id);
+        await deleteDoc(tableDocRef);
         toast({ title: "Table Deleted", description: "The table has been removed." });
     } catch (error) {
         console.error("Error deleting table: ", error);

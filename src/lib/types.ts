@@ -2,12 +2,14 @@
 export interface Category {
   id: string;
   name: string;
+  restaurantId: string;
 }
 
 export interface Table {
   id: string;
   name: string;
   status: 'available' | 'occupied' | 'reserved';
+  restaurantId: string;
 }
 
 export interface MenuItem {
@@ -18,7 +20,7 @@ export interface MenuItem {
   category: string;
   isAvailable: boolean;
   isVeg: boolean;
-  restaurantId: string; // New field for multi-tenancy
+  restaurantId: string;
 }
 
 export interface CustomerInfo {
@@ -48,6 +50,6 @@ export interface Order {
   status: 'Preparing' | 'Completed' | 'Cancelled' | 'Billed';
   createdAt: any; 
   updatedAt: any;
-  restaurantId: string; // New field for multi-tenancy
+  restaurantId: string;
   userId: string;
 }

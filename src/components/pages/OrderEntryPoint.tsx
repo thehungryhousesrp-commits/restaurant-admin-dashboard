@@ -13,14 +13,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog } from '@/components/ui/dialog';
 import { InvoicePreview } from '@/components/order/InvoicePreview';
 import { AppContext } from '@/context/AppContext';
-import { addDoc, collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardFooter, CardHeader, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
-import { updateTableStatus } from '@/lib/order';
+import { updateTableStatus, placeOrder } from '@/lib/order';
 
 
 // ===============================================================
@@ -86,44 +85,6 @@ interface AnimatingItem {
 }
 
 
-const placeOrder = async (orderItems: OrderItem[], customerInfo: { name: string, phone: string }, selectedTable: Table | null, orderType: OrderType): Promise<{ finalOrder: Order, docRef: any }> => {
-  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const cgst = subtotal * 0.025;
-  const sgst = subtotal * 0.025;
-  const total = Math.round(subtotal + cgst + sgst);
-
-  const newOrderData = {
-    items: orderItems,
-    customerInfo,
-    tableId: selectedTable?.id || 'takeaway',
-    tableName: selectedTable?.name || 'Takeaway',
-    subtotal,
-    cgst,
-    sgst,
-    total,
-    status: 'Preparing' as const,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  const batch = writeBatch(db);
-  const newOrderRef = doc(collection(db, 'orders'));
-  
-  batch.set(newOrderRef, newOrderData);
-
-  if (orderType === 'dine-in' && selectedTable) {
-      const tableRef = doc(db, 'tables', selectedTable.id);
-      batch.update(tableRef, { status: 'occupied' });
-  }
-
-  await batch.commit();
-
-  return {
-    finalOrder: { id: newOrderRef.id, ...newOrderData } as any,
-    docRef: newOrderRef
-  };
-};
-
 const TakeawayForm = ({ onContinue }: { onContinue: (info: { name: string, phone: string }) => void }) => {
     const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
 
@@ -172,7 +133,7 @@ const TakeawayForm = ({ onContinue }: { onContinue: (info: { name: string, phone
 // ===============================================================
 
 export default function OrderEntryPoint() {
-  const { menuItems, categories, menuLoading, categoriesLoading } = useContext(AppContext);
+  const { menuItems, categories, restaurantId, menuLoading, categoriesLoading } = useContext(AppContext);
   
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [takeawayCustomer, setTakeawayCustomer] = useState<{name: string, phone: string} | null>(null);
@@ -264,20 +225,17 @@ export default function OrderEntryPoint() {
   }, [activeKey]);
   
   const resetCurrentOrderState = useCallback(() => {
-     if(!activeKey) return;
-     // This function is now just responsible for clearing the data.
-     setInProgressOrders(prev => {
-         const newOrders = { ...prev };
-         delete newOrders[activeKey];
-         return newOrders;
-     });
-  }, [activeKey]);
-  
-  const resetSelection = () => {
+    if (!activeKey) return;
+    setInProgressOrders(prev => {
+        const newOrders = { ...prev };
+        delete newOrders[activeKey];
+        return newOrders;
+    });
+    // Also reset the selection state
     setSelectedTable(null);
     setTakeawayCustomer(null);
-  };
-
+  }, [activeKey]);
+  
   const handlePlaceOrder = useCallback(async () => {
     if (!activeKey || currentOrder.length === 0) {
         toast({ title: "Empty Order", description: "Please add items to the order.", variant: "destructive" });
@@ -297,7 +255,7 @@ export default function OrderEntryPoint() {
             phone: currentCustomerInfo.phone
         };
 
-        const { finalOrder } = await placeOrder(currentOrder, finalCustomerInfo, selectedTable, orderType);
+        const { finalOrder } = await placeOrder(restaurantId, currentOrder, finalCustomerInfo, selectedTable);
         
         setLastPlacedOrder(finalOrder);
         setIsInvoiceOpen(true);
@@ -313,31 +271,22 @@ export default function OrderEntryPoint() {
     } finally {
         setIsSubmitting(false);
     }
-  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, orderType, toast]);
+  }, [activeKey, currentOrder, currentCustomerInfo, selectedTable, orderType, toast, restaurantId]);
   
   const onInvoiceDialogClose = (isOpen: boolean) => {
     setIsInvoiceOpen(isOpen);
     if (!isOpen) {
         resetCurrentOrderState(); 
         setLastPlacedOrder(null);
-        resetSelection();
     }
   };
 
   const handleCancelOrder = useCallback(() => {
-    if (confirm('Are you sure you want to clear all fields for this order?')) {
-      if (activeKey) {
-        setInProgressOrders(prev => {
-          const newOrders = { ...prev };
-          delete newOrders[activeKey];
-          return newOrders;
-        });
-      }
-      setSelectedTable(null);
-      setTakeawayCustomer(null);
+    if (confirm('Are you sure you want to clear this entire order? All items and customer details will be removed.')) {
+      resetCurrentOrderState();
       toast({ title: 'Order Cleared', description: 'All fields have been reset.', variant: 'destructive' });
     }
-  }, [activeKey, toast]);
+  }, [resetCurrentOrderState, toast]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
 
@@ -444,7 +393,7 @@ export default function OrderEntryPoint() {
         <div className="p-4 border-b shrink-0">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold font-headline">Current Order</h2>
-              <Button variant="ghost" size="sm" onClick={resetSelection} className="flex items-center gap-1 text-xs">
+              <Button variant="ghost" size="sm" onClick={resetCurrentOrderState} className="flex items-center gap-1 text-xs">
                   <ArrowLeft className="h-3 w-3" /> Back
               </Button>
             </div>
@@ -496,5 +445,3 @@ export default function OrderEntryPoint() {
     </div>
   );
 }
-
-    

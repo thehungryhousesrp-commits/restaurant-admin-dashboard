@@ -13,7 +13,7 @@ interface AppContextType {
   menuLoading: boolean;
   categoriesLoading: boolean;
   tablesLoading: boolean;
-  restaurantId: string; // Expose restaurantId for other components
+  restaurantId: string;
 }
 
 // ============================================================================
@@ -65,7 +65,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           category: data.category || 'uncategorized',
           isAvailable: data.isAvailable,
           isVeg: data.isVeg,
-          restaurantId: restaurantId, // Ensure restaurantId is attached
+          restaurantId: restaurantId,
         } as MenuItem;
       });
       setMenuItems(items);
@@ -76,7 +76,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const unsubscribeCategories = onSnapshot(collection(db, categoriesPath), (snapshot) => {
-      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+      const cats = snapshot.docs.map(doc => ({ id: doc.id, restaurantId, ...doc.data() } as Category));
       setCategories(cats);
       setCategoriesLoading(false);
     }, (error) => {
@@ -85,7 +85,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const unsubscribeTables = onSnapshot(collection(db, tablesPath), (snapshot) => {
-      const tbls = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
+      const tbls = snapshot.docs.map(doc => ({ id: doc.id, restaurantId, ...doc.data() } as Table));
       setTables(tbls);
       setTablesLoading(false);
     }, (error) => {

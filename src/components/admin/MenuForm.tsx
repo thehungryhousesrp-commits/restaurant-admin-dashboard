@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -34,7 +35,7 @@ interface MenuFormProps {
 }
 
 export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
-  const { categories, loading: categoriesLoading } = useContext(AppContext);
+  const { categories, restaurantId, loading: categoriesLoading } = useContext(AppContext);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -77,17 +78,17 @@ export default function MenuForm({ itemToEdit, onFormSubmit }: MenuFormProps) {
   const onSubmit = async (data: MenuFormValues) => {
     setIsSubmitting(true);
     try {
-      const finalData: Omit<MenuItem, 'id'> = {
+      const finalData: Omit<MenuItem, 'id' | 'restaurantId'> = {
         ...data,
         isAvailable: data.isAvailable ?? true,
         isVeg: data.isVeg ?? false,
       };
 
       if (isEditing && itemToEdit) {
-        await updateMenuItem(itemToEdit.id, finalData);
+        await updateMenuItem(restaurantId, itemToEdit.id, finalData);
         toast({ title: "Success", description: "Menu item updated successfully." });
       } else {
-        await addMenuItem(finalData);
+        await addMenuItem(restaurantId, finalData);
         toast({ title: "Success", description: "New menu item added." });
       }
       onFormSubmit();

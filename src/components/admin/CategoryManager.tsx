@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -17,7 +18,7 @@ import { addCategory, deleteCategory } from '@/lib/menu';
 type CategoryFormValues = z.infer<typeof categorySchema>;
 
 export default function CategoryManager() {
-  const { categories, loading } = useContext(AppContext);
+  const { categories, loading, restaurantId } = useContext(AppContext);
   const { toast } = useToast();
 
   const form = useForm<CategoryFormValues>({
@@ -27,7 +28,7 @@ export default function CategoryManager() {
 
   const onSubmit = async (data: CategoryFormValues) => {
     try {
-      await addCategory({ name: data.name });
+      await addCategory(restaurantId, { name: data.name });
       toast({ title: "Category Added", description: `"${data.name}" has been added.` });
       form.reset();
     } catch (e) {
@@ -37,7 +38,7 @@ export default function CategoryManager() {
   
   const handleDelete = async (categoryId: string) => {
     try {
-      await deleteCategory(categoryId);
+      await deleteCategory(restaurantId, categoryId);
       toast({ title: "Category Deleted" });
     } catch (e) {
       toast({ title: "Error", description: "Failed to delete category", variant: "destructive" });

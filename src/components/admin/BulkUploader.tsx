@@ -43,7 +43,7 @@ BBQ Chicken Wings: 200
 `;
 
 function BulkUploader() {
-  const { categories, menuItems, loading: loadingCategories } = useContext(AppContext);
+  const { categories, menuItems, restaurantId, loading: loadingCategories } = useContext(AppContext);
   const { toast } = useToast();
   const [rawInput, setRawInput] = useState(defaultMenuText);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
@@ -146,7 +146,7 @@ function BulkUploader() {
       if (newCategoryNames.length > 0) {
         toast({ title: "Creating New Categories", description: `Found ${newCategoryNames.length} new categories.` });
         for (const name of newCategoryNames) {
-          const newCat = await addCategory({ name });
+          const newCat = await addCategory(restaurantId, { name });
           if(newCat) newCategories.push(newCat);
         }
       }
@@ -171,7 +171,7 @@ function BulkUploader() {
 
         const isNonVegKeyword = ['chicken', 'mutton', 'fish', 'prawn', 'egg', 'wings'].some(keyword => item.name.toLowerCase().includes(keyword));
 
-        const payload: Omit<MenuItem, 'id'> = {
+        const payload: Omit<MenuItem, 'id' | 'restaurantId'> = {
           name: item.name,
           price: item.price,
           category: categoryId, 
@@ -181,9 +181,9 @@ function BulkUploader() {
         };
 
         if(item.resolution === 'overwrite' && item.existingItemId) {
-          return updateMenuItem(item.existingItemId, payload);
+          return updateMenuItem(restaurantId, item.existingItemId, payload);
         }
-        return addMenuItem(payload);
+        return addMenuItem(restaurantId, payload);
       });
 
       await Promise.all(uploadPromises);

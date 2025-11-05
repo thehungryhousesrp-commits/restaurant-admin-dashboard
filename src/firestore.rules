@@ -18,32 +18,18 @@ service cloud.firestore {
     // Rules for the multi-tenant `restaurants` collection
     // This is the core of the multi-tenant security model.
     match /restaurants/{restaurantId}/{document=**} {
-      // Allow read/write access only if the user is authenticated AND
-      // their custom auth token contains a `restaurantId` claim that
-      // matches the {restaurantId} in the path they are trying to access.
-      //
-      // In a more complex scenario with roles, you might check a list of restaurants:
-      // allow read, write: if isSignedIn() && restaurantId in request.auth.token.restaurants;
-      allow read, write: if isSignedIn() && request.auth.token.restaurantId == restaurantId;
+      // In a real app, you would check a custom claim on the user's auth token
+      // that lists which restaurants they have access to.
+      // e.g., `allow read, write: if isSignedIn() && restaurantId in request.auth.token.restaurants;`
+      // For now, since we don't have full auth logic, we will allow any signed-in user
+      // to access data within any restaurant. THIS IS FOR DEVELOPMENT ONLY.
+      allow read, write: if isSignedIn();
     }
 
     // ======================================================================
     // The rules below are now obsolete because access is controlled by the
-    // /restaurants/{restaurantId} rule above. Keeping them for reference,
-    // but they will not be hit if all data is correctly nested.
+    // /restaurants/{restaurantId} rule above. They are removed to prevent
+    // any potential conflicts or security holes. All data must be nested.
     // ======================================================================
-
-    match /menu-items/{itemId} {
-      allow read, write: if false; // Should not be accessible at the root level
-    }
-    match /categories/{categoryId} {
-      allow read, write: if false; // Should not be accessible at the root level
-    }
-    match /tables/{tableId} {
-      allow read, write: if false; // Should not be accessible at the root level
-    }
-    match /orders/{orderId} {
-      allow read, write: if false; // Should not be accessible at the root level
-    }
   }
 }

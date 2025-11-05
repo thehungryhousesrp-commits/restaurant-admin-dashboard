@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -14,7 +15,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-// ✅ IMPORTANT: params is now a Promise in Next.js 15
+// IMPORTANT: This page needs to determine which restaurant the order belongs to.
+// For now, we'll assume a single restaurant context, but in a true multi-tenant
+// app, the URL might be /r/{restaurantId}/invoice/{orderId} or the restaurantId
+// would be derived from the domain.
+
+// For this implementation, we will use a temporary hardcoded restaurantId.
+const TEMP_DEV_RESTAURANT_ID = "main-restaurant";
+
+
 interface InvoicePageProps {
   params: Promise<{
     orderId: string;
@@ -49,7 +58,7 @@ const FIRESTORE_TIMEOUT_MS = 10000;
 
 // Utility Functions
 const generatePdfFilename = (orderId: string): string => {
-  const timestamp = new Date().toISOString().split('T');
+  const timestamp = new Date().toISOString().split('T')[0];
   const shortId = orderId.slice(-6).toUpperCase();
   return `invoice-${shortId}-${timestamp}.pdf`;
 };
@@ -176,10 +185,10 @@ const ErrorDisplay = ({ title, message, showDetails = false }: ErrorDisplayProps
         </AlertDescription>
       </Alert>
       <Button
-        onClick={() => window.location.href = '/orders'}
+        onClick={() => window.location.href = '/'} // Redirect to home instead of /orders
         className="mt-6 w-full sm:w-auto"
       >
-        Back to Orders
+        Back to Home
       </Button>
     </div>
   </div>
@@ -196,7 +205,6 @@ export default function InvoicePage({ params }: InvoicePageProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // ✅ NEW: Unwrap the async params promise
   useEffect(() => {
     const unwrapParams = async () => {
       try {
@@ -234,7 +242,8 @@ export default function InvoicePage({ params }: InvoicePageProps) {
         setLoading(true);
         setError(null);
 
-        const docRef = doc(db, 'orders', orderId);
+        // Correct path for multi-tenant structure
+        const docRef = doc(db, `restaurants/${TEMP_DEV_RESTAURANT_ID}/orders`, orderId);
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
