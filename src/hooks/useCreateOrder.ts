@@ -1,56 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useState, useContext } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { type OrderItem } from '@/lib/types';
+import { AppContext } from '@/context/AppContext';
+import { placeOrder } from '@/lib/order';
+import { type OrderItem, type CustomerInfo, type Table } from '@/lib/types';
 
 export const useCreateOrder = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { restaurantId, tables } = useContext(AppContext);
 
-  const createOrder = async (orderItems: OrderItem[], tableId: string, customerInfo?: { name: string; phone: string }) => {
+  const createOrder = async (orderItems: OrderItem[], tableId: string, customerInfo?: CustomerInfo) => {
+    if (!restaurantId) {
+      toast({ title: 'Error', description: 'No active restaurant selected.', variant: 'destructive' });
+      return false;
+    }
+
     if (orderItems.length === 0) {
       toast({ title: 'Error', description: 'Cannot create an empty order.', variant: 'destructive' });
       return false;
     }
 
     setLoading(true);
-    const batch = writeBatch(db);
 
     try {
-      // 1. Create a new order document reference
-      const newOrderRef = doc(collection(db, 'orders'));
+      const selectedTable = tables.find(t => t.id === tableId) || null;
 
-      // 2. Calculate total
-      const total = orderItems.reduce((acc, item) => acc + item.total, 0);
-
-      // 3. Define the new order object
-      const newOrder = {
-        id: newOrderRef.id,
-        items: orderItems,
-        total,
-        status: 'Preparing', // Default status for new orders
-        tableId: tableId,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        ...(customerInfo && { customerInfo }),
-      };
-
-      // 4. Add the new order to the batch
-      batch.set(newOrderRef, newOrder);
-
-      // 5. Update the table status to 'occupied'
-      const tableRef = doc(db, 'tables', tableId);
-      batch.update(tableRef, { status: 'occupied' });
-
-      // 6. Commit the batch
-      await batch.commit();
+      await placeOrder(restaurantId, orderItems, customerInfo || { name: 'N/A', phone: 'N/A' }, selectedTable);
 
       toast({ 
         title: 'Order Placed Successfully!', 
-        description: `Order for table ${tableId} has been sent to the kitchen.` 
+        description: `Order for table ${selectedTable?.name || 'Takeaway'} has been sent to the kitchen.` 
       });
       
       setLoading(false);

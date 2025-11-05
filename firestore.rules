@@ -1,47 +1,53 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper Functions
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function getRole(restaurantId) {
+      return get(/databases/$(database)/documents/restaurants/$(restaurantId)/staff/$(request.auth.uid)).data.role;
     }
 
-    function isRestaurantOwner(restaurantId) {
-      return get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+    function isOwner(restaurantId) {
+        return get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
     }
 
-    function isRestaurantMember(restaurantId) {
-      // This is a placeholder. In a real app, you'd check a 'members' subcollection or roles.
-      // For now, we'll allow the owner.
-      return isRestaurantOwner(restaurantId);
+    function isManager(restaurantId) {
+        return isOwner(restaurantId) || getRole(restaurantId) == 'manager';
     }
-    
+
+    function isCashier(restaurantId) {
+        return isManager(restaurantId) || getRole(restaurantId) == 'cashier';
+    }
+
     // Authenticated users can read their own user document.
     match /users/{userId} {
-      allow read, update: if isOwner(userId);
+      allow read, update: if request.auth.uid == userId;
     }
-    
-    // Only the owner of a restaurant can read/write its top-level document.
+
+    // Rules for restaurants and their subcollections
     match /restaurants/{restaurantId} {
-      allow read, update: if isRestaurantOwner(restaurantId);
+      // Only the owner of a restaurant can read/write its top-level document.
+      allow read, update: if isOwner(restaurantId);
       // Users cannot create or delete restaurants directly; this must be done via a Cloud Function.
       allow create, delete: if false;
 
-      // Rules for all subcollections within a restaurant document.
-      // These rules ensure that any access to a subcollection document
-      // requires that the user is a member of that restaurant.
-      match /{collection}/{docId} {
-        allow read, write: if isRestaurantMember(restaurantId);
+      // Managers can edit the menu, Cashiers can only read it
+      match /menu/{itemId} {
+        allow read: if isCashier(restaurantId);
+        allow write: if isManager(restaurantId);
       }
-    }
-    
-    // Completely disable direct client access to the global `orders` collection.
-    // It should have been removed, but this rule provides an extra layer of security.
-    match /orders/{orderId} {
-        allow read, write: if false;
+
+      // Cashiers can create and read orders, but only Managers can update/delete them
+      match /orders/{orderId} {
+        allow read, create: if isCashier(restaurantId);
+        allow update, delete: if isManager(restaurantId);
+      }
+
+      // Owners are the only ones who can manage staff
+      match /staff/{userId} {
+          allow read, write: if isOwner(restaurantId);
+      }
     }
   }
 }
@@ -54,11 +60,11 @@ service firebase.storage {
       allow write: if request.auth != null && resource.size < 2 * 1024 * 1024 // Max 2MB
                       && resource.contentType.matches('image/.*')
                       && get(/databases/(default)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
-                      
+
       // Anyone can read the logos. This is safe as they are public branding assets.
       allow read: if true;
     }
-    
+
     // Deny all other writes to storage by default.
     match /{allPaths=**} {
       allow read, write: if false;
