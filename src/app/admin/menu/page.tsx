@@ -39,7 +39,6 @@ export default function AdminMenuPage() {
 
     return (
         <div>
-            <Header />
             <AdminDashboard />
         </div>
     );

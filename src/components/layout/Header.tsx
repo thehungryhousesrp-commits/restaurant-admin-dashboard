@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -11,7 +12,6 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ChefHat } from 'lucide-react';
 
 export default function Header() {
   const pathname = usePathname();
@@ -20,10 +20,10 @@ export default function Header() {
   const { toast } = useToast();
   
   const navItems = [
-    { href: '/', label: 'Order Entry', public: true },
-    { href: '/admin/menu', label: 'Admin', public: false },
-    { href: '/kitchen', label: 'Kitchen Display', public: false },
-    { href: '/about', label: 'About Developer', public: false }
+    { href: '/', label: 'Order Entry', public: true, admin: false },
+    { href: '/admin/menu', label: 'Admin', public: false, admin: true },
+    { href: '/kitchen', label: 'Kitchen Display', public: false, admin: true },
+    { href: '/about', label: 'About', public: true, admin: false }
   ];
 
   const handleLogout = async () => {
@@ -50,7 +50,8 @@ export default function Header() {
           </Link>
           <nav className="hidden md:flex gap-6 items-center">
             {navItems.map((item) => {
-              if (item.public) {
+              // Always render public links
+              if (item.public && !item.admin) {
                 return (
                   <Link
                     key={item.href}
@@ -64,23 +65,26 @@ export default function Header() {
                   </Link>
                 );
               }
-              // For non-public items, handle loading and auth state
-              if (loadingAuth) {
-                return <Skeleton key={item.href} className="h-5 w-20" />;
-              }
-              if (user) {
-                 return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
-                        pathname === item.href && "text-foreground"
-                      )}
-                    >
-                      {item.label}
-                    </Link>
-                 );
+              // For admin links, check auth state
+              if (item.admin) {
+                if (loadingAuth) {
+                    return <Skeleton key={item.href} className="h-5 w-20" />;
+                }
+                if (user) {
+                   return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+                          pathname === item.href && "text-foreground"
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                   );
+                }
+                return null; // Don't render admin link if not logged in
               }
               return null;
             })}
@@ -97,7 +101,7 @@ export default function Header() {
             ) : (
                pathname !== '/login' && (
                 <Button asChild variant="default" size="sm">
-                  <Link href="/login">Login</Link>
+                  <Link href="/login">Login / Sign Up</Link>
                 </Button>
                )
             )}
