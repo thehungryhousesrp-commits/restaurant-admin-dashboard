@@ -15,14 +15,12 @@ import { AppContext } from '@/context/AppContext';
 import { addCategory, addMenuItem, updateMenuItem } from '@/lib/menu';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
+import { generateBulkItems, type RawItemLine, type GeneratedItem } from '@/ai/generateBulkItems';
 
 
 // The state for each item being reviewed, including its duplicate status
-interface ReviewItem {
+interface ReviewItem extends GeneratedItem {
   id: string; // A temporary unique ID for the react key
-  name: string;
-  price: number;
-  categoryName: string;
   isDuplicate: boolean;
   existingItemId?: string; // If it's a duplicate, the ID of the existing item
   resolution: 'new' | 'skip' | 'overwrite' | 'rename'; // How to handle the item
@@ -65,50 +63,59 @@ function BulkUploader() {
   }, [menuItems, restaurantId]);
 
 
-  const handleParse = () => {
+  const handleParse = async () => {
     setIsParsing(true);
+    toast({ title: 'Parsing Menu...', description: 'The AI is analyzing your menu text. Please wait.' });
 
     const lines = rawInput.split('\n');
     let currentCategory = 'Uncategorized';
-    const items: ReviewItem[] = [];
+    const linesToProcess: RawItemLine[] = [];
 
-    lines.forEach((line, index) => {
+    // Pre-process lines to associate items with categories
+    lines.forEach(line => {
       const trimmedLine = line.trim();
       if (!trimmedLine) return;
 
       if (trimmedLine.includes(':')) {
-        const parts = trimmedLine.split(':');
-        const name = parts[0].trim();
-        const price = parseFloat(parts[1].trim());
-
-        if (name && !isNaN(price)) {
-          const lowerCaseName = name.toLowerCase();
-          const isDuplicate = existingMenuItemMap.has(lowerCaseName);
-          items.push({
-            id: `review-${Date.now()}-${index}`,
-            name,
-            price,
-            categoryName: currentCategory,
-            isDuplicate,
-            existingItemId: isDuplicate ? existingMenuItemMap.get(lowerCaseName) : undefined,
-            resolution: isDuplicate ? 'skip' : 'new', // Default duplicates to 'skip'
-          });
-        }
+        // This looks like a menu item
+        linesToProcess.push({ line: trimmedLine, category: currentCategory });
       } else {
+        // This is a category heading
         currentCategory = trimmedLine;
       }
     });
 
-    setReviewItems(items);
-    setIsParsing(false);
-    const duplicateCount = items.filter(item => item.isDuplicate).length;
-    toast({
-      title: "Review Your Items",
-      description: `Found ${items.length} items. ${duplicateCount > 0 ? `${duplicateCount} potential duplicates were detected.` : ''}`,
-    });
+    try {
+        const generatedItems = await generateBulkItems(linesToProcess);
+        
+        const itemsForReview = generatedItems.map((item, index): ReviewItem => {
+            const lowerCaseName = item.name.toLowerCase();
+            const isDuplicate = existingMenuItemMap.has(lowerCaseName);
+            return {
+                ...item,
+                id: `review-${Date.now()}-${index}`,
+                isDuplicate,
+                existingItemId: isDuplicate ? existingMenuItemMap.get(lowerCaseName) : undefined,
+                resolution: isDuplicate ? 'skip' : 'new',
+            };
+        });
+
+        setReviewItems(itemsForReview);
+        const duplicateCount = itemsForReview.filter(item => item.isDuplicate).length;
+        toast({
+            title: "Review Your Items",
+            description: `AI found ${itemsForReview.length} items. ${duplicateCount > 0 ? `${duplicateCount} potential duplicates were detected.` : ''}`,
+        });
+
+    } catch (error) {
+        console.error("AI parsing failed", error);
+        toast({ title: "AI Parsing Failed", description: "Could not parse the menu. Please check the format and try again.", variant: 'destructive' });
+    } finally {
+        setIsParsing(false);
+    }
   };
 
-  const handleUpdateItem = (id: string, field: keyof ReviewItem, value: string | number) => {
+  const handleUpdateItem = (id: string, field: keyof ReviewItem, value: string | number | boolean) => {
     setReviewItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
   
@@ -181,15 +188,13 @@ function BulkUploader() {
           return Promise.resolve(); // Skip this item
         }
 
-        const isNonVegKeyword = ['chicken', 'mutton', 'fish', 'prawn', 'egg', 'wings'].some(keyword => item.name.toLowerCase().includes(keyword));
-
         const payload: Omit<MenuItem, 'id'| 'restaurantId'> = {
           name: item.name,
           price: item.price,
           category: categoryId, 
-          description: '.',
+          description: `An item in the ${item.categoryName} category.`, // AI will enhance this later
           isAvailable: true,
-          isVeg: !isNonVegKeyword,
+          isVeg: item.isVeg,
         };
 
         if(item.resolution === 'overwrite' && item.existingItemId) {
@@ -218,13 +223,13 @@ function BulkUploader() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-2xl flex items-center gap-2"><Wand2 /> Bulk Menu Uploader</CardTitle>
-          <CardDescription>Paste your menu text to parse and upload items in batches. The system will detect duplicates for the active outlet.</CardDescription>
+          <CardTitle className="font-headline text-2xl flex items-center gap-2"><Wand2 /> AI Bulk Uploader</CardTitle>
+          <CardDescription>Paste your menu text to have our AI parse and upload items in batches. It will detect duplicates for the active outlet.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>How to Use the Bulk Uploader</AlertTitle>
+            <AlertTitle>How to Use the AI Bulk Uploader</AlertTitle>
             <AlertDescription>
               <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
                   <li>Place each category on its own line (e.g., `Biryani`).</li>
@@ -248,7 +253,7 @@ function BulkUploader() {
             disabled={isParsing || isUploading}
           />
           <Button onClick={handleParse} disabled={isParsing || isUploading || !rawInput.trim() || categoriesLoading}>
-            {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />} {isParsing ? 'Parsing...' : 'Parse & Review'}
+            {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />} {isParsing ? 'AI is Parsing...' : 'Parse with AI & Review'}
           </Button>
         </CardContent>
       </Card>
@@ -268,6 +273,7 @@ function BulkUploader() {
                     <TableHead>Name</TableHead>
                     <TableHead>Price (INR)</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Veg/Non-Veg</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -294,6 +300,11 @@ function BulkUploader() {
                       </TableCell>
                       <TableCell><Input type="number" value={item.price} onChange={e => handleUpdateItem(item.id, 'price', parseFloat(e.target.value) || 0)} className="h-8" disabled={isUploading} /></TableCell>
                       <TableCell><Input value={item.categoryName} onChange={e => handleUpdateItem(item.id, 'categoryName', e.target.value)} className="h-8" disabled={isUploading} /></TableCell>
+                       <TableCell>
+                        <Badge variant={item.isVeg ? 'default' : 'destructive'} className={cn(item.isVeg ? 'bg-green-500' : 'bg-red-500')}>
+                          {item.isVeg ? 'Veg' : 'Non-Veg'}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         {item.isDuplicate && item.resolution !== 'new' ? (
                             <div className="flex gap-1 justify-end">
