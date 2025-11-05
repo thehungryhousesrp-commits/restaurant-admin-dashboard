@@ -16,7 +16,7 @@ export default function PublicHeader() {
           <Link href="/" className="flex items-center space-x-2">
              <div className="relative h-16 w-40">
                 <Image
-                    src="/Picsart_25-07-02_21-51-50-642 (1).png"
+                    src="https://i.ibb.co/nTRZV7T/5fad425b-56e6-49d5-9781-f7420aeea30b-removebg-preview-1.png"
                     alt="Reskot Logo"
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
