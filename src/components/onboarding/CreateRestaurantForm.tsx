@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { createRestaurantSchema } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { doc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, writeBatch, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -19,9 +20,10 @@ type FormValues = z.infer<typeof createRestaurantSchema>;
 
 interface CreateRestaurantFormProps {
     user: FirebaseUser;
+    onFormSubmit?: () => void; // Optional callback
 }
 
-export default function CreateRestaurantForm({ user }: CreateRestaurantFormProps) {    
+export default function CreateRestaurantForm({ user, onFormSubmit }: CreateRestaurantFormProps) {    
     const { toast } = useToast();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -47,7 +49,7 @@ export default function CreateRestaurantForm({ user }: CreateRestaurantFormProps
             // 2. Update the user's document to add the new restaurant ID
             const userDocRef = doc(db, 'users', user.uid);
             batch.update(userDocRef, {
-                restaurantIds: [newRestaurantRef.id], // For now, creating the first one
+                restaurantIds: arrayUnion(newRestaurantRef.id),
                 activeRestaurantId: newRestaurantRef.id,
             });
 
@@ -56,11 +58,15 @@ export default function CreateRestaurantForm({ user }: CreateRestaurantFormProps
 
             toast({
                 title: "Restaurant Created!",
-                description: `"${data.restaurantName}" is ready. Redirecting you to the dashboard.`,
+                description: `"${data.restaurantName}" is ready.`,
             });
             
-            // 4. Redirect to the main application dashboard
-            router.push('/order-entry');
+            // 4. If there's a callback, call it. Otherwise, redirect.
+            if (onFormSubmit) {
+                onFormSubmit();
+            } else {
+                router.push('/order-entry');
+            }
 
         } catch (error) {
             console.error("Error creating restaurant:", error);
@@ -82,9 +88,9 @@ export default function CreateRestaurantForm({ user }: CreateRestaurantFormProps
                     name="restaurantName"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Restaurant Name</FormLabel>
+                            <FormLabel>New Outlet Name</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g., The Grand Indian Kitchen" {...field} />
+                                <Input placeholder="e.g., The Grand Indian - Downtown" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -92,7 +98,7 @@ export default function CreateRestaurantForm({ user }: CreateRestaurantFormProps
                 />
                 <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Restaurant
+                    Create Outlet
                 </Button>
             </form>
         </Form>

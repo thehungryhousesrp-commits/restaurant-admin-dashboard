@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import React, { createContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { collection, onSnapshot, doc, query, where } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { db, auth } from '@/lib/firebase';
-import { type MenuItem, type Category, type Table, type AppUser } from '@/lib/types';
+import { type MenuItem, type Category, type Table, type AppUser, type Restaurant } from '@/lib/types';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 interface AppContextType {
@@ -13,13 +13,22 @@ interface AppContextType {
   appUser: AppUser | null;
   authLoading: boolean;
   appUserLoading: boolean;
-  restaurantId: string | null;
+  
+  // Restaurant-related state
+  restaurants: Restaurant[];
+  activeRestaurant: Restaurant | null;
+  restaurantId: string | null; // This is the active restaurant ID
+
+  // Data for the active restaurant
   menuItems: MenuItem[];
   categories: Category[];
   tables: Table[];
+  
+  // Loading states for the data
   menuLoading: boolean;
   categoriesLoading: boolean;
   tablesLoading: boolean;
+  restaurantsLoading: boolean;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -27,13 +36,19 @@ export const AppContext = createContext<AppContextType>({
   appUser: null,
   authLoading: true,
   appUserLoading: true,
+  
+  restaurants: [],
+  activeRestaurant: null,
   restaurantId: null,
+
   menuItems: [],
   categories: [],
   tables: [],
+
   menuLoading: true,
   categoriesLoading: true,
   tablesLoading: true,
+  restaurantsLoading: true,
 });
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
@@ -41,25 +56,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [appUserLoading, setAppUserLoading] = useState(true);
 
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [restaurantsLoading, setRestaurantsLoading] = useState(true);
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
+  
   const [menuLoading, setMenuLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [tablesLoading, setTablesLoading] = useState(true);
 
-  const restaurantId = appUser?.activeRestaurantId || (appUser?.restaurantIds && appUser.restaurantIds[0]) || null;
+  // Derive active restaurant ID from the appUser state
+  const restaurantId = appUser?.activeRestaurantId || null;
+
+  // Derive the full active restaurant object
+  const activeRestaurant = useMemo(() => {
+    return restaurants.find(r => r.id === restaurantId) || null;
+  }, [restaurants, restaurantId]);
   
   // Effect to fetch the custom user document from Firestore
   useEffect(() => {
     if (user) {
+      setAppUserLoading(true);
       const userDocRef = doc(db, 'users', user.uid);
       const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
           setAppUser({ uid: docSnap.id, ...docSnap.data() } as AppUser);
         } else {
-          // This case might happen if user record in auth exists but not in firestore.
-          // Should be handled by your sign-up logic.
           setAppUser(null);
         }
         setAppUserLoading(false);
@@ -70,17 +94,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
       return () => unsubscribe();
     } else if (!authLoading) {
-      // User is not logged in
       setAppUser(null);
       setAppUserLoading(false);
     }
   }, [user, authLoading]);
 
+  // Effect to fetch the list of restaurants a user has access to
+  useEffect(() => {
+    if (appUser && appUser.restaurantIds && appUser.restaurantIds.length > 0) {
+      setRestaurantsLoading(true);
+      const restaurantsQuery = query(collection(db, 'restaurants'), where('__name__', 'in', appUser.restaurantIds));
+      const unsubscribe = onSnapshot(restaurantsQuery, (querySnapshot) => {
+        const userRestaurants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Restaurant));
+        setRestaurants(userRestaurants);
+        setRestaurantsLoading(false);
+      }, (error) => {
+        console.error("Error fetching restaurants:", error);
+        setRestaurants([]);
+        setRestaurantsLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setRestaurants([]);
+      setRestaurantsLoading(false);
+    }
+  }, [appUser]);
 
-  // Effect to fetch restaurant-specific data
+  // Effect to fetch data for the currently active restaurant
   useEffect(() => {
     if (!restaurantId) {
-      // If there's no restaurant ID, reset data and stop loading states
       setMenuItems([]);
       setCategories([]);
       setTables([]);
@@ -88,7 +130,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setCategoriesLoading(false);
       setTablesLoading(false);
       return;
-    };
+    }
 
     setMenuLoading(true);
     setCategoriesLoading(true);
@@ -128,6 +170,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     appUser,
     authLoading,
     appUserLoading,
+    restaurants,
+    activeRestaurant,
     restaurantId,
     menuItems,
     categories,
@@ -135,6 +179,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     menuLoading,
     categoriesLoading,
     tablesLoading,
+    restaurantsLoading,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
