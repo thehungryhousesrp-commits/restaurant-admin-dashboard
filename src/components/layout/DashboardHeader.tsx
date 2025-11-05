@@ -39,7 +39,7 @@ export default function DashboardHeader() {
   const handleLogout = async () => {
     await signOut(auth);
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    router.push('/login');
+    router.push('/');
   };
 
   const handleSwitchRestaurant = async (restaurantId: string) => {
