@@ -3,7 +3,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { RawItemLineSchema, GeneratedItemSchema, type GeneratedItem, type RawItemLine } from '@/lib/types';
+import { RawItemLineSchema, GeneratedItemSchema } from '@/lib/schemas';
+import { type GeneratedItem, type RawItemLine } from '@/lib/types';
 
 
 // ============================================================================
