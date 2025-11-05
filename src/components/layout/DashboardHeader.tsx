@@ -64,8 +64,22 @@ export default function DashboardHeader() {
       <div className="container flex h-20 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
-             <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/20 ring-2 ring-purple-400/50 hover:ring-purple-400 transition-all duration-300">
-                <LogoAnimation />
+             <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/20 ring-2 ring-purple-400/50 hover:ring-purple-400 transition-all duration-300 flex items-center justify-center h-16 w-40">
+                {activeRestaurant?.logoUrl ? (
+                  <div className="relative h-full w-full">
+                    <Image
+                      src={activeRestaurant.logoUrl}
+                      alt={activeRestaurant.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      style={{ objectFit: 'contain' }}
+                      priority
+                      crossOrigin="anonymous"
+                    />
+                  </div>
+                ) : (
+                  <LogoAnimation />
+                )}
             </div>
           </Link>
           <nav className="hidden md:flex gap-6 items-center">
