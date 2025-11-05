@@ -466,7 +466,7 @@ const OrdersView = () => {
     if (!dateRange || (!dateRange.from && !dateRange.to)) {
       return true;
     }
-    const orderDate = new Date(order.createdAt);
+    const orderDate = new Date(order.createdAt.seconds * 1000);
     const from = dateRange.from ? startOfDay(dateRange.from) : null;
     const to = dateRange.to ? endOfDay(dateRange.to) : null;
 
@@ -493,7 +493,7 @@ const OrdersView = () => {
             `"${order.customerInfo.name}"`,
             `"${order.customerInfo.phone}"`,
             `"${order.tableName}"`,
-            `"${new Date(order.createdAt).toLocaleDateString()}"`,
+            `"${new Date(order.createdAt.seconds * 1000).toLocaleDateString()}"`,
             order.total.toFixed(2),
         ];
         return row.join(',');
