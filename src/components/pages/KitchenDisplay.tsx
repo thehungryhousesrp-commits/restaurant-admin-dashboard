@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { AppContext } from '@/context/AppContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -279,3 +279,5 @@ export default function KitchenDisplay() {
         </div>
     );
 }
+
+    
