@@ -433,7 +433,7 @@ export default function OrderEntryPoint() {
         </div>
 
         <div className="flex-1 p-4 flex flex-col min-h-0">
-            <OrderSummary ref={orderSummaryListRef} orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
+            <OrderSummary ref={orderSummaryListRef} items={currentOrder} onUpdateOrder={handleUpdateOrder} />
         </div>
       </aside>
 
