@@ -4,7 +4,7 @@
 import { type Table } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Armchair, User, Utensils, Sparkles } from "lucide-react";
+import { Armchair, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useContext } from "react";
 import { AppContext } from "@/context/AppContext";
@@ -21,11 +21,14 @@ export default function SelectTable({ onTableSelect, selectedTable, inProgressOr
     const { tables, loading } = useContext(AppContext);
     
     const getTableStatus = (table: Table): 'available' | 'occupied' => {
-        const order = inProgressOrders[table.id];
-        if (order && (order.items.length > 0 || order.customerInfo.name || order.customerInfo.phone)) {
+        // An in-progress order exists if the key is in the map and it has items or customer info.
+        const inProgressOrder = inProgressOrders[table.id];
+        if (inProgressOrder && (inProgressOrder.items.length > 0 || inProgressOrder.customerInfo.name || inProgressOrder.customerInfo.phone)) {
             return 'occupied';
         }
-        return 'available';
+        // Fallback to the status from the database (e.g., if an order was placed but page was refreshed).
+        // A truly available table will have status 'available' and no in-progress order.
+        return table.status === 'occupied' ? 'occupied' : 'available';
     };
 
     const handleTableClick = (table: Table) => {
@@ -59,6 +62,7 @@ export default function SelectTable({ onTableSelect, selectedTable, inProgressOr
                         const status = getTableStatus(table);
                         const isSelected = selectedTable?.id === table.id;
                         const styles = getStatusStyles(status);
+                        // Show the customer name if it's an in-progress order.
                         const customerName = status === 'occupied' ? inProgressOrders[table.id]?.customerInfo?.name : '';
 
                         return (
@@ -80,7 +84,7 @@ export default function SelectTable({ onTableSelect, selectedTable, inProgressOr
                                         {status}
                                     </p>
                                     {customerName && (
-                                        <p className={cn("text-xs font-medium truncate mt-1", styles.text)}>
+                                        <p className={cn("text-xs font-medium truncate mt-1", styles.text, "w-full px-1")}>
                                             by: {customerName}
                                         </p>
                                     )}

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useCallback, useMemo, useContext, useRef, useEffect } from 'react';
@@ -245,19 +244,21 @@ export default function OrderEntryPoint() {
   
   const resetCurrentOrderState = useCallback(() => {
     if (!activeKey) return;
-    setInProgressOrders(prev => {
-        const newOrders = { ...prev };
-        if (newOrders[activeKey].items.length === 0) {
-           delete newOrders[activeKey];
-        } else {
-            // If order has items, we just go back, don't clear it.
-        }
-        return newOrders;
-    });
-    // Also reset the selection state
+    const currentDraft = inProgressOrders[activeKey];
+    
+    // Only clear the draft if it's truly empty. Otherwise, just go back.
+    if (currentDraft && currentDraft.items.length === 0 && !currentDraft.customerInfo.name && !currentDraft.customerInfo.phone) {
+         setInProgressOrders(prev => {
+            const newOrders = { ...prev };
+            delete newOrders[activeKey];
+            return newOrders;
+        });
+    }
+   
+    // Reset the selection state to go back to the table/order type view
     setSelectedTable(null);
     setTakeawayCustomer(null);
-  }, [activeKey]);
+  }, [activeKey, inProgressOrders]);
   
   const handlePlaceOrder = useCallback(async () => {
     if (!activeKey || !restaurantId || currentOrder.length === 0) {
@@ -319,6 +320,9 @@ export default function OrderEntryPoint() {
             return newOrders;
         });
       toast({ title: 'Order Cleared', description: 'All fields have been reset.', variant: 'destructive' });
+      // After clearing, go back to selection screen
+      setSelectedTable(null);
+      setTakeawayCustomer(null);
     }
   }, [activeKey, toast]);
 
@@ -466,7 +470,7 @@ export default function OrderEntryPoint() {
         </div>
 
         <div className="p-4 flex-grow min-h-0">
-            <OrderSummary orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
+            <OrderSummary ref={orderSummaryListRef} orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
         </div>
       </aside>
 
