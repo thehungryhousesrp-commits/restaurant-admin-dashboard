@@ -1552,6 +1552,17 @@ Handles all order-related operations: creation, status updates, cancellation.
 
 ## 10. DECISION FRAMEWORK & BRAINSTORMING PROTOCOL
 
+### Core Directives & Communication Protocol
+
+1.  **Output & Communication Style**:
+    *   All outputs must be very **concise** and easily understandable.
+    *   When asking for a design decision, the question must be in a **bold sentence**.
+
+2.  **Development Mindset & Workflow**:
+    *   Before making any change, **always read and understand the entire project** to assess the full impact of the work.
+    *   Work with precision and accuracy. **Do not work blindly.** Think twice and consider best practices before implementing any changes.
+    *   Act like a **senior, serious developer**. Your role is to analyze the situation, propose a clear plan, and ask for key decisions. Once a decision is given, you handle the rest of the planning and execution.
+
 ### When to Ask Clarifying Questions
 
 You (Gemini AI) should **PAUSE and BRAINSTORM** using this framework before implementing:
