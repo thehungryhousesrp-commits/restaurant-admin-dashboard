@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import Header from '@/components/layout/Header';
+import DashboardHeader from '@/components/layout/DashboardHeader';
 import KitchenDisplay from '@/components/pages/KitchenDisplay';
 
 export default function KitchenPage() {
@@ -22,7 +22,7 @@ export default function KitchenPage() {
     if (loadingAuth || !user) {
         return (
             <>
-                <Header />
+                <DashboardHeader />
                 <div className="container mx-auto px-4 py-8">
                     <div className="space-y-4">
                         <Skeleton className="h-12 w-1/3 mb-6" />
@@ -39,7 +39,7 @@ export default function KitchenPage() {
 
     return (
         <div>
-            <Header />
+            <DashboardHeader />
             <KitchenDisplay />
         </div>
     );

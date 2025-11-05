@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-import AdminDashboard from '@/components/pages/AdminDashboard';
-import Header from '@/components/layout/Header';
+import AdminDashboard from '@/components/admin/AdminDashboard';
+import DashboardHeader from '@/components/layout/DashboardHeader';
 
 export default function AdminMenuPage() {
     const [user, loadingAuth] = useAuthState(auth);
@@ -22,7 +22,7 @@ export default function AdminMenuPage() {
     if (loadingAuth || !user) {
         return (
             <>
-                <Header />
+                <DashboardHeader />
                 <div className="container mx-auto px-4 py-8">
                     <div className="space-y-4">
                         <Skeleton className="h-12 w-1/3" />
@@ -39,6 +39,7 @@ export default function AdminMenuPage() {
 
     return (
         <div>
+            <DashboardHeader />
             <AdminDashboard />
         </div>
     );

@@ -1,35 +1,35 @@
 
 'use client';
 
-import { useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import DashboardHeader from "@/components/layout/DashboardHeader";
+import OrderEntryPoint from "@/components/pages/OrderEntryPoint";
 import { Skeleton } from '@/components/ui/skeleton';
-import LandingPage from '@/components/pages/LandingPage';
-import PublicHeader from '@/components/layout/PublicHeader';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-
-export default function Home() {
+export default function OrderEntryPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
 
   useEffect(() => {
-    if (user) {
-      router.replace('/order-entry');
+    if (!loading && !user) {
+        router.replace('/login');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  if (loading || user) {
+  if (loading || !user) {
     return (
       <div className="relative flex min-h-screen flex-col">
-        <PublicHeader />
+        <DashboardHeader />
         <main className="flex-1 container mx-auto px-4 py-8">
             <div className="space-y-4">
                 <Skeleton className="h-12 w-1/3" />
                 <Skeleton className="h-8 w-1/4" />
                 <div className="flex gap-8">
-                    <Skeleton className="h-96 w-full" />
+                    <Skeleton className="h-96 w-64" />
+                    <Skeleton className="h-96 flex-1" />
                 </div>
             </div>
         </main>
@@ -39,10 +39,11 @@ export default function Home() {
 
   return (
     <div className="relative flex min-h-screen flex-col">
-      <PublicHeader />
+      <DashboardHeader />
       <main className="flex-1">
-        <LandingPage />
+        <OrderEntryPoint />
       </main>
     </div>
   );
 }
+

@@ -20,10 +20,10 @@ export default function DashboardHeader() {
   const { toast } = useToast();
   
   const navItems = [
-    { href: '/order-entry', label: 'Order Entry', public: false, admin: false },
-    { href: '/admin/menu', label: 'Admin', public: false, admin: true },
-    { href: '/kitchen', label: 'Kitchen Display', public: false, admin: true },
-    { href: '/about', label: 'About', public: false, admin: false }
+    { href: '/order-entry', label: 'Order Entry' },
+    { href: '/admin/menu', label: 'Admin' },
+    { href: '/kitchen', label: 'Kitchen Display' },
+    { href: '/about', label: 'About' }
   ];
 
   const handleLogout = async () => {

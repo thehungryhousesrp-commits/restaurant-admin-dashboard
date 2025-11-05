@@ -7,7 +7,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import AboutPageContent from '@/components/pages/AboutPage';
-import Header from '@/components/layout/Header';
+import DashboardHeader from '@/components/layout/DashboardHeader';
 
 export default function AboutPage() {
     const [user, loadingAuth] = useAuthState(auth);
@@ -22,7 +22,7 @@ export default function AboutPage() {
     if (loadingAuth || !user) {
         return (
             <>
-                <Header />
+                <DashboardHeader />
                 <div className="container mx-auto px-4 py-8">
                     <div className="space-y-4">
                         <Skeleton className="h-48 w-full" />
@@ -38,8 +38,9 @@ export default function AboutPage() {
 
     return (
         <div>
-            <Header />
+            <DashboardHeader />
             <AboutPageContent adminName={adminName} />
         </div>
     );
 }
+
