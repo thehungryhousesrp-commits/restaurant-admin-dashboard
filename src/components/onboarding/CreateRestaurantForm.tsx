@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { createRestaurantSchema } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { doc, setDoc, serverTimestamp, writeBatch, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, collection, writeBatch, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -46,7 +46,7 @@ export default function CreateRestaurantForm({ user, onFormSubmit }: CreateResta
                 createdAt: serverTimestamp(),
             });
 
-            // 2. Update the user's document to add the new restaurant ID
+            // 2. Update the user's document to add the new restaurant ID and set it as active
             const userDocRef = doc(db, 'users', user.uid);
             batch.update(userDocRef, {
                 restaurantIds: arrayUnion(newRestaurantRef.id),
@@ -65,7 +65,7 @@ export default function CreateRestaurantForm({ user, onFormSubmit }: CreateResta
             if (onFormSubmit) {
                 onFormSubmit();
             } else {
-                router.push('/order-entry');
+                router.push('/#features');
             }
 
         } catch (error) {
