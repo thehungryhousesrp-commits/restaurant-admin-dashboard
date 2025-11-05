@@ -11,23 +11,11 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-
-    // Get tenantId from the user's custom claims
-    function getTenantId() {
-      return request.auth.token.tenantId;
-    }
-
-    // Check if the user is operating within their assigned tenant
-    function isSameTenant(tenantId) {
-      return isSignedIn() && getTenantId() == tenantId;
-    }
     
-    // Check if the user has admin role (we'll expand on this later)
-    function isAdmin() {
-      // For now, we assume the owner is the admin. This will be expanded with roles.
-      return get(/databases/$(database)/documents/restaurants/$(getTenantId())).data.ownerId == request.auth.uid;
+    // Checks if the requesting user is the owner of a given restaurant.
+    function isOwner(restaurantId) {
+      return request.auth.uid == get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId;
     }
-
 
     // =================================
     // Collection Rules
@@ -45,52 +33,21 @@ service cloud.firestore {
     match /restaurants/{restaurantId} {
       // Allow creation if the user is the owner.
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      // Allow owner to read the main restaurant document.
-      allow get: if isSignedIn() && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+      // Allow owner to read their own restaurant document.
+      allow get: if isSignedIn() && isOwner(restaurantId);
       // Only the owner can update core restaurant details.
-      allow update: if isSignedIn() && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isOwner(restaurantId);
     }
     
     // --- Restaurant Sub-collections ---
-    // These rules apply to all collections nested under a restaurant.
-    match /restaurants/{restaurantId}/{collection} {
-      // DEFAULT DENY: No access unless specified in a more specific rule below.
-      allow read, write: if false;
-    }
-
-    // --- Menu Items ---
-    match /restaurants/{restaurantId}/menu-items/{itemId} {
-        // Anyone authenticated into the correct tenant can read the menu.
-        allow get, list: if isSameTenant(restaurantId);
-        // Only admins of the tenant can create, update, or delete menu items.
-        allow create, update, delete: if isSameTenant(restaurantId) && isAdmin();
-    }
-
-    // --- Categories ---
-    match /restaurants/{restaurantId}/categories/{categoryId} {
-        allow get, list: if isSameTenant(restaurantId);
-        allow create, update, delete: if isSameTenant(restaurantId) && isAdmin();
-    }
-
-    // --- Tables ---
-    match /restaurants/{restaurantId}/tables/{tableId} {
-        allow get, list: if isSameTenant(restaurantId);
-        // Any staff member can update a table's status (e.g., 'occupied').
-        allow update: if isSameTenant(restaurantId);
-        // Only admins can add or remove tables from the restaurant layout.
-        allow create, delete: if isSameTenant(restaurantId) && isAdmin();
-    }
-
-    // --- Orders ---
-    match /restaurants/{restaurantId}/orders/{orderId} {
-        // Any staff member can create an order.
-        allow create: if isSameTenant(restaurantId);
-        // Any staff member can view orders.
-        allow get, list: if isSameTenant(restaurantId);
-        // Admins can update orders (e.g., to cancel or modify).
-        allow update: if isSameTenant(restaurantId) && isAdmin();
-        // Disallow deleting orders to maintain a historical record.
-        allow delete: if false;
+    // This provides a secure default for all nested collections.
+    match /restaurants/{restaurantId}/{collection}/{docId} {
+      // Only the owner of the restaurant can access its sub-collections.
+      allow read, write: if isSignedIn() && isOwner(restaurantId);
+      // Exception: We will allow order creation for anyone for now (e.g., guest flow later)
+      // but only the owner can delete them.
+      allow create: if collection == 'orders';
+      allow delete: if isSignedIn() && isOwner(restaurantId);
     }
   }
 }
