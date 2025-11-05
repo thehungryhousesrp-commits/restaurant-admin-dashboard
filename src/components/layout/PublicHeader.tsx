@@ -14,7 +14,9 @@ export default function PublicHeader() {
       <div className="container flex h-20 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
-            <LogoAnimation />
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/20 ring-2 ring-purple-400/50 hover:ring-purple-400 transition-all duration-300">
+                <LogoAnimation />
+            </div>
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
