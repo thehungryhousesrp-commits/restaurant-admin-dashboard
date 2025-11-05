@@ -16,6 +16,7 @@ import { useContext } from "react";
 import { AppContext } from "@/context/AppContext";
 import { addDoc, collection, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { cn } from "@/lib/utils";
 
 type TableFormValues = z.infer<typeof tableSchema>;
 
@@ -29,6 +30,10 @@ export default function TableManager() {
   });
 
   const onSubmit = async (data: TableFormValues) => {
+    if (!restaurantId) {
+      toast({ title: "Error", description: "No active restaurant selected.", variant: "destructive" });
+      return;
+    }
     try {
       const tablesColRef = collection(db, `restaurants/${restaurantId}/tables`);
       await addDoc(tablesColRef, { name: data.name, status: 'available', restaurantId });
@@ -41,6 +46,10 @@ export default function TableManager() {
   };
   
   const handleDelete = async (id: string) => {
+     if (!restaurantId) {
+      toast({ title: "Error", description: "No active restaurant selected.", variant: "destructive" });
+      return;
+    }
     try {
         const tableDocRef = doc(db, `restaurants/${restaurantId}/tables`, id);
         await deleteDoc(tableDocRef);
@@ -55,7 +64,7 @@ export default function TableManager() {
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Manage Tables</CardTitle>
-        <CardDescription>Add, view, and remove dining tables.</CardDescription>
+        <CardDescription>Add, view, and remove dining tables. The status updates automatically when an order is placed.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Form {...form}>
@@ -83,7 +92,13 @@ export default function TableManager() {
                 <div key={table.id} className="flex items-center justify-between p-2 bg-secondary rounded-md">
                   <div className="flex items-center gap-3">
                     <span>{table.name}</span>
-                    <Badge variant={table.status === 'available' ? 'default' : 'destructive'} className="capitalize bg-green-500">
+                    <Badge 
+                      className={cn("capitalize", 
+                        table.status === 'available' && 'bg-green-500 hover:bg-green-500/80',
+                        table.status === 'occupied' && 'bg-red-500 hover:bg-red-500/80',
+                        table.status === 'reserved' && 'bg-yellow-500 hover:bg-yellow-500/80',
+                      )}
+                    >
                       {table.status}
                     </Badge>
                   </div>
