@@ -28,7 +28,7 @@ export default function PublicHeader() {
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-2">
-             {pathname !== '/login' && pathname !== '/signup' && (
+             {pathname !== '/login' && (
                 <Button asChild variant="outline" size="sm">
                   <Link href="/login">Login</Link>
                 </Button>
