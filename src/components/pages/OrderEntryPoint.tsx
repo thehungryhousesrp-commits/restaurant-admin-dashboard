@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, useContext, useRef } from 'react';
+import { useState, useCallback, useMemo, useContext, useRef, useEffect } from 'react';
 import { type OrderItem, type Table, type MenuItem, type Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardFooter, CardHeader, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
-import { updateTableStatus, placeOrder } from '@/lib/order';
+import { placeOrder } from '@/lib/order';
 
 
 // ===============================================================
@@ -133,7 +133,7 @@ const TakeawayForm = ({ onContinue }: { onContinue: (info: { name: string, phone
 // ===============================================================
 
 export default function OrderEntryPoint() {
-  const { menuItems, categories, restaurantId, menuLoading, categoriesLoading } = useContext(AppContext);
+  const { menuItems, categories, restaurantId, menuLoading, categoriesLoading, tables } = useContext(AppContext);
   
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [takeawayCustomer, setTakeawayCustomer] = useState<{name: string, phone: string} | null>(null);
@@ -155,9 +155,27 @@ export default function OrderEntryPoint() {
   const { toast } = useToast();
 
   const activeKey = orderType === 'dine-in' ? selectedTable?.id : (takeawayCustomer ? 'takeaway' : null);
-  const currentOrder = activeKey ? inProgressOrders[activeKey]?.items ?? [] : [];
-  const currentCustomerInfo = activeKey ? inProgressOrders[activeKey]?.customerInfo ?? { name: '', phone: '' } : { name: '', phone: '' };
   
+  const currentOrder = useMemo(() => {
+    return activeKey ? inProgressOrders[activeKey]?.items ?? [] : [];
+  }, [activeKey, inProgressOrders]);
+
+  const currentCustomerInfo = useMemo(() => {
+    return activeKey ? inProgressOrders[activeKey]?.customerInfo ?? { name: '', phone: '' } : { name: '', phone: '' };
+  }, [activeKey, inProgressOrders]);
+  
+  useEffect(() => {
+    if (orderType === 'takeaway' && takeawayCustomer) {
+      if (!inProgressOrders['takeaway']) {
+        setInProgressOrders(prev => ({
+          ...prev,
+          takeaway: { items: [], customerInfo: takeawayCustomer }
+        }));
+      }
+    }
+  }, [orderType, takeawayCustomer, inProgressOrders]);
+
+
   const handleSelectTable = (table: Table) => {
     setSelectedTable(table);
     if (!inProgressOrders[table.id]) {
@@ -228,7 +246,11 @@ export default function OrderEntryPoint() {
     if (!activeKey) return;
     setInProgressOrders(prev => {
         const newOrders = { ...prev };
-        delete newOrders[activeKey];
+        if (newOrders[activeKey].items.length === 0) {
+           delete newOrders[activeKey];
+        } else {
+            // If order has items, we just go back, don't clear it.
+        }
         return newOrders;
     });
     // Also reset the selection state
@@ -275,18 +297,29 @@ export default function OrderEntryPoint() {
   
   const onInvoiceDialogClose = (isOpen: boolean) => {
     setIsInvoiceOpen(isOpen);
-    if (!isOpen) {
-        resetCurrentOrderState(); 
+    if (!isOpen && activeKey) {
+        // Clear the specific completed order from in-progress state
+        setInProgressOrders(prev => {
+            const newOrders = { ...prev };
+            delete newOrders[activeKey];
+            return newOrders;
+        });
+        setSelectedTable(null);
+        setTakeawayCustomer(null);
         setLastPlacedOrder(null);
     }
   };
 
   const handleCancelOrder = useCallback(() => {
-    if (confirm('Are you sure you want to clear this entire order? All items and customer details will be removed.')) {
-      resetCurrentOrderState();
+    if (activeKey && confirm('Are you sure you want to clear this entire order? All items and customer details will be removed.')) {
+      setInProgressOrders(prev => {
+            const newOrders = { ...prev };
+            delete newOrders[activeKey];
+            return newOrders;
+        });
       toast({ title: 'Order Cleared', description: 'All fields have been reset.', variant: 'destructive' });
     }
-  }, [resetCurrentOrderState, toast]);
+  }, [activeKey, toast]);
 
   const showMenu = (orderType === 'dine-in' && selectedTable) || (orderType === 'takeaway' && takeawayCustomer);
 
@@ -311,7 +344,6 @@ export default function OrderEntryPoint() {
                 ) : (
                     <TakeawayForm onContinue={(info) => {
                         setTakeawayCustomer(info);
-                        setInProgressOrders(prev => ({...prev, takeaway: {items: [], customerInfo: info}}))
                     }} />
                 )}
               </div>
@@ -432,8 +464,8 @@ export default function OrderEntryPoint() {
             </div>
         </div>
 
-        <div className="flex-1 p-4 flex flex-col min-h-0">
-            <OrderSummary ref={orderSummaryListRef} items={currentOrder} onUpdateOrder={handleUpdateOrder} />
+        <div className="p-4 flex-grow min-h-0">
+            <OrderSummary ref={orderSummaryListRef} orderItems={currentOrder} onUpdateOrder={handleUpdateOrder} />
         </div>
       </aside>
 

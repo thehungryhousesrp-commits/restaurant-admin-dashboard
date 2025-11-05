@@ -69,6 +69,6 @@ export interface Restaurant {
   id: string;
   name: string;
   ownerId: string;
-  // Add other restaurant details here as needed (address, GST, etc.)
+  logoUrl?: string; // Add optional logoUrl
   createdAt: any;
 }

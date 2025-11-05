@@ -1,35 +1,38 @@
+
 "use client";
 
 import React from 'react';
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { type Order } from "@/lib/types";
+import { type Order, type Restaurant } from "@/lib/types";
 import Image from "next/image";
 
 interface InvoiceDisplayProps {
   order: Order;
+  restaurant: Restaurant | null;
 }
 
-const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ order }, ref) => {
-    // This calculation might be slightly off due to floating point inaccuracies.
-    // It's better to calculate based on the stored values if precision is critical.
+const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ order, restaurant }, ref) => {
     const roundOff = order.total - (order.subtotal + order.cgst + order.sgst);
+    
+    const logoUrl = restaurant?.logoUrl || "/logo.png"; // Fallback to default logo
 
     return (
         <div ref={ref} className="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 font-sans text-black">
-            {/* Using text-black on the parent to ensure content is visible on a white print background */}
             <div className="flex flex-col items-center gap-4 text-center mb-6">
                 <div className="relative h-24 w-24">
                   <Image
-                    src="/Picsart_25-07-02_21-51-50-642 (1).png"
-                    alt="The Hungry House Hub Logo"
+                    src={logoUrl}
+                    alt={restaurant?.name || "Reskot Logo"}
                     fill
                     style={{ objectFit: 'contain' }}
                     priority
+                    // Important for html2canvas to render external images
+                    crossOrigin="anonymous"
                   />
                 </div>
                 <div className="space-y-0.5">
-                    <h1 className="font-headline text-3xl">The Hungry House Hub</h1>
+                    <h1 className="font-headline text-3xl">{restaurant?.name || "The Hungry House Hub"}</h1>
                     <p className="text-xs text-gray-600">
                         62/A Netaji Subhas Avenue, Serampore, Hooghly, 712201
                     </p>
@@ -93,7 +96,6 @@ const InvoiceDisplay = React.forwardRef<HTMLDivElement, InvoiceDisplayProps>(({ 
                         <span className="text-gray-600">SGST @ 2.5%</span>
                         <span>₹{order.sgst.toFixed(2)}</span>
                     </div>
-                    {/* Only show round off if it's not zero */}
                     {Math.abs(roundOff) > 0.001 && (
                         <div className="flex justify-between">
                             <span className="text-gray-600">Round Off</span>

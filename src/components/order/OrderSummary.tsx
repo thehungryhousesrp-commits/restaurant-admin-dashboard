@@ -11,13 +11,13 @@ import { Separator } from '@/components/ui/separator';
 
 interface OrderSummaryProps {
   onUpdateOrder: (updatedOrder: OrderItem[]) => void;
-  items: OrderItem[];
+  orderItems: OrderItem[];
 }
 
 const GST_RATE = 0.05; // Assuming 5% GST (2.5% CGST + 2.5% SGST)
 
 const OrderSummary = React.forwardRef<HTMLDivElement, OrderSummaryProps>(
-  ({ items: orderItems, onUpdateOrder }, ref) => {
+  ({ orderItems, onUpdateOrder }, ref) => {
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [noteText, setNoteText] = useState('');
 

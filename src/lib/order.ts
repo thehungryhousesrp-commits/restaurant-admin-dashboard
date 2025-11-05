@@ -1,4 +1,5 @@
 
+
 import { type Order, type OrderItem, type CustomerInfo, type Table } from "./types";
 import { serverTimestamp, writeBatch, doc, collection, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "./firebase";
@@ -14,6 +15,7 @@ export const placeOrder = async (
     const sgst = subtotal * 0.025;
     const total = Math.round(subtotal + cgst + sgst);
 
+    // Create the order data that will be stored in the subcollection
     const newOrderData = {
         items: currentOrder.map(item => ({
             ...item,
@@ -32,16 +34,28 @@ export const placeOrder = async (
         restaurantId: restaurantId,
         userId: 'staff-member-1', // This should be dynamic in a real app from auth context
     };
+    
+    // Also create a copy for the top-level collection for easy lookup
+    const topLevelOrderData = {
+        ...newOrderData,
+        // We don't store serverTimestamps in the top-level copy, we use a fixed date.
+        createdAt: new Date(), 
+        updatedAt: new Date(),
+    };
 
-    const ordersColRef = collection(db, `restaurants/${restaurantId}/orders`);
-    const newOrderRef = doc(ordersColRef); // Create a reference with a new ID
 
     const batch = writeBatch(db);
-    
-    // Set the new order document in the batch
-    batch.set(newOrderRef, newOrderData);
 
-    // If it's a dine-in order, update the table status
+    // 1. Reference to the order in the restaurant-specific subcollection
+    const restaurantOrderRef = doc(collection(db, `restaurants/${restaurantId}/orders`));
+    batch.set(restaurantOrderRef, newOrderData);
+
+    // 2. Reference to the same order in the top-level collection for easy invoice lookup
+    const topLevelOrderRef = doc(db, 'orders', restaurantOrderRef.id);
+    batch.set(topLevelOrderRef, topLevelOrderData);
+
+
+    // 3. If it's a dine-in order, update the table status
     if (selectedTable) {
         const tableRef = doc(db, `restaurants/${restaurantId}/tables`, selectedTable.id);
         batch.update(tableRef, { status: 'occupied' });
@@ -51,8 +65,8 @@ export const placeOrder = async (
     await batch.commit();
 
     return {
-        finalOrder: { id: newOrderRef.id, ...newOrderData } as any, // Cast to any to handle serverTimestamp
-        docRef: newOrderRef
+        finalOrder: { id: restaurantOrderRef.id, ...newOrderData } as any, // Cast to any to handle serverTimestamp
+        docRef: restaurantOrderRef
     };
 };
 
@@ -61,8 +75,11 @@ export const deleteOrders = async (restaurantId: string, orderIds: string[]) => 
     if (orderIds.length === 0) return;
     const batch = writeBatch(db);
     orderIds.forEach(id => {
-        const docRef = doc(db, `restaurants/${restaurantId}/orders`, id);
-        batch.delete(docRef);
+        // Delete from both collections
+        const restaurantOrderRef = doc(db, `restaurants/${restaurantId}/orders`, id);
+        const topLevelOrderRef = doc(db, 'orders', id);
+        batch.delete(restaurantOrderRef);
+        batch.delete(topLevelOrderRef);
     });
     await batch.commit();
 };

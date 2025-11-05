@@ -2,10 +2,10 @@
 'use client';
 
 import { useState, useCallback, useContext } from 'react';
-import { type MenuItem, type Order, type Category } from '@/lib/types';
+import { type MenuItem, type Order, type Category, type Restaurant } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download, Calendar as CalendarIcon, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Eye, Utensils, LayoutList, Armchair, ShoppingCart, Wand2, Download, Calendar as CalendarIcon, X, Settings } from 'lucide-react';
 import {
   Table as ShadcnTable,
   TableHead,
@@ -40,7 +40,7 @@ import CategoryManager from '@/components/admin/CategoryManager';
 import TableManager from '@/components/admin/TableManager';
 import BulkUploader from '@/components/admin/BulkUploader';
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { updateMenuItem, deleteMenuItems } from '@/lib/menu';
 import { deleteOrders } from '@/lib/order';
@@ -52,12 +52,19 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
+
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-type AdminView = 'items' | 'categories' | 'tables' | 'orders' | 'bulk-upload';
+type AdminView = 'items' | 'categories' | 'tables' | 'orders' | 'bulk-upload' | 'settings';
 
 interface NavItem {
   id: AdminView;
@@ -75,6 +82,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'tables', label: 'Tables', icon: Armchair },
   { id: 'orders', label: 'Orders', icon: ShoppingCart },
   { id: 'bulk-upload', label: 'Bulk Uploader', icon: Wand2 },
+  { id: 'settings', label: 'Outlet Settings', icon: Settings },
 ];
 
 // ============================================================================
@@ -109,6 +117,91 @@ const AdminSidebar = ({
     </aside>
   );
 };
+
+// ============================================================================
+// OUTLET SETTINGS VIEW
+// ============================================================================
+const outletSettingsSchema = z.object({
+  logoUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+});
+
+type OutletSettingsFormValues = z.infer<typeof outletSettingsSchema>;
+
+const OutletSettingsView = () => {
+    const { activeRestaurant, restaurantId } = useContext(AppContext);
+    const { toast } = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const form = useForm<OutletSettingsFormValues>({
+        resolver: zodResolver(outletSettingsSchema),
+        defaultValues: {
+            logoUrl: activeRestaurant?.logoUrl || '',
+        },
+    });
+    
+    // Ensure form is updated if the active restaurant changes
+    useEffect(() => {
+        form.reset({
+            logoUrl: activeRestaurant?.logoUrl || '',
+        });
+    }, [activeRestaurant, form]);
+
+    const onSubmit = async (data: OutletSettingsFormValues) => {
+        if (!restaurantId) {
+            toast({ title: 'Error', description: 'No active restaurant selected.', variant: 'destructive' });
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const restaurantRef = doc(db, 'restaurants', restaurantId);
+            await updateDoc(restaurantRef, {
+                logoUrl: data.logoUrl,
+            });
+            toast({ title: 'Success', description: 'Outlet settings have been updated.' });
+        } catch (error) {
+            console.error('Error updating outlet settings:', error);
+            toast({ title: 'Error', description: 'Failed to update settings.', variant: 'destructive' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Outlet Settings for {activeRestaurant?.name}</h2>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Brand Logo</CardTitle>
+                    <CardDescription>Enter the URL for your restaurant's logo. This will appear on invoices.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="logoUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Logo Image URL</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="https://example.com/your-logo.png" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Settings
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 
 // ============================================================================
 // MENU ITEMS VIEW
@@ -151,7 +244,7 @@ const MenuItemsView = () => {
   const handleToggleAvailability = useCallback(
     async (item: MenuItem, isAvailable: boolean) => {
       try {
-        await updateMenuItem(restaurantId, item.id, { isAvailable });
+        await updateMenuItem(restaurantId!, item.id, { isAvailable });
         toast({ title: `${item.name} is now ${isAvailable ? 'available' : 'unavailable'}` });
       } catch (error) {
         console.error('Error updating availability:', error);
@@ -185,7 +278,7 @@ const MenuItemsView = () => {
     if (deleteConfirmation !== 'DELETE') return;
 
     try {
-      await deleteMenuItems(restaurantId, selectedItems);
+      await deleteMenuItems(restaurantId!, selectedItems);
       toast({
         title: 'Success',
         description: `${selectedItems.length} item(s) deleted permanently`,
@@ -679,6 +772,8 @@ export default function AdminDashboard() {
             <BulkUploader />
           </div>
         );
+      case 'settings':
+          return <OutletSettingsView />;
       default:
         return <MenuItemsView />;
     }
