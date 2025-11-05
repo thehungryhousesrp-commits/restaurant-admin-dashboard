@@ -130,7 +130,7 @@ export default function SignUpForm() {
         description: "Redirecting you to set up your first restaurant.",
       });
 
-      router.push('/onboarding');
+      router.push('/');
 
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
