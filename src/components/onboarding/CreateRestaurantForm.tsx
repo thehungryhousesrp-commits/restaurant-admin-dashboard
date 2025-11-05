@@ -13,8 +13,9 @@ import { useRouter } from "next/navigation";
 import { doc, collection, writeBatch, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { AppContext } from '@/context/AppContext';
 
 type FormValues = z.infer<typeof createRestaurantSchema>;
 
@@ -24,6 +25,7 @@ interface CreateRestaurantFormProps {
 }
 
 export default function CreateRestaurantForm({ user, onFormSubmit }: CreateRestaurantFormProps) {    
+    const { restaurants } = useContext(AppContext);
     const { toast } = useToast();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -35,6 +37,21 @@ export default function CreateRestaurantForm({ user, onFormSubmit }: CreateResta
 
     const onSubmit = async (data: FormValues) => {
         setLoading(true);
+
+        // Check for duplicate restaurant name (case-insensitive)
+        const existingRestaurant = restaurants.find(
+            (r) => r.name.trim().toLowerCase() === data.restaurantName.trim().toLowerCase()
+        );
+
+        if (existingRestaurant) {
+            form.setError('restaurantName', {
+                type: 'manual',
+                message: 'You already have an outlet with this name. Please choose a different name.',
+            });
+            setLoading(false);
+            return;
+        }
+        
         const batch = writeBatch(db);
 
         try {
