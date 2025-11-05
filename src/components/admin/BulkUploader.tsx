@@ -43,21 +43,26 @@ BBQ Chicken Wings: 200
 `;
 
 function BulkUploader() {
-  const { categories, menuItems, restaurantId, loading: loadingCategories } = useContext(AppContext);
+  const { categories, menuItems, restaurantId, categoriesLoading } = useContext(AppContext);
   const { toast } = useToast();
   const [rawInput, setRawInput] = useState(defaultMenuText);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Memoize a map of existing item names for quick lookups
+  // Memoize a map of existing item names for the active restaurant for quick lookups
   const existingMenuItemMap = useMemo(() => {
     const map = new Map<string, string>(); // Maps lowercase name to original item ID
-    menuItems.forEach(item => {
-      map.set(item.name.toLowerCase(), item.id);
-    });
+    if (menuItems && restaurantId) {
+        menuItems.forEach(item => {
+            // Ensure we only map items for the current restaurant.
+            if (item.restaurantId === restaurantId) {
+                map.set(item.name.toLowerCase(), item.id);
+            }
+        });
+    }
     return map;
-  }, [menuItems]);
+  }, [menuItems, restaurantId]);
 
 
   const handleParse = () => {
@@ -111,7 +116,9 @@ function BulkUploader() {
     setReviewItems(prev => prev.map(item => {
       if (item.id === id) {
         // If user wants to rename, but name is still a duplicate, keep it as 'rename'
-        if (resolution === 'new' && existingMenuItemMap.has(item.name.toLowerCase()) && item.name.toLowerCase() !== menuItems.find(mi => mi.id === item.existingItemId)?.name.toLowerCase()) {
+        const existingMenuItem = menuItems.find(mi => mi.id === item.existingItemId);
+        const originalName = existingMenuItem ? existingMenuItem.name.toLowerCase() : '';
+        if (resolution === 'new' && existingMenuItemMap.has(item.name.toLowerCase()) && item.name.toLowerCase() !== originalName) {
            toast({ title: 'Still a Duplicate', description: `"${item.name}" already exists. Please choose a unique name.`, variant: 'destructive' });
            return { ...item, resolution: 'rename' };
         }
@@ -126,6 +133,11 @@ function BulkUploader() {
   };
 
   const handleInitiateUpload = async () => {
+    if (!restaurantId) {
+        toast({ title: "No Restaurant Selected", description: "Please select an active restaurant before uploading.", variant: 'destructive' });
+        return;
+    }
+
     setIsUploading(true);
     toast({ title: "Starting Upload...", description: "Please wait.", duration: 5000 });
 
@@ -133,7 +145,7 @@ function BulkUploader() {
     const itemsToOverwrite = reviewItems.filter(item => item.resolution === 'overwrite');
     
     try {
-      // Step 1: Handle Categories
+      // Step 1: Handle Categories for the active restaurant
       const allItemCategoryNames = reviewItems
         .filter(item => item.resolution === 'new' || item.resolution === 'overwrite')
         .map(p => p.categoryName);
@@ -151,11 +163,11 @@ function BulkUploader() {
         }
       }
 
-      // Step 2: Create a definitive map of all categories (old and new)
+      // Step 2: Create a definitive map of all categories (old and new) for this restaurant
       const finalCategoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c.id]));
       newCategories.forEach(c => finalCategoryMap.set(c.name.toLowerCase(), c.id));
 
-      // Step 3: Upload New and Overwrite Existing Menu Items
+      // Step 3: Upload New and Overwrite Existing Menu Items for the active restaurant
       const finalUploadCount = itemsToUpload.length + itemsToOverwrite.length;
       toast({ title: "Processing Menu Items...", description: `Adding or updating ${finalUploadCount} items.` });
 
@@ -171,7 +183,7 @@ function BulkUploader() {
 
         const isNonVegKeyword = ['chicken', 'mutton', 'fish', 'prawn', 'egg', 'wings'].some(keyword => item.name.toLowerCase().includes(keyword));
 
-        const payload: Omit<MenuItem, 'id' | 'restaurantId'> = {
+        const payload: Omit<MenuItem, 'id'| 'restaurantId'> = {
           name: item.name,
           price: item.price,
           category: categoryId, 
@@ -207,7 +219,7 @@ function BulkUploader() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center gap-2"><Wand2 /> Bulk Menu Uploader</CardTitle>
-          <CardDescription>Paste your menu text to parse and upload items in batches. The system will detect duplicates.</CardDescription>
+          <CardDescription>Paste your menu text to parse and upload items in batches. The system will detect duplicates for the active outlet.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
@@ -235,7 +247,7 @@ function BulkUploader() {
             rows={15}
             disabled={isParsing || isUploading}
           />
-          <Button onClick={handleParse} disabled={isParsing || isUploading || !rawInput.trim() || loadingCategories}>
+          <Button onClick={handleParse} disabled={isParsing || isUploading || !rawInput.trim() || categoriesLoading}>
             {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />} {isParsing ? 'Parsing...' : 'Parse & Review'}
           </Button>
         </CardContent>
@@ -261,7 +273,7 @@ function BulkUploader() {
                 </TableHeader>
                 <TableBody>
                   {reviewItems.map(item => (
-                    <TableRow key={item.id} className={cn(item.isDuplicate && item.resolution !== 'new' && 'bg-yellow-50/50')}>
+                    <TableRow key={item.id} className={cn(item.isDuplicate && item.resolution !== 'new' && 'bg-yellow-50/50 dark:bg-yellow-900/20')}>
                       <TableCell>
                         {item.resolution === 'new' && <Badge variant="default">New</Badge>}
                         {item.resolution === 'skip' && <Badge variant="secondary">Skipped</Badge>}
@@ -275,7 +287,7 @@ function BulkUploader() {
                             <Button size="icon" className="h-8 w-8" onClick={() => handleSetResolution(item.id, 'new')}><Check className="h-4 w-4" /></Button>
                           </div>
                         ) : item.isDuplicate && item.resolution !== 'new' ? (
-                          <div className="font-medium text-yellow-700">⚠️ {item.name}</div>
+                          <div className="font-medium text-yellow-600 dark:text-yellow-400">⚠️ {item.name}</div>
                         ): (
                           <Input value={item.name} onChange={e => handleUpdateItem(item.id, 'name', e.target.value)} className="h-8" disabled={isUploading} />
                         )}
@@ -304,7 +316,7 @@ function BulkUploader() {
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button onClick={handleInitiateUpload} disabled={isUploading || itemsToProcessCount === 0 || loadingCategories}>
+            <Button onClick={handleInitiateUpload} disabled={isUploading || itemsToProcessCount === 0 || categoriesLoading}>
               {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
               {isUploading ? 'Uploading...' : `Upload ${itemsToProcessCount} Items`}
             </Button>
