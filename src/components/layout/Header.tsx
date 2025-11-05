@@ -50,7 +50,7 @@ export default function Header() {
           </Link>
           <nav className="hidden md:flex gap-6 items-center">
             {navItems.map((item) => {
-              // Always render public links
+              // Always render public links that are not admin links
               if (item.public && !item.admin) {
                 return (
                   <Link
@@ -84,8 +84,10 @@ export default function Header() {
                       </Link>
                    );
                 }
-                return null; // Don't render admin link if not logged in
+                // If not loading and not user, render nothing
+                return null;
               }
+              // Return null for any other case to be safe
               return null;
             })}
           </nav>
