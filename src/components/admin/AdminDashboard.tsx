@@ -80,7 +80,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'categories', label: 'Categories', icon: LayoutList },
   { id: 'tables', label: 'Tables', icon: Armchair },
   { id: 'orders', label: 'Orders', icon: ShoppingCart },
-  { id: 'bulk-upload', label: 'Bulk Uploader', icon: Wand2 },
+  // { id: 'bulk-upload', label: 'Bulk Uploader', icon: Wand2 },
   { id: 'settings', label: 'Outlet Settings', icon: Settings },
 ];
 

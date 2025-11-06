@@ -1,18 +1,40 @@
-const { initializeTestEnvironment, assertSucceeds, assertFails } = require("@firebase/rules-unit-testing");
-const fs = require("fs");
+const { initializeTestEnvironment, assertSucceeds, assertFails, firestore } = require("@firebase/rules-unit-testing");
+
+// --- MULTI-TENANT TEST SETUP ---
+const PROJECT_ID = "rules-spec-test";
+
+// Define Tenants
+const TENANT_A_ID = "restaurant-a";
+const TENANT_B_ID = "restaurant-b";
+
+// Define Users and their Custom Claims
+const ADMIN_A = { uid: "admin-a-uid", tenantId: TENANT_A_ID, role: "admin", permissions: ['manage_staff', 'manage_menu', 'create_orders', 'update_orders', 'manage_inventory', 'manage_customers', 'create_billing', 'process_payments', 'create_kot', 'update_kot'] };
+const BILLING_A = { uid: "billing-a-uid", tenantId: TENANT_A_ID, role: "billing", permissions: ['create_billing', 'process_payments'] };
+const ADMIN_B = { uid: "admin-b-uid", tenantId: TENANT_B_ID, role: "admin", permissions: [] };
+const NO_CLAIMS_USER = { uid: "no-claims-uid" };
 
 let testEnv;
 
-const OWNER_USER = { uid: "owner-uid" };
-const MANAGER_USER = { uid: "manager-uid" };
-const CASHIER_USER = { uid: "cashier-uid" };
-const OTHER_USER = { uid: "other-uid" };
-const RESTAURANT_ID = "test-restaurant";
+// CORRECTED: Helper to get an authenticated context with proper claims structure
+function getAuthContext(auth) {
+  if (!auth) {
+    return testEnv.unauthenticatedContext();
+  }
+  // The second argument to authenticatedContext IS the custom claims token.
+  return testEnv.authenticatedContext(auth.uid, {
+    tenantId: auth.tenantId,
+    role: auth.role,
+    permissions: auth.permissions
+  });
+}
 
-describe("Firestore Security Rules", () => {
+// --- TESTS ---
+describe("Res-kot Multi-Tenant Security Rules", () => {
+
   before(async () => {
     testEnv = await initializeTestEnvironment({
-      projectId: "rules-spec-test",
+      projectId: PROJECT_ID,
+      firestore: { host: "127.0.0.1", port: 8080 },
     });
   });
 
@@ -20,169 +42,85 @@ describe("Firestore Security Rules", () => {
     await testEnv.cleanup();
   });
 
-  // Clear the database before each test
   beforeEach(async () => {
     await testEnv.clearFirestore();
-  });
-
-  // Seed the database for tests that need it
-  const setupRestaurantAndStaff = async (staffSetup) => {
+    // Seed data with a privileged context
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore();
-      const restaurantRef = db.collection("restaurants").doc(RESTAURANT_ID);
-      await restaurantRef.set({ ownerId: OWNER_USER.uid, name: "Test Cafe" });
-
-      for (const user of staffSetup) {
-        await restaurantRef.collection("staff").doc(user.uid).set({ role: user.role });
-      }
-    });
-  };
-
-  describe("User Profile Access", () => {
-    it("should allow a user to read and update their own profile", async () => {
-      const context = testEnv.authenticatedContext(OWNER_USER.uid);
-      const userDoc = context.firestore().collection("users").doc(OWNER_USER.uid);
-      await assertSucceeds(userDoc.set({ displayName: "Initial Name"}));
-      await assertSucceeds(userDoc.get());
-      await assertSucceeds(userDoc.update({ displayName: "New Name" }));
-    });
-
-    it("should NOT allow a user to read or update another user's profile", async () => {
-      const context = testEnv.authenticatedContext(OTHER_USER.uid);
-      const userDoc = context.firestore().collection("users").doc(OWNER_USER.uid);
-      await assertFails(userDoc.get());
-      await assertFails(userDoc.update({ displayName: "New Name" }));
+      await db.collection('tenants').doc(TENANT_A_ID).collection('metadata').doc('info').set({ name: "Tenant A" });
+      await db.collection('tenants').doc(TENANT_B_ID).collection('metadata').doc('info').set({ name: "Tenant B" });
     });
   });
 
-  describe("Restaurant Document Access", () => {
-    beforeEach(async () => await setupRestaurantAndStaff([]));
-
-    it("should allow the owner to read and update the restaurant document", async () => {
-        const context = testEnv.authenticatedContext(OWNER_USER.uid);
-        const restDoc = context.firestore().collection("restaurants").doc(RESTAURANT_ID);
-        await assertSucceeds(restDoc.get());
-        await assertSucceeds(restDoc.update({ name: "Updated Name" }));
+  // --- TENANT ISOLATION TESTS ---
+  describe("Tenant Isolation", () => {
+    it("should FAIL if a user from one tenant tries to read data from another", async () => {
+      const db = getAuthContext(ADMIN_B).firestore();
+      const docRef = db.collection('tenants').doc(TENANT_A_ID).collection('metadata').doc('info');
+      await assertFails(docRef.get());
     });
 
-    it("should NOT allow a manager, cashier, or other user to update the restaurant document", async () => {
-        await setupRestaurantAndStaff([{ uid: MANAGER_USER.uid, role: "manager" }]);
-        const managerContext = testEnv.authenticatedContext(MANAGER_USER.uid);
-        const cashierContext = testEnv.authenticatedContext(CASHIER_USER.uid);
-        const otherContext = testEnv.authenticatedContext(OTHER_USER.uid);
-
-        const restDoc_manager = managerContext.firestore().collection("restaurants").doc(RESTAURANT_ID);
-        const restDoc_cashier = cashierContext.firestore().collection("restaurants").doc(RESTAURANT_ID);
-        const restDoc_other = otherContext.firestore().collection("restaurants").doc(RESTAURANT_ID);
-        
-        // They can read, but not update
-        await assertSucceeds(restDoc_manager.get());
-        await assertFails(restDoc_manager.update({ name: "Manager Update" }));
-        await assertFails(restDoc_cashier.update({ name: "Cashier Update" }));
-        await assertFails(restDoc_other.update({ name: "Other Update" }));
+    it("should FAIL if a user with no tenantId tries to read any tenant data", async () => {
+      const db = getAuthContext(NO_CLAIMS_USER).firestore();
+      const docRef = db.collection('tenants').doc(TENANT_A_ID).collection('metadata').doc('info');
+      await assertFails(docRef.get());
     });
 
-    it("should NOT allow anyone to create or delete a restaurant directly", async () => {
-        const context = testEnv.authenticatedContext(OWNER_USER.uid);
-        const newRestDoc = context.firestore().collection("restaurants").doc("new-restaurant");
-        const existingRestDoc = context.firestore().collection("restaurants").doc(RESTAURANT_ID);
-        await assertFails(newRestDoc.set({ ownerId: OWNER_USER.uid }));
-        await assertFails(existingRestDoc.delete());
+    it("should SUCCEED if a user reads data from their own tenant", async () => {
+      const db = getAuthContext(ADMIN_A).firestore();
+      const docRef = db.collection('tenants').doc(TENANT_A_ID).collection('metadata').doc('info');
+      await assertSucceeds(docRef.get());
     });
   });
 
-  describe("Menu Access", () => {
-    beforeEach(async () => await setupRestaurantAndStaff([
-        { uid: MANAGER_USER.uid, role: "manager" },
-        { uid: CASHIER_USER.uid, role: "cashier" }
-    ]));
-
-    const getMenuDoc = (user) => {
-        const context = testEnv.authenticatedContext(user.uid);
-        return context.firestore().collection("restaurants").doc(RESTAURANT_ID).collection("menu").doc("pizza");
-    }
-
-    it("should allow a Cashier to read the menu", async () => {
-        await assertSucceeds(getMenuDoc(CASHIER_USER).get());
+  // --- ROLE-BASED ACCESS CONTROL (RBAC) TESTS ---
+  describe("Role-Based Access Control (RBAC)", () => {
+    it("should ALLOW an admin to write to a tenant's settings", async () => {
+      const db = getAuthContext(ADMIN_A).firestore();
+      const settingsRef = db.collection('tenants').doc(TENANT_A_ID).collection('settings').doc('main');
+      await assertSucceeds(settingsRef.set({ timeZone: 'Asia/Kolkata', tenantId: TENANT_A_ID }));
     });
 
-    it("should NOT allow a Cashier to write to the menu", async () => {
-        await assertFails(getMenuDoc(CASHIER_USER).set({ price: 20 }));
+    it("should DENY a non-admin user from writing to a tenant's settings", async () => {
+      const db = getAuthContext(BILLING_A).firestore();
+      const settingsRef = db.collection('tenants').doc(TENANT_A_ID).collection('settings').doc('main');
+      await assertFails(settingsRef.set({ timeZone: 'Asia/Kolkata', tenantId: TENANT_A_ID }));
     });
 
-    it("should allow a Manager to read and write to the menu", async () => {
-        const menuDoc = getMenuDoc(MANAGER_USER);
-        await assertSucceeds(menuDoc.get());
-        await assertSucceeds(menuDoc.set({ price: 22 }));
+    it("should ALLOW a user with 'create_billing' permission to create a bill", async () => {
+        const db = getAuthContext(BILLING_A).firestore();
+        const billRef = db.collection('tenants').doc(TENANT_A_ID).collection('billing').doc('bill-001');
+        await assertSucceeds(billRef.set({ total: 100, tenantId: TENANT_A_ID }));
     });
 
-    it("should NOT allow an unaffiliated user to access the menu", async () => {
-        const menuDoc = getMenuDoc(OTHER_USER);
-        await assertFails(menuDoc.get());
-        await assertFails(menuDoc.set({ price: 25 }));
-    });
-  });
-
-  describe("Order Access", () => {
-    beforeEach(async () => await setupRestaurantAndStaff([
-        { uid: MANAGER_USER.uid, role: "manager" },
-        { uid: CASHIER_USER.uid, role: "cashier" }
-    ]));
-
-    const getOrderDoc = (user) => {
-        const context = testEnv.authenticatedContext(user.uid);
-        return context.firestore().collection("restaurants").doc(RESTAURANT_ID).collection("orders").doc("order-123");
-    }
-
-    it("should allow a Cashier to create and read orders", async () => {
-        const orderDoc = getOrderDoc(CASHIER_USER);
-        await assertSucceeds(orderDoc.set({ status: "new" }));
-        await assertSucceeds(orderDoc.get());
-    });
-
-    it("should NOT allow a Cashier to update or delete orders", async () => {
-        // Need to create the order first with priveleged access
+    it("should DENY a user from updating a bill (immutable rule)", async () => {
         await testEnv.withSecurityRulesDisabled(async (context) => {
-            await context.firestore().collection("restaurants").doc(RESTA-URANT_ID).collection("orders").doc("order-123").set({});
+            await context.firestore().collection('tenants').doc(TENANT_A_ID).collection('billing').doc('bill-001').set({ total: 100 });
         });
-        const orderDoc = getOrderDoc(CASHIER_USER);
-        await assertFails(orderDoc.update({ status: "complete" }));
-        await assertFails(orderDoc.delete());
+        const db = getAuthContext(BILLING_A).firestore();
+        const billRef = db.collection('tenants').doc(TENANT_A_ID).collection('billing').doc('bill-001');
+        await assertFails(billRef.update({ total: 200 }));
     });
 
-    it("should allow a Manager to update and delete orders", async () => {
-        await testEnv.withSecurityRulesDisabled(async (context) => {
-            await context.firestore().collection("restaurants").doc(RESTAURANT_ID).collection("orders").doc("order-123").set({});
-        });
-        const orderDoc = getOrderDoc(MANAGER_USER);
-        await assertSucceeds(orderDoc.update({ status: "complete" }));
-        await assertSucceeds(orderDoc.delete());
-    });
-  });
-
-  describe("Staff Management", () => {
-    beforeEach(async () => await setupRestaurantAndStaff([]));
-
-    const getStaffDoc = (user, staffMemberUid) => {
-        const context = testEnv.authenticatedContext(user.uid);
-        return context.firestore().collection("restaurants").doc(RESTAURANT_ID).collection("staff").doc(staffMemberUid);
-    }
-
-    it("should allow the Owner to read and write to the staff collection", async () => {
-        const staffDoc = getStaffDoc(OWNER_USER, MANAGER_USER.uid);
-        await assertSucceeds(staffDoc.get());
-        await assertSucceeds(staffDoc.set({ role: "manager" }));
+    it("should DENY a user without 'create_orders' permission from creating an order", async () => {
+      const db = getAuthContext(BILLING_A).firestore();
+      const orderRef = db.collection('tenants').doc(TENANT_A_ID).collection('orders').doc('order-001');
+      await assertFails(orderRef.set({ items: [], tenantId: TENANT_A_ID }));
     });
 
-    it("should NOT allow a Manager or Cashier to access the staff collection", async () => {
-        await setupRestaurantAndStaff([{ uid: MANAGER_USER.uid, role: "manager" }]);
+    it("should ALLOW a user to read their own staff document", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('tenants').doc(TENANT_A_ID).collection('staff').doc(BILLING_A.uid).set({ name: "Test User" });
+      });
+      const db = getAuthContext(BILLING_A).firestore();
+      const staffRef = db.collection('tenants').doc(TENANT_A_ID).collection('staff').doc(BILLING_A.uid);
+      await assertSucceeds(staffRef.get());
+    });
 
-        const managerDocForOther = getStaffDoc(MANAGER_USER, CASHIER_USER.uid);
-        const cashierDocForSelf = getStaffDoc(CASHIER_USER, CASHIER_USER.uid);
-
-        await assertFails(managerDocForOther.get());
-        await assertFails(managerDocForOther.set({ role: "cashier" }));
-        await assertFails(cashierDocForSelf.get()); // Even reading their own staff doc is disallowed
+    it("should DENY a user from reading another user's staff document (unless admin)", async () => {
+        const db = getAuthContext(BILLING_A).firestore();
+        const staffRef = db.collection('tenants').doc(TENANT_A_ID).collection('staff').doc(ADMIN_A.uid);
+        await assertFails(staffRef.get());
     });
   });
 });

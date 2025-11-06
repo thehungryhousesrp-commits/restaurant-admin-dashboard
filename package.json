@@ -1,17 +1,33 @@
 {
-  "name": "firestore-rules-test",
+  "name": "reskot-app",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "test": "firebase emulators:exec \"mocha firestore.rules.spec.ts\""
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "firebase emulators:exec --only firestore \"wait-on tcp:8080 && mocha --timeout 10000 firestore.rules.spec.ts\""
   },
-  "author": "",
-  "license": "ISC",
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "next": "14.2.3",
+    "firebase": "^10.0.0",
+    "@firebase/rules-unit-testing": "^3.0.0"
+  },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^2.0.7",
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.3",
     "mocha": "^10.2.0",
     "chai": "^4.3.7",
-    "firebase-tools": "^11.16.0"
+    "firebase-tools": "^11.16.0",
+    "wait-on": "^7.0.1"
   }
 }

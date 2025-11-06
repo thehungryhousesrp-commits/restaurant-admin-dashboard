@@ -1,77 +1,114 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function getRole(restaurantId) {
-      return get(/databases/$(database)/documents/restaurants/$(restaurantId)/staff/$(request.auth.uid)).data.role;
+    // --- Helper Functions ---
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    function isOwner(restaurantId) {
-        return get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+    // CORRECTED: Claims are on request.auth.token
+    function getTenantId() {
+      return request.auth.token.tenantId;
     }
 
-    function isManager(restaurantId) {
-        return isOwner(restaurantId) || getRole(restaurantId) == 'manager';
+    function getUserRole() {
+      return request.auth.token.role;
     }
 
-    function isCashier(restaurantId) {
-        return isManager(restaurantId) || getRole(restaurantId) == 'cashier';
+    function userHasPermission(permission) {
+      return permission in request.auth.token.permissions;
     }
 
-    function isStaff(restaurantId) {
-        return exists(/databases/$(database)/documents/restaurants/$(restaurantId)/staff/$(request.auth.uid));
+    function isSameTenant(tenantId) {
+      return getTenantId() == tenantId;
     }
 
-    // Authenticated users can read their own user document.
-    match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
+    function isAdmin() {
+      return getUserRole() == 'admin';
     }
 
-    // Rules for restaurants and their subcollections
-    match /restaurants/{restaurantId} {
-      allow read: if isOwner(restaurantId) || isStaff(restaurantId);
-      allow update: if isOwner(restaurantId);
-      // Users cannot create or delete restaurants directly; this must be done via a Cloud Function.
-      allow create, delete: if false;
+    function isCreatingValidDoc() {
+      return request.resource.data.tenantId == getTenantId();
+    }
 
-      // Managers can edit the menu, Cashiers can only read it
-      match /menu/{itemId} {
-        allow read: if isCashier(restaurantId);
-        allow write: if isManager(restaurantId);
+    // --- Tenant-level Access Control ---
+    match /tenants/{tenantId} {
+
+      // Metadata: Admin-only write, any tenant user can read
+      match /metadata/{docId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId);
+        allow write: if isAdmin() && isCreatingValidDoc();
       }
 
-      // Cashiers can create and read orders, but only Managers can update/delete them
+      // Settings: Admin-only write, any tenant user can read
+      match /settings/{docId} {
+         allow read: if isAuthenticated() && isSameTenant(tenantId);
+         allow write: if isAdmin() && isCreatingValidDoc();
+      }
+
+      // Staff: Admin can manage, users can read their own doc
+      match /staff/{staffId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId) && (isAdmin() || request.auth.uid == staffId);
+        allow write: if isAdmin() && isCreatingValidDoc();
+      }
+
+      // Menu Items: Any tenant user can read, requires 'manage_menu' permission to write
+      match /menu_items/{itemId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId);
+        allow write: if userHasPermission('manage_menu') && isCreatingValidDoc();
+      }
+
+      // Orders: Any tenant user can read, specific permissions for create/update
       match /orders/{orderId} {
-        allow read, create: if isCashier(restaurantId);
-        allow update, delete: if isManager(restaurantId);
+        allow read: if isAuthenticated() && isSameTenant(tenantId);
+        allow create: if userHasPermission('create_orders') && isCreatingValidDoc();
+        allow update: if userHasPermission('update_orders');
+        allow delete: if false;
       }
 
-      // Owners are the only ones who can manage staff
-      match /staff/{userId} {
-          allow read, write: if isOwner(restaurantId);
+      // KOT Tickets: Any tenant user can read, kitchen-specific permissions to write
+      match /kot_tickets/{kotId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId);
+        allow create: if userHasPermission('create_kot') && isCreatingValidDoc();
+        allow update: if userHasPermission('update_kot');
       }
-    }
-  }
-}
 
-service firebase.storage {
-  match /b/{bucket}/o {
-    // Allow owners to upload logos to a specific path for their restaurant.
-    match /restaurants/{restaurantId}/logo/{fileName} {
-      // Users can only write to their own restaurant's folder.
-      allow write: if request.auth != null && resource.size < 2 * 1024 * 1024 // Max 2MB
-                      && resource.contentType.matches('image/.*')
-                      && get(/databases/(default)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+      // Inventory: Any tenant user can read, requires 'manage_inventory' permission to write
+      match /inventory/{inventoryId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId);
+        allow write: if userHasPermission('manage_inventory') && isCreatingValidDoc();
+      }
 
-      // Anyone can read the logos. This is safe as they are public branding assets.
-      allow read: if true;
-    }
+      // Customers: Any tenant user can read, requires 'manage_customers' permission to write
+      match /customers/{customerId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId);
+        allow write: if userHasPermission('manage_customers') && isCreatingValidDoc();
+      }
 
-    // Deny all other writes to storage by default.
-    match /{allPaths=**} {
-      allow read, write: if false;
+      // Billing: Billing role or admin can read, specific create permission
+      match /billing/{billId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId) && (isAdmin() || getUserRole() == 'billing');
+        allow create: if userHasPermission('create_billing') && isCreatingValidDoc();
+        allow update: if false; // Bills are immutable
+      }
+
+      // Payments: Billing role or admin can read, specific process permission
+      match /payments/{paymentId} {
+        allow read: if isAuthenticated() && isSameTenant(tenantId) && (isAdmin() || getUserRole() == 'billing');
+        allow write: if userHasPermission('process_payments') && isCreatingValidDoc();
+      }
+
+      // Audit Logs: Admin-read only, no client writes
+      match /audit_logs/{logId} {
+        allow read: if isAdmin() && isSameTenant(tenantId);
+        allow write: if false;
+      }
+
+      // Default deny all other sub-collections
+      match /{document=**} {
+        allow read, write: if false;
+      }
     }
   }
 }
