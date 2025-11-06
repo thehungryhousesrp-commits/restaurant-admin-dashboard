@@ -20,6 +20,10 @@ service cloud.firestore {
         return isManager(restaurantId) || getRole(restaurantId) == 'cashier';
     }
 
+    function isStaff(restaurantId) {
+        return exists(/databases/$(database)/documents/restaurants/$(restaurantId)/staff/$(request.auth.uid));
+    }
+
     // Authenticated users can read their own user document.
     match /users/{userId} {
       allow read, update: if request.auth.uid == userId;
@@ -27,8 +31,8 @@ service cloud.firestore {
 
     // Rules for restaurants and their subcollections
     match /restaurants/{restaurantId} {
-      // Only the owner of a restaurant can read/write its top-level document.
-      allow read, update: if isOwner(restaurantId);
+      allow read: if isOwner(restaurantId) || isStaff(restaurantId);
+      allow update: if isOwner(restaurantId);
       // Users cannot create or delete restaurants directly; this must be done via a Cloud Function.
       allow create, delete: if false;
 

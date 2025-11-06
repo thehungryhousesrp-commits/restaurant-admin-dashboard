@@ -1,0 +1,16 @@
+Nov 06, 2025 2:34:55 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+INFO: Started WebSocket server on ws://127.0.0.1:9150
+API endpoint: http://127.0.0.1:8080
+If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
+
+   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+
+Dev App Server is now running.
+
+Nov 06, 2025 2:34:56 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+Nov 06, 2025 2:34:56 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected HTTP/2 connection.
+Multiple projectIds are not recommended in single project mode. Requested project ID rules-spec-test, but the emulator is configured for studio-5171737170-2a797. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+*** shutting down gRPC server since JVM is shutting down
+*** server shut down
